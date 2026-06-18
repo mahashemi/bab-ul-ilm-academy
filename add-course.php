@@ -1,0 +1,106 @@
+<?php
+require_once __DIR__ . '/db.php';
+requireRole('teacher');
+$user = auth();
+
+$subjects = $pdo->query('SELECT * FROM subjects ORDER BY name')->fetchAll();
+$errors = [];
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verifyCsrf();
+
+    $title       = trim($_POST['title'] ?? '');
+    $description = trim($_POST['description'] ?? '');
+    $subjectId   = (int) ($_POST['subject_id'] ?? 0);
+    $level       = $_POST['level'] ?? 'beginner';
+    $language    = trim($_POST['language'] ?? 'English');
+    $price       = (float) ($_POST['price'] ?? 0);
+
+    if (mb_strlen($title) < 5) $errors[] = 'Title must be at least 5 characters.';
+    if (mb_strlen($description) < 20) $errors[] = 'Description must be at least 20 characters.';
+    if (!in_array($level, ['beginner','intermediate','advanced'], true)) $errors[] = 'Invalid level.';
+
+    if (!$errors) {
+        $stmt = $pdo->prepare(
+            'INSERT INTO courses (teacher_id, subject_id, title, description, level, language, price, is_published)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 1)'
+        );
+        $stmt->execute([$user['id'], $subjectId ?: null, $title, $description, $level, $language, $price]);
+        $newId = (int) $pdo->lastInsertId();
+        flash('success', 'Course created! Now add some lessons.');
+        redirect('add-lesson.php?course_id=' . $newId);
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>New Course — <?= e(SITE_NAME) ?></title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav class="navbar">
+    <div class="nav-brand">🕌 <?= e(SITE_NAME) ?></div>
+    <div class="nav-links"><a href="dashboard.php">Dashboard</a><a href="logout.php" class="nav-btn">Logout</a></div>
+</nav>
+
+<div class="dashboard-wrap">
+    <div class="dashboard-header"><h2>📖 Create a New Course</h2><p>Fill in the details below to publish your course.</p></div>
+
+    <?php if ($errors): ?>
+        <div class="alert alert-error"><?php foreach ($errors as $err): ?><div><?= e($err) ?></div><?php endforeach; ?></div>
+    <?php endif; ?>
+
+    <div class="card"><div class="card-body">
+        <form method="post">
+            <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+
+            <div class="form-group">
+                <label class="form-label">Course Title</label>
+                <input type="text" name="title" class="form-control" placeholder="e.g. Tajweed for Beginners" value="<?= e($_POST['title'] ?? '') ?>" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea name="description" class="form-control" placeholder="What will students learn in this course?" required><?= e($_POST['description'] ?? '') ?></textarea>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Subject</label>
+                    <select name="subject_id" class="form-control">
+                        <option value="">Select subject</option>
+                        <?php foreach ($subjects as $s): ?>
+                            <option value="<?= (int) $s['id'] ?>"><?= e($s['icon']) ?> <?= e($s['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Level</label>
+                    <select name="level" class="form-control">
+                        <option value="beginner">Beginner</option>
+                        <option value="intermediate">Intermediate</option>
+                        <option value="advanced">Advanced</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Language</label>
+                    <input type="text" name="language" class="form-control" value="English" placeholder="English">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Price (Rs) — 0 for free</label>
+                    <input type="number" name="price" class="form-control" min="0" step="0.01" placeholder="0">
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-full">Create Course</button>
+        </form>
+    </div></div>
+</div>
+</body>
+</html>

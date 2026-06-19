@@ -21,6 +21,9 @@ CREATE TABLE IF NOT EXISTS users (
     qualification TEXT,              -- Teacher: credentials, degrees
     avatar       VARCHAR(300),
     is_approved  TINYINT(1) DEFAULT 1,  -- Admin can suspend
+    is_verified  TINYINT(1) DEFAULT 0,
+    verification_token   VARCHAR(64) NULL,
+    verification_expires  DATETIME NULL,
     created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_email (email),
     INDEX idx_role (role)
@@ -56,8 +59,11 @@ CREATE TABLE IF NOT EXISTS courses (
     cover_url    VARCHAR(500),
     is_published TINYINT(1) DEFAULT 0,
     created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_by   INT UNSIGNED NULL,
+    updated_at   TIMESTAMP NULL,
     FOREIGN KEY (teacher_id)  REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (subject_id)  REFERENCES subjects(id) ON DELETE SET NULL,
+    FOREIGN KEY (updated_by)  REFERENCES users(id) ON DELETE SET NULL,
     INDEX idx_teacher (teacher_id),
     INDEX idx_published (is_published)
 ) ENGINE=InnoDB;
@@ -112,6 +118,6 @@ CREATE TABLE IF NOT EXISTS course_reviews (
 -- ── Initial Admin Account ───────────────────────────────────────────────
 -- Default password: Admin@123
 -- IMPORTANT: Log in immediately and change this password via your profile.
-INSERT INTO users (name, email, password, role) VALUES
+INSERT INTO users (name, email, password, role, is_verified) VALUES
 ('Site Admin', 'admin@babulilmacademy.com',
- '$2y$10$Rn49XbRBi1VaO9H6AnkdfOhBEGhhe.D.4.HYAJaquZDWuHT7qXS2q', 'admin');
+ '$2y$10$Rn49XbRBi1VaO9H6AnkdfOhBEGhhe.D.4.HYAJaquZDWuHT7qXS2q', 'admin', 1);

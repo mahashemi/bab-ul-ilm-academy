@@ -37,15 +37,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!$errors) {
         $hash = password_hash($password, PASSWORD_DEFAULT);
+        $token = generateVerificationToken();
         $stmt = $pdo->prepare(
-            'INSERT INTO users (name, email, password, role, country, phone, qualification) VALUES (?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO users (name, email, password, role, country, phone, qualification, verification_token, verification_expires)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 24 HOUR))'
         );
-        $stmt->execute([$name, $email, $hash, $role, $country, $phone, $role === 'teacher' ? $qualification : null]);
+        $stmt->execute([$name, $email, $hash, $role, $country, $phone, $role === 'teacher' ? $qualification : null, $token]);
 
-        $userId = (int) $pdo->lastInsertId();
-        $_SESSION['user'] = ['id' => $userId, 'name' => $name, 'email' => $email, 'role' => $role];
-        flash('success', 'Welcome to Bab ul Ilm Academy, ' . $name . '!');
-        redirect('dashboard.php');
+        sendVerificationEmail($email, $name, $token);
+        $devParam = DEV_SHOW_VERIFY_LINK ? '&token=' . $token : '';
+        redirect('verify-pending.php?email=' . urlencode($email) . $devParam);
     }
 }
 ?>

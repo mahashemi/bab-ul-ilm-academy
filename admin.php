@@ -33,8 +33,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
     if (isset($_POST['toggle_approved'])) {
         $pdo->prepare('UPDATE users SET is_approved = 1 - is_approved WHERE id = ?')->execute([(int) $_POST['toggle_approved']]);
+    } elseif (isset($_POST['toggle_verified'])) {
+        $pdo->prepare('UPDATE users SET is_verified = 1, verification_token = NULL, verification_expires = NULL WHERE id = ?')->execute([(int) $_POST['toggle_verified']]);
     } elseif (isset($_POST['toggle_published'])) {
         $pdo->prepare('UPDATE courses SET is_published = 1 - is_published WHERE id = ?')->execute([(int) $_POST['toggle_published']]);
+    } elseif (isset($_POST['set_role']) && $_POST['set_role'] !== '') {
+        $targetId = (int) $_POST['user_id'];
+        $newRole = $_POST['set_role'];
+        if ($targetId !== (int) $user['id'] && in_array($newRole, ['student','teacher','admin'], true)) {
+            $pdo->prepare('UPDATE users SET role = ? WHERE id = ?')->execute([$newRole, $targetId]);
+        }
     }
     redirect('admin.php?tab=' . ($_GET['tab'] ?? 'users'));
 }
@@ -121,7 +129,8 @@ $courses = $pdo->query(
                     <td><?= $c['price'] > 0 ? 'Rs ' . number_format((float) $c['price']) : 'Free' ?></td>
                     <td><?= (int) $c['student_count'] ?></td>
                     <td><span class="badge <?= $c['is_published'] ? 'badge-free' : 'badge-paid' ?>"><?= $c['is_published'] ? 'Published' : 'Draft' ?></span></td>
-                    <td>
+                    <td style="display:flex;gap:.4rem">
+                        <a href="edit-course.php?id=<?= (int) $c['id'] ?>" class="btn btn-sm btn-outline">Edit</a>
                         <form method="post"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_published" value="<?= (int) $c['id'] ?>" class="btn btn-sm btn-outline"><?= $c['is_published'] ? 'Unpublish' : 'Publish' ?></button></form>
                     </td>
                 </tr>
@@ -133,7 +142,7 @@ $courses = $pdo->query(
             <a href="?export=users" class="btn btn-outline btn-sm">⬇ Download CSV</a>
         </div>
         <table class="table">
-            <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Country</th><th>Qualification</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Country</th><th>Qualification</th><th>Status</th><th>Verified</th><th>Joined</th><th>Actions</th></tr></thead>
             <tbody>
                 <?php foreach ($users as $u): ?>
                 <tr>
@@ -143,9 +152,25 @@ $courses = $pdo->query(
                     <td><?= e($u['country'] ?: '—') ?></td>
                     <td style="max-width:220px"><?= e($u['qualification'] ?: '—') ?></td>
                     <td><span class="badge <?= $u['is_approved'] ? 'badge-free' : 'badge-paid' ?>"><?= $u['is_approved'] ? 'Active' : 'Suspended' ?></span></td>
+                    <td><?= $u['is_verified'] ? '✓ Verified' : '—' ?></td>
                     <td><?= date('M j, Y', strtotime($u['created_at'])) ?></td>
-                    <td>
+                    <td style="display:flex;gap:.4rem">
                         <form method="post"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_approved" value="<?= (int) $u['id'] ?>" class="btn btn-sm btn-outline"><?= $u['is_approved'] ? 'Suspend' : 'Reactivate' ?></button></form>
+                        <?php if (!$u['is_verified']): ?>
+                        <form method="post"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_verified" value="<?= (int) $u['id'] ?>" class="btn btn-sm btn-outline">Verify</button></form>
+                        <?php endif; ?>
+                        <?php if ((int) $u['id'] !== (int) $user['id']): ?>
+                        <form method="post" onsubmit="return confirm('Change <?= e($u['name']) ?>\'s role?')">
+                            <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+                            <input type="hidden" name="user_id" value="<?= (int) $u['id'] ?>">
+                            <select name="set_role" onchange="this.form.submit()" class="form-control" style="padding:.3rem .5rem;font-size:.78rem;width:auto;display:inline-block">
+                                <option value="">Change role…</option>
+                                <option value="student" <?= $u['role']==='student'?'selected':'' ?>>Student</option>
+                                <option value="teacher" <?= $u['role']==='teacher'?'selected':'' ?>>Teacher</option>
+                                <option value="admin" <?= $u['role']==='admin'?'selected':'' ?>>Admin</option>
+                            </select>
+                        </form>
+                        <?php endif; ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>

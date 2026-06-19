@@ -24,11 +24,15 @@ Bab ul Ilm Academy is a dual-role e-learning platform:
 | Feature | Status |
 |---|---|
 | Dual registration — Student or Teacher role at signup | ✅ |
+| Email verification required before login (24h token, resend supported) | ✅ |
+| Edit your own profile (name, country, phone, bio, qualification, password) | ✅ |
 | Teacher: create courses (subject, level, language, price) | ✅ |
 | Teacher: add lessons to a course in order | ✅ |
+| Owners and admins can edit any course — "Last edited by" shown on the course | ✅ |
 | Student: browse/search course catalog by subject | ✅ |
 | Student: enroll and mark lessons complete, see progress bar | ✅ |
-| Admin panel — manage users & courses, suspend accounts, export CSV | ✅ |
+| Country selector with auto-filled dial code + validated 10-digit phone | ✅ |
+| Admin panel — manage users & courses, change roles, suspend accounts, export CSV | ✅ |
 | Certificates on course completion | 🔜 planned |
 | Video lesson embedding (YouTube/Vimeo URL field exists, not yet rendered) | 🔜 planned |
 | Paid course checkout | 🔜 planned |
@@ -48,7 +52,10 @@ bab_ul_ilm_academy/
 ├── add-course.php            # Teacher: create a new course
 ├── add-lesson.php             # Teacher: add lessons to a course
 ├── dashboard.php               # Role-aware dashboard (teacher's courses / student's enrollments)
-├── admin.php                    # Admin panel (users, courses, CSV export)
+├── edit-course.php             # Edit a course (owner teacher or admin)
+├── edit-profile.php            # Edit your own profile
+├── verify.php / verify-pending.php / resend-verification.php   # Email verification flow
+├── admin.php                    # Admin panel (users, roles, courses, CSV export)
 ├── VISION.md                     # Product vision & mission
 └── TASKS.md                       # Project task tracker
 ```
@@ -83,7 +90,16 @@ UPDATE users SET password = '<new bcrypt hash>' WHERE email = 'admin@babulilmaca
 Visit `/admin.php` while logged in as the admin account (`role = 'admin'`) to:
 - View platform stats (teachers, students, courses, enrollments)
 - View and CSV-export all users; suspend/reactivate accounts (suspended users are blocked at login)
-- View, publish/unpublish, and CSV-export all courses
+- **Change any user's role** (student / teacher / admin) via a dropdown — you cannot change your own role
+- View, edit, publish/unpublish, and CSV-export all courses
+
+## Email Verification
+
+New accounts must verify their email before logging in. `mail()` is attempted on registration, but **most local environments (XAMPP) have no SMTP configured**, so delivery will silently fail. To make local testing possible, `config.php` has `DEV_SHOW_VERIFY_LINK = true`, which shows the verification link directly on the "check your email" page after registering. **Set this to `false` once real SMTP/email delivery is wired up in production.**
+
+## Editing & Attribution
+
+Teachers can edit their own courses from `dashboard.php` or the course page. Admins can edit *any* course the same way. Whenever an admin edits someone else's course, the course page shows "Last edited by [Admin Name] (Admin)" so changes are always traceable.
 
 ## Roles
 

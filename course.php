@@ -4,8 +4,10 @@ $user = auth();
 
 $id = (int) ($_GET['id'] ?? 0);
 $stmt = $pdo->prepare(
-    'SELECT c.*, u.name AS teacher_name, u.qualification, s.name AS subject_name, s.icon AS subject_icon
+    'SELECT c.*, u.name AS teacher_name, u.qualification, s.name AS subject_name, s.icon AS subject_icon,
+            e.name AS editor_name, e.role AS editor_role
      FROM courses c JOIN users u ON u.id = c.teacher_id LEFT JOIN subjects s ON s.id = c.subject_id
+     LEFT JOIN users e ON e.id = c.updated_by
      WHERE c.id = ?'
 );
 $stmt->execute([$id]);
@@ -89,8 +91,19 @@ $progressPct = $lessons ? (int) round(count($completedLessons) / count($lessons)
                 <span class="badge <?= $course['price'] == 0 ? 'badge-free' : 'badge-paid' ?>"><?= $course['price'] > 0 ? 'Rs ' . number_format((float) $course['price']) : 'Free' ?></span>
                 <span class="badge" style="background:#f5f5f5;color:#555"><?= e($course['language']) ?></span>
             </div>
-            <h1 style="font-size:1.5rem;margin-bottom:.6rem"><?= e($course['title']) ?></h1>
+            <div style="display:flex;align-items:center;gap:.7rem;flex-wrap:wrap">
+                <h1 style="font-size:1.5rem;margin-bottom:.6rem"><?= e($course['title']) ?></h1>
+                <?php if ($user && ($user['id'] == $course['teacher_id'] || $user['role'] === 'admin')): ?>
+                    <a href="edit-course.php?id=<?= $id ?>" class="btn btn-sm btn-outline">✏️ Edit</a>
+                <?php endif; ?>
+            </div>
             <p style="color:var(--text-mid);margin-bottom:1rem"><?= e($course['description']) ?></p>
+            <?php if ($course['editor_name']): ?>
+                <div style="font-size:.78rem;color:var(--text-light);margin-bottom:1rem">
+                    Last edited by <?= e($course['editor_name']) ?><?= $course['editor_role'] === 'admin' ? ' (Admin)' : '' ?>
+                    on <?= date('M j, Y', strtotime($course['updated_at'])) ?>
+                </div>
+            <?php endif; ?>
 
             <div style="display:flex;align-items:center;gap:1rem;padding:1rem;background:var(--cream);border-radius:var(--radius-sm)">
                 <div class="profile-avatar" style="width:48px;height:48px;font-size:1.1rem;margin:0;background:var(--gold)"><?= e(mb_substr($course['teacher_name'], 0, 1)) ?></div>

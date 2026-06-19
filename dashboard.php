@@ -18,6 +18,7 @@ if ($user['role'] === 'admin') redirect('admin.php');
     <div class="nav-links">
         <a href="courses.php">Courses</a>
         <?php if ($user['role'] === 'teacher'): ?><a href="add-course.php">+ New Course</a><?php endif; ?>
+        <a href="edit-profile.php">Edit Profile</a>
         <?php if ($user['role'] === 'admin'): ?><a href="admin.php">Admin</a><?php endif; ?>
         <a href="logout.php" class="nav-btn">Logout</a>
     </div>
@@ -61,7 +62,10 @@ if ($user['role'] === 'admin') redirect('admin.php');
                     <td><?= $c['price'] > 0 ? 'Rs ' . number_format((float) $c['price']) : 'Free' ?></td>
                     <td><?= (int) $c['student_count'] ?></td>
                     <td><span class="badge <?= $c['is_published'] ? 'badge-free' : 'badge-paid' ?>"><?= $c['is_published'] ? 'Published' : 'Draft' ?></span></td>
-                    <td><a href="add-lesson.php?course_id=<?= (int) $c['id'] ?>" class="btn btn-sm btn-outline">+ Lesson</a></td>
+                    <td style="display:flex;gap:.4rem">
+                        <a href="edit-course.php?id=<?= (int) $c['id'] ?>" class="btn btn-sm btn-outline">Edit</a>
+                        <a href="add-lesson.php?course_id=<?= (int) $c['id'] ?>" class="btn btn-sm btn-outline">+ Lesson</a>
+                    </td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>

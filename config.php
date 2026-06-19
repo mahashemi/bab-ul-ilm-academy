@@ -9,7 +9,12 @@ define('DB_NAME', 'bab_ul_ilm');
 
 define('SITE_NAME', 'Bab ul Ilm Academy');
 define('SITE_TAGLINE', 'Seek Knowledge — From the Cradle to the Grave');
-define('SITE_URL', '');             // e.g. https://babulilm.com
+define('SITE_URL', '');             // e.g. https://babulilmacademy.com
+
+// Email verification: when true, the verification link is also shown on screen
+// after registration (useful when SMTP isn't configured yet, e.g. local XAMPP).
+// Set this to false once real email delivery works in production.
+define('DEV_SHOW_VERIFY_LINK', true);
 
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params(['httponly' => true, 'samesite' => 'Lax']);

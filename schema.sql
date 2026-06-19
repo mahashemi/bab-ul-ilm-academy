@@ -1,6 +1,6 @@
--- Bab ul Ilm Academy Database Schema
+-- Bab ul Ilm Academy Database Schema (Production)
 -- Run this file once to set up your database.
--- Command: mysql -u root -p < schema.sql
+-- Command: mysql --default-character-set=utf8mb4 -u root -p < schema.sql
 
 CREATE DATABASE IF NOT EXISTS bab_ul_ilm
     CHARACTER SET utf8mb4
@@ -109,40 +109,9 @@ CREATE TABLE IF NOT EXISTS course_reviews (
     FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- ── Demo Users ────────────────────────────────────────────────────────────
--- Default password for all demo users: Admin@123
-INSERT INTO users (name, email, password, role, country, qualification) VALUES
-('Admin',          'admin@babulilm.com',   '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin',   'Pakistan', NULL),
-('Sheikh Ibrahim', 'sheikh@babulilm.com',  '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'teacher', 'Pakistan', 'MA Islamic Studies, IIU Islamabad. Hafiz-ul-Quran. 10 years teaching experience.'),
-('Ustadha Zainab', 'zainab@babulilm.com',  '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'teacher', 'Pakistan', 'Qari and Arabic teacher, Jamia Karachi. Specialises in Tajweed for beginners.'),
-('Student Ahmad',  'ahmad@example.com',    '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student', 'UK',       NULL);
-
--- ── Demo Courses ──────────────────────────────────────────────────────────
-INSERT INTO courses (teacher_id, subject_id, title, description, level, language, price, is_published) VALUES
-(2, 1, 'Tajweed for Beginners — Learn to Read Quran Correctly',
- 'A complete beginner course on the rules of Tajweed. You will learn the Makharij (articulation points), Sifaat, Madd rules, and how to recite the Quran with proper pronunciation. No prior knowledge needed.',
- 'beginner', 'English', 0.00, 1),
-(2, 2, 'Forty Hadith of Imam Nawawi — Explained',
- 'Study the famous 40 Hadith collection with detailed explanation of each narration, its chain, meaning, and practical lessons for daily life.',
- 'intermediate', 'English', 500.00, 1),
-(3, 4, 'Arabic for Absolute Beginners',
- 'Learn to read, write, and speak basic Arabic from scratch. This course covers the Arabic alphabet, basic vocabulary, and simple sentence structure.',
- 'beginner', 'Urdu/English', 0.00, 1),
-(3, 1, 'Advanced Tajweed — Ahkaam ul Tajweed',
- 'Deep dive into the advanced rules of Tajweed for students who already know basics. Covers Waqf, Ibtida, Ghunna levels, and special rules.',
- 'advanced', 'Urdu', 800.00, 1);
-
--- ── Demo Lessons ──────────────────────────────────────────────────────────
-INSERT INTO lessons (course_id, title, content, sort_order) VALUES
-(1, 'Welcome & Course Overview',      'In this lesson we introduce ourselves and explain the full course structure, what you will learn, and how to get the most from each session.', 1),
-(1, 'The Arabic Alphabet — Full Review', 'We will review all 28 letters of the Arabic alphabet, their forms (initial, medial, final, isolated), and their names.', 2),
-(1, 'Makharij — Points of Articulation', 'Learn where each Arabic letter is articulated from: throat, tongue, lips, nasal passage. Correct Makharij is the foundation of Tajweed.', 3),
-(2, 'Introduction to the 40 Hadith',  'Who is Imam Nawawi? The history of this famous collection, and why these 40 Hadith are considered the foundation of Islam.', 1),
-(2, 'Hadith 1 — Actions by Intentions', 'Full text, chain of narration, explanation of "innama al-a''maal bil-niyyaat" and its implications in worship and daily life.', 2),
-(3, 'Arabic Alphabet — Letters 1-10', 'Learn to write and pronounce the first 10 letters: Alif, Ba, Ta, Tha, Jim, Ha, Kha, Dal, Dhal, Ra.', 1),
-(3, 'Arabic Alphabet — Letters 11-28', 'Complete the alphabet. Practice writing each letter in all four forms.', 2);
-
--- ── Demo Enrollments ──────────────────────────────────────────────────────
-INSERT INTO enrollments (student_id, course_id) VALUES
-(4, 1),
-(4, 3);
+-- ── Initial Admin Account ───────────────────────────────────────────────
+-- Default password: Admin@123
+-- IMPORTANT: Log in immediately and change this password via your profile.
+INSERT INTO users (name, email, password, role) VALUES
+('Site Admin', 'admin@babulilmacademy.com',
+ '$2y$10$Rn49XbRBi1VaO9H6AnkdfOhBEGhhe.D.4.HYAJaquZDWuHT7qXS2q', 'admin');

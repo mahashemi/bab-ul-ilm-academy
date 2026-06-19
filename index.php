@@ -37,6 +37,7 @@ $stats = $pdo->query(
         <a href="courses.php">Courses</a>
         <?php if ($user): ?>
             <a href="dashboard.php">Dashboard</a>
+            <?php if ($user['role'] === 'admin'): ?><a href="admin.php">Admin</a><?php endif; ?>
             <a href="logout.php" class="nav-btn">Logout</a>
         <?php else: ?>
             <a href="login.php">Login</a>

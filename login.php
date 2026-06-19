@@ -11,12 +11,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email    = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
 
-    $stmt = $pdo->prepare('SELECT id, name, email, password, role FROM users WHERE email = ?');
+    $stmt = $pdo->prepare('SELECT id, name, email, password, role, is_approved FROM users WHERE email = ?');
     $stmt->execute([$email]);
     $u = $stmt->fetch();
 
     if (!$u || !password_verify($password, $u['password'])) {
         $errors[] = 'Incorrect email or password.';
+    } elseif (!$u['is_approved']) {
+        $errors[] = 'Your account has been suspended. Please contact the administrator.';
     } else {
         $_SESSION['user'] = ['id' => $u['id'], 'name' => $u['name'], 'email' => $u['email'], 'role' => $u['role']];
         redirect('dashboard.php');
@@ -64,11 +66,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <p style="text-align:center;margin-top:1.2rem;font-size:.88rem;color:var(--text-light)">
             New here? <a href="register.php">Create an account</a>
         </p>
-
-        <div class="alert alert-info" style="margin-top:1.5rem;font-size:.82rem">
-            <strong>Demo teacher:</strong> sheikh@babulilm.com / Admin@123<br>
-            <strong>Demo student:</strong> ahmad@example.com / Admin@123
-        </div>
     </div>
 </div>
 </body>

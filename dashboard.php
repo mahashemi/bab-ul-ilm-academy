@@ -2,6 +2,7 @@
 require_once __DIR__ . '/db.php';
 requireAuth();
 $user = auth();
+if ($user['role'] === 'admin') redirect('admin.php');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -17,6 +18,7 @@ $user = auth();
     <div class="nav-links">
         <a href="courses.php">Courses</a>
         <?php if ($user['role'] === 'teacher'): ?><a href="add-course.php">+ New Course</a><?php endif; ?>
+        <?php if ($user['role'] === 'admin'): ?><a href="admin.php">Admin</a><?php endif; ?>
         <a href="logout.php" class="nav-btn">Logout</a>
     </div>
 </nav>

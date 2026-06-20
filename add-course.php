@@ -21,11 +21,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!in_array($level, ['beginner','intermediate','advanced'], true)) $errors[] = 'Invalid level.';
 
     if (!$errors) {
+        $imagePath = handleImageUpload('cover', 'courses');
         $stmt = $pdo->prepare(
-            'INSERT INTO courses (teacher_id, subject_id, title, description, level, language, price, is_published)
-             VALUES (?, ?, ?, ?, ?, ?, ?, 1)'
+            'INSERT INTO courses (teacher_id, subject_id, title, description, level, language, price, cover_url, is_published)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)'
         );
-        $stmt->execute([$user['id'], $subjectId ?: null, $title, $description, $level, $language, $price]);
+        $stmt->execute([$user['id'], $subjectId ?: null, $title, $description, $level, $language, $price, $imagePath]);
         $newId = (int) $pdo->lastInsertId();
         flash('success', 'Course created! Now add some lessons.');
         redirect('add-lesson.php?course_id=' . $newId);
@@ -54,8 +55,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php endif; ?>
 
     <div class="card"><div class="card-body">
-        <form method="post">
+        <form method="post" enctype="multipart/form-data">
             <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+
+            <div class="form-group">
+                <label class="form-label">Cover Image (optional)</label>
+                <input type="file" name="cover" class="form-control" accept="image/jpeg,image/png,image/webp">
+                <div class="form-hint">JPG, PNG, or WEBP. Max 5MB. Leave blank to use a subject icon instead.</div>
+            </div>
 
             <div class="form-group">
                 <label class="form-label">Course Title</label>

@@ -84,7 +84,9 @@ $progressPct = $lessons ? (int) round(count($completedLessons) / count($lessons)
     <?php if (flash('success')): ?><div class="alert alert-success"><?= e(flash('success')) ?></div><?php endif; ?>
 
     <div class="card">
-        <div class="course-cover" style="height:200px;font-size:5rem"><?= e($course['subject_icon'] ?: '📖') ?></div>
+        <div class="course-cover" style="height:200px;font-size:5rem">
+            <?php if ($course['cover_url']): ?><img src="<?= e($course['cover_url']) ?>" alt=""><?php else: ?><?= e($course['subject_icon'] ?: '📖') ?><?php endif; ?>
+        </div>
         <div class="card-body">
             <div style="display:flex;gap:.6rem;margin-bottom:.6rem;flex-wrap:wrap">
                 <span class="badge badge-<?= e($course['level']) ?>"><?= e(ucfirst($course['level'])) ?></span>

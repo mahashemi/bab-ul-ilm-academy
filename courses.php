@@ -62,7 +62,7 @@ $courses = $stmt->fetchAll();
         <?php foreach ($courses as $c): ?>
         <a href="course.php?id=<?= (int) $c['id'] ?>" class="course-card" style="text-decoration:none;color:inherit">
             <div class="course-cover">
-                <?= e($c['subject_icon'] ?: '📖') ?>
+                <?php if ($c['cover_url']): ?><img src="<?= e($c['cover_url']) ?>" alt=""><?php else: ?><?= e($c['subject_icon'] ?: '📖') ?><?php endif; ?>
                 <span class="badge badge-<?= e($c['level']) ?> course-level"><?= e(ucfirst($c['level'])) ?></span>
             </div>
             <div class="course-body">

@@ -97,3 +97,41 @@ function sendVerificationEmail(string $toEmail, string $name, string $token): bo
     $headers = 'From: no-reply@' . preg_replace('/^www\./', '', $_SERVER['HTTP_HOST'] ?? 'localhost');
     return @mail($toEmail, $subject, $body, $headers);
 }
+
+// ── Image Upload ──────────────────────────────────────────────────────────
+// Returns a relative path to store in the DB, or null if no valid file was uploaded.
+function handleImageUpload(string $fieldName, string $subDir): ?string {
+    if (empty($_FILES[$fieldName]['name']) || $_FILES[$fieldName]['error'] === UPLOAD_ERR_NO_FILE) {
+        return null;
+    }
+    if ($_FILES[$fieldName]['error'] !== UPLOAD_ERR_OK) {
+        return null;
+    }
+    $tmpPath = $_FILES[$fieldName]['tmp_name'];
+    if ($_FILES[$fieldName]['size'] > 5 * 1024 * 1024) {
+        return null; // 5MB limit
+    }
+
+    $imageInfo = @getimagesize($tmpPath);
+    if (!$imageInfo) {
+        return null; // not a real image
+    }
+
+    $allowedTypes = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_WEBP => 'webp'];
+    if (!isset($allowedTypes[$imageInfo[2]])) {
+        return null;
+    }
+
+    $ext = $allowedTypes[$imageInfo[2]];
+    $filename = bin2hex(random_bytes(16)) . '.' . $ext;
+    $destDir = __DIR__ . '/uploads/' . $subDir;
+    if (!is_dir($destDir)) {
+        mkdir($destDir, 0755, true);
+    }
+
+    if (!move_uploaded_file($tmpPath, $destDir . '/' . $filename)) {
+        return null;
+    }
+
+    return 'uploads/' . $subDir . '/' . $filename;
+}

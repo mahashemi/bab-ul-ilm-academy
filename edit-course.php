@@ -39,11 +39,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!in_array($level, ['beginner','intermediate','advanced'], true)) $errors[] = 'Invalid level.';
 
     if (!$errors) {
+        $imagePath = handleImageUpload('cover', 'courses') ?? $course['cover_url'];
         $stmt = $pdo->prepare(
-            'UPDATE courses SET title=?, description=?, subject_id=?, level=?, language=?, price=?, is_published=?, updated_by=?, updated_at=NOW()
+            'UPDATE courses SET title=?, description=?, subject_id=?, level=?, language=?, price=?, cover_url=?, is_published=?, updated_by=?, updated_at=NOW()
              WHERE id=?'
         );
-        $stmt->execute([$title, $description, $subjectId ?: null, $level, $language, $price, $isPublished, $user['id'], $id]);
+        $stmt->execute([$title, $description, $subjectId ?: null, $level, $language, $price, $imagePath, $isPublished, $user['id'], $id]);
         flash('success', 'Course updated.');
         redirect('course.php?id=' . $id);
     }
@@ -74,8 +75,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php endif; ?>
 
     <div class="card"><div class="card-body">
-        <form method="post">
+        <form method="post" enctype="multipart/form-data">
             <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+
+            <div class="form-group">
+                <label class="form-label">Cover Image</label>
+                <?php if ($course['cover_url']): ?>
+                    <img src="<?= e($course['cover_url']) ?>" style="max-width:200px;border-radius:8px;margin-bottom:.6rem;display:block">
+                <?php endif; ?>
+                <input type="file" name="cover" class="form-control" accept="image/jpeg,image/png,image/webp">
+                <div class="form-hint">Upload a new cover to replace the current one, or leave blank to keep it.</div>
+            </div>
 
             <div class="form-group">
                 <label class="form-label">Course Title</label>

@@ -33,6 +33,7 @@
 - [x] Implement course catalog with search/filter — P1
 - [x] Teacher profile: qualification, bio, subjects — P2
 - [x] Admin panel: suspend/reactivate users, publish/unpublish courses — P2
+- [x] Cover image upload for courses (JPG/PNG/WEBP, 5MB max, server-validated) — P2
 - [ ] Course reviews / ratings by students (table exists, no UI yet) — P2
 - [ ] Certificate generation on completion — P3
 - [ ] Payment integration for paid courses — P3

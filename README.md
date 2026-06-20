@@ -33,6 +33,7 @@ Bab ul Ilm Academy is a dual-role e-learning platform:
 | Student: enroll and mark lessons complete, see progress bar | ✅ |
 | Country selector with auto-filled dial code + validated 10-digit phone | ✅ |
 | Admin panel — manage users & courses, change roles, suspend accounts, export CSV | ✅ |
+| Cover image upload for courses (JPG/PNG/WEBP, 5MB max, validated server-side) | ✅ |
 | Certificates on course completion | 🔜 planned |
 | Video lesson embedding (YouTube/Vimeo URL field exists, not yet rendered) | 🔜 planned |
 | Paid course checkout | 🔜 planned |
@@ -96,6 +97,10 @@ Visit `/admin.php` while logged in as the admin account (`role = 'admin'`) to:
 ## Email Verification
 
 New accounts must verify their email before logging in. `mail()` is attempted on registration, but **most local environments (XAMPP) have no SMTP configured**, so delivery will silently fail. To make local testing possible, `config.php` has `DEV_SHOW_VERIFY_LINK = true`, which shows the verification link directly on the "check your email" page after registering. **Set this to `false` once real SMTP/email delivery is wired up in production.**
+
+## Image Uploads
+
+Courses support a cover image upload (JPG/PNG/WEBP, max 5MB). Files are validated server-side with `getimagesize()` (not just by extension), renamed to a random filename, and stored in `/uploads/courses/`. That folder has a `.htaccess` blocking PHP/script execution. If no cover is uploaded, courses fall back to a subject icon.
 
 ## Editing & Attribution
 

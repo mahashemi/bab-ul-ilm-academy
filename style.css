@@ -209,10 +209,33 @@ footer { background: var(--green-deep); color: rgba(255,255,255,.75); padding: 3
 .empty-state .icon { font-size: 3.5rem; margin-bottom: 1rem; opacity: .5; }
 .empty-state h3 { font-size: 1.2rem; color: var(--text-mid); margin-bottom: .5rem; }
 
-@media (max-width: 680px) {
-    .nav-links { display: none; }
-    .hero { padding: 3rem 1rem; }
-    .grid-2 { grid-template-columns: 1fr; }
+@media (max-width: 768px) {
+    .navbar {
+        flex-direction: column; align-items: stretch; height: auto;
+        padding: .7rem 1rem; gap: .5rem;
+    }
+    .nav-brand { font-size: 1.1rem; text-align: center; }
+    .nav-brand small { font-size: .65rem; }
+    .nav-links { flex-wrap: wrap; justify-content: center; gap: .4rem .6rem; width: 100%; }
+    .nav-links a { font-size: .82rem; padding: .35rem .65rem; }
+    .hero { padding: 2.5rem 1rem; }
+    .hero h1 { font-size: 1.6rem; }
+    .hero p { font-size: .95rem; }
+    .hero-actions { flex-direction: column; align-items: stretch; }
+    .hero-stats { gap: 1.5rem; }
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
     .form-row { grid-template-columns: 1fr; }
-    .auth-box { padding: 1.8rem; }
+    .auth-box { padding: 1.5rem; }
+    .container, .section { padding-left: 1rem; padding-right: 1rem; }
+    .dashboard-wrap { padding: 0 1rem; }
+    .dashboard-header { padding: 1.2rem 1.4rem; }
+    .table { font-size: .8rem; }
+    .table th, .table td { padding: .6rem .5rem; white-space: nowrap; }
+    .dashboard-wrap, .container { overflow-x: auto; }
+    .role-switch { flex-direction: column; }
+}
+@media (max-width: 420px) {
+    .hero h1 { font-size: 1.4rem; }
+    .nav-brand { font-size: 1rem; }
+    .btn { padding: .6rem 1.2rem; font-size: .88rem; }
 }

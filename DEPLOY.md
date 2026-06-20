@@ -54,7 +54,11 @@ This is your backup and source of truth. **Never skip this step** — the server
 
 ## 4. Deploy to Production Server
 
-Two supported paths depending on what kind of hosting you end up with:
+**✅ This app is live.** Production deployment uses cPanel with SSH access and a real git clone in the document root (the "VPS" pattern below, adapted for shared cPanel hosting). The site is a working `git clone` of this repo — **every deploy after the first is just `git pull origin main` on the server.**
+
+`config.php` on the server is marked `git update-index --skip-worktree` so it will never be overwritten by a pull, no matter what changes in this file upstream. Server access details (host, SSH key, DB credentials) are kept outside this public repo — ask whoever set up the deployment if you need them.
+
+Two generic paths are documented below for reference (e.g. if redeploying to a new host):
 
 ### Option A — Shared Hosting (cPanel / FTP, no SSH)
 Most budget PHP/MySQL hosts (Hostinger, Namecheap, GoDaddy) fall here.

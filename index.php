@@ -27,6 +27,7 @@ $stats = $pdo->query(
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?= e(SITE_NAME) ?> — <?= e(SITE_TAGLINE) ?></title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%95%8C%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -37,7 +38,7 @@ $stats = $pdo->query(
         <a href="courses.php">Courses</a>
         <?php if ($user): ?>
             <a href="dashboard.php">Dashboard</a>
-            <?php if ($user['role'] === 'admin'): ?><a href="admin.php">Admin</a><?php endif; ?>
+            <?php if (($user['role'] ?? '') === 'admin'): ?><a href="admin.php">Admin</a><?php endif; ?>
             <a href="logout.php" class="nav-btn">Logout</a>
         <?php else: ?>
             <a href="login.php">Login</a>

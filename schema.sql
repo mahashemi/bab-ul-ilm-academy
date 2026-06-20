@@ -27,14 +27,14 @@ CREATE TABLE IF NOT EXISTS users (
     created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_email (email),
     INDEX idx_role (role)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── Course Categories ─────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS subjects (
     id   INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     icon VARCHAR(10)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO subjects (name, icon) VALUES
 ('Quran & Tajweed',               '📖'),
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS courses (
     FOREIGN KEY (updated_by)  REFERENCES users(id) ON DELETE SET NULL,
     INDEX idx_teacher (teacher_id),
     INDEX idx_published (is_published)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── Lessons ───────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS lessons (
@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS lessons (
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
     INDEX idx_course (course_id)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── Enrollments ───────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS enrollments (
@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS enrollments (
     UNIQUE KEY one_enrollment (student_id, course_id),
     FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (course_id)  REFERENCES courses(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── Lesson Progress ───────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS lesson_progress (
@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS lesson_progress (
     PRIMARY KEY (student_id, lesson_id),
     FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (lesson_id)  REFERENCES lessons(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── Reviews ───────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS course_reviews (
@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS course_reviews (
     UNIQUE KEY one_review (course_id, student_id),
     FOREIGN KEY (course_id)  REFERENCES courses(id) ON DELETE CASCADE,
     FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── Initial Admin Account ───────────────────────────────────────────────
 -- Default password: Admin@123

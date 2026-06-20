@@ -28,7 +28,7 @@ $studentCount = $studentCount->fetch()['c'];
 
 $isEnrolled = false;
 $completedLessons = [];
-if ($user && $user['role'] === 'student') {
+if ($user && ($user['role'] ?? '') === 'student') {
     $e = $pdo->prepare('SELECT 1 FROM enrollments WHERE student_id = ? AND course_id = ?');
     $e->execute([$user['id'], $id]);
     $isEnrolled = (bool) $e->fetch();
@@ -43,7 +43,7 @@ if ($user && $user['role'] === 'student') {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['enroll'])) {
     requireAuth();
     verifyCsrf();
-    if ($user['role'] === 'student' && !$isEnrolled) {
+    if (($user['role'] ?? '') === 'student' && !$isEnrolled) {
         $pdo->prepare('INSERT IGNORE INTO enrollments (student_id, course_id) VALUES (?, ?)')->execute([$user['id'], $id]);
         flash('success', 'Enrolled successfully! Start learning below.');
         redirect('course.php?id=' . $id);
@@ -68,6 +68,7 @@ $progressPct = $lessons ? (int) round(count($completedLessons) / count($lessons)
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?= e($course['title']) ?> — <?= e(SITE_NAME) ?></title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%95%8C%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -95,7 +96,7 @@ $progressPct = $lessons ? (int) round(count($completedLessons) / count($lessons)
             </div>
             <div style="display:flex;align-items:center;gap:.7rem;flex-wrap:wrap">
                 <h1 style="font-size:1.5rem;margin-bottom:.6rem"><?= e($course['title']) ?></h1>
-                <?php if ($user && ($user['id'] == $course['teacher_id'] || $user['role'] === 'admin')): ?>
+                <?php if ($user && ($user['id'] == $course['teacher_id'] || ($user['role'] ?? '') === 'admin')): ?>
                     <a href="edit-course.php?id=<?= $id ?>" class="btn btn-sm btn-outline">✏️ Edit</a>
                 <?php endif; ?>
             </div>
@@ -120,7 +121,7 @@ $progressPct = $lessons ? (int) round(count($completedLessons) / count($lessons)
         <div class="card-footer">
             <?php if (!$user): ?>
                 <a href="login.php" class="btn btn-primary btn-full">Login to Enroll</a>
-            <?php elseif ($user['role'] !== 'student'): ?>
+            <?php elseif (($user['role'] ?? '') !== 'student'): ?>
                 <div class="alert alert-info">Only students can enroll in courses.</div>
             <?php elseif ($isEnrolled): ?>
                 <div class="alert alert-success">✓ You are enrolled in this course</div>

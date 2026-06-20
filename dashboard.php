@@ -2,7 +2,7 @@
 require_once __DIR__ . '/db.php';
 requireAuth();
 $user = auth();
-if ($user['role'] === 'admin') redirect('admin.php');
+if (($user['role'] ?? '') === 'admin') redirect('admin.php');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -10,6 +10,7 @@ if ($user['role'] === 'admin') redirect('admin.php');
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard — <?= e(SITE_NAME) ?></title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%95%8C%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -17,9 +18,9 @@ if ($user['role'] === 'admin') redirect('admin.php');
     <div class="nav-brand">🕌 <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></div>
     <div class="nav-links">
         <a href="courses.php">Courses</a>
-        <?php if ($user['role'] === 'teacher'): ?><a href="add-course.php">+ New Course</a><?php endif; ?>
+        <?php if (($user['role'] ?? '') === 'teacher'): ?><a href="add-course.php">+ New Course</a><?php endif; ?>
         <a href="edit-profile.php">Edit Profile</a>
-        <?php if ($user['role'] === 'admin'): ?><a href="admin.php">Admin</a><?php endif; ?>
+        <?php if (($user['role'] ?? '') === 'admin'): ?><a href="admin.php">Admin</a><?php endif; ?>
         <a href="logout.php" class="nav-btn">Logout</a>
     </div>
 </nav>
@@ -27,13 +28,13 @@ if ($user['role'] === 'admin') redirect('admin.php');
 <div class="dashboard-wrap">
     <div class="dashboard-header">
         <h2>👋 Welcome, <?= e($user['name']) ?></h2>
-        <p><?= $user['role'] === 'teacher' ? 'Manage your courses and track your students.' : 'Continue your learning journey.' ?></p>
-        <span class="dashboard-role badge-<?= e($user['role']) ?>"><?= e(ucfirst($user['role'])) ?></span>
+        <p><?= ($user['role'] ?? '') === 'teacher' ? 'Manage your courses and track your students.' : 'Continue your learning journey.' ?></p>
+        <span class="dashboard-role badge-<?= e(($user['role'] ?? '')) ?>"><?= e(ucfirst(($user['role'] ?? ''))) ?></span>
     </div>
 
     <?php if (flash('success')): ?><div class="alert alert-success"><?= e(flash('success')) ?></div><?php endif; ?>
 
-    <?php if ($user['role'] === 'teacher'): ?>
+    <?php if (($user['role'] ?? '') === 'teacher'): ?>
         <?php
         $stmt = $pdo->prepare(
             "SELECT c.*, s.name AS subject_name, (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) AS student_count

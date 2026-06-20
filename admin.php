@@ -2,7 +2,7 @@
 require_once __DIR__ . '/db.php';
 requireAuth();
 $user = auth();
-if ($user['role'] !== 'admin') {
+if (($user['role'] ?? '') !== 'admin') {
     http_response_code(403);
     die('<p style="font-family:sans-serif;padding:3rem;text-align:center">Access denied. Admins only. <a href="index.php">Go back</a></p>');
 }
@@ -71,6 +71,7 @@ $courses = $pdo->query(
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin Panel — <?= e(SITE_NAME) ?></title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%95%8C%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>

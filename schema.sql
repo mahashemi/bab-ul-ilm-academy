@@ -44,7 +44,18 @@ INSERT INTO subjects (name, icon) VALUES
 ('Islamic History',               '🏛️'),
 ('Aqeedah (Belief)',              '✨'),
 ('Akhlaq & Spirituality',         '🌿'),
-('Children''s Education',         '🧒');
+('Children''s Education',         '🧒'),
+-- School subjects (Grade 1–12)
+('Mathematics',                   '🔢'),
+('Science',                       '🔬'),
+('English Language & Literature', '📚'),
+('Computer Science / ICT',        '💻'),
+('Social Studies (History & Geography)', '🌍'),
+-- Bachelor-level streams
+('Pre-Medical Studies',           '🩺'),
+('Pre-Engineering Studies',       '⚙️'),
+('Business & Commerce',          '💼'),
+('Arts & Humanities',            '🎨');
 
 -- ── Courses ───────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS courses (

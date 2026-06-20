@@ -6,10 +6,10 @@
 The name signifies that knowledge has a doorway, and this platform is that door for Muslims seeking to learn.
 
 ## Vision
-To become the foremost online Islamic learning institution — connecting qualified scholars and teachers with students worldwide, making sacred knowledge (Ilm) accessible to every Muslim regardless of geography or resources.
+To become the foremost online learning institution for the Muslim Ummah — connecting qualified scholars and teachers with students worldwide, making both sacred knowledge (Ilm) and core academic education accessible to every Muslim regardless of geography or resources.
 
 ## Mission
-Bab ul Ilm Academy provides a structured, trust-based e-learning platform where Islamic teachers publish courses, students enroll and track progress, and the pursuit of knowledge is honoured as one of the highest acts of worship in Islam.
+Bab ul Ilm Academy provides a structured, trust-based e-learning platform spanning two pillars: **Islamic studies** (Quran, Hadith, Fiqh, Arabic) and **core academics** (Mathematics, Science, English, Computer Science, Social Studies — Grade 1 through 12 — plus Bachelor-level streams: Pre-Medical, Pre-Engineering, Business, Arts & Humanities). Teachers publish courses, students enroll and track progress, and the pursuit of knowledge — religious or worldly — is honoured as one of the highest acts of worship in Islam.
 
 ## Tagline
 **"Seek Knowledge — From the Cradle to the Grave."** — Inspired by the hadith of the Prophet ﷺ
@@ -26,9 +26,9 @@ Bab ul Ilm Academy provides a structured, trust-based e-learning platform where 
 ---
 
 ## Target Audience
-- **Students:** Muslims of all ages seeking Islamic education online
-- **Teachers/Scholars:** Islamic educators, hafiz, scholars, university lecturers
-- **Subjects:** Quran, Hadith, Fiqh, Arabic, Islamic History, Akhlaq, Tafsir, etc.
+- **Students:** Muslims of all ages — from Grade 1 schoolchildren to Bachelor-level students — seeking Islamic and academic education online
+- **Teachers/Scholars:** Islamic educators, hafiz, scholars, university lecturers, and qualified school/college teachers
+- **Subjects:** Quran, Hadith, Fiqh, Arabic, Islamic History, Akhlaq, Tafsir, plus Mathematics, Science, English, Computer Science, Social Studies, and Bachelor streams (Pre-Medical, Pre-Engineering, Business, Arts & Humanities)
 
 ---
 

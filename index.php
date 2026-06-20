@@ -52,7 +52,7 @@ $stats = $pdo->query(
         <div class="hero-arabic">باب العلم</div>
         <h1>Seek Knowledge — <span>From the Cradle to the Grave</span></h1>
         <p style="font-size:.85rem;opacity:.75;margin-bottom:.6rem;letter-spacing:.3px"><?= e(SITE_AFFILIATION) ?></p>
-        <p>Learn Quran, Hadith, Fiqh, and Arabic from qualified teachers, anywhere in the world. Structured courses, real progress tracking, sincere teaching.</p>
+        <p>Islamic studies and core academics — from Quran, Hadith, and Fiqh to Mathematics, Science, and Bachelor-level streams — taught by qualified teachers, anywhere in the world. Structured courses, real progress tracking, sincere teaching, Grade 1 through university.</p>
         <div class="hero-actions">
             <?php if ($user): ?>
                 <a href="courses.php" class="btn btn-primary">Browse Courses</a>

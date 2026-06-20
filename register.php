@@ -93,6 +93,7 @@ function cleanPhoneInput(el) {
         <div class="auth-logo">
             <h2>🕌 <?= e(SITE_NAME) ?></h2>
             <p><?= e(SITE_TAGLINE) ?></p>
+            <p style="font-size:.75rem;color:var(--text-light);margin-top:.2rem"><?= e(SITE_AFFILIATION) ?></p>
         </div>
 
         <?php if ($errors): ?>

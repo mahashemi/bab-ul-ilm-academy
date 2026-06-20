@@ -30,7 +30,7 @@ $courses = $stmt->fetchAll();
 </head>
 <body>
 <nav class="navbar">
-    <div class="nav-brand">🕌 <?= e(SITE_NAME) ?></div>
+    <div class="nav-brand">🕌 <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></div>
     <div class="nav-links">
         <a href="courses.php">Courses</a>
         <?php if ($user): ?><a href="dashboard.php">Dashboard</a><a href="logout.php" class="nav-btn">Logout</a>
@@ -75,7 +75,7 @@ $courses = $stmt->fetchAll();
                 </div>
             </div>
             <div class="course-footer">
-                <span class="course-price <?= $c['price'] == 0 ? 'free' : '' ?>"><?= $c['price'] > 0 ? 'Rs ' . number_format((float) $c['price']) : 'Free' ?></span>
+                <span class="course-price <?= $c['price'] == 0 ? 'free' : '' ?>"><?= $c['price'] > 0 ? '$' . number_format((float) $c['price']) : 'Free' ?></span>
                 <span class="btn btn-outline btn-sm">View →</span>
             </div>
         </a>

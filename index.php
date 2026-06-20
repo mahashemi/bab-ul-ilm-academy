@@ -32,7 +32,7 @@ $stats = $pdo->query(
 <body>
 
 <nav class="navbar">
-    <div class="nav-brand">🕌 <?= e(SITE_NAME) ?><small>Gateway of Knowledge</small></div>
+    <div class="nav-brand">🕌 <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></div>
     <div class="nav-links">
         <a href="courses.php">Courses</a>
         <?php if ($user): ?>
@@ -50,6 +50,7 @@ $stats = $pdo->query(
     <div class="hero-content">
         <div class="hero-arabic">باب العلم</div>
         <h1>Seek Knowledge — <span>From the Cradle to the Grave</span></h1>
+        <p style="font-size:.85rem;opacity:.75;margin-bottom:.6rem;letter-spacing:.3px"><?= e(SITE_AFFILIATION) ?></p>
         <p>Learn Quran, Hadith, Fiqh, and Arabic from qualified teachers, anywhere in the world. Structured courses, real progress tracking, sincere teaching.</p>
         <div class="hero-actions">
             <?php if ($user): ?>
@@ -95,7 +96,7 @@ $stats = $pdo->query(
                 </div>
             </div>
             <div class="course-footer">
-                <span class="course-price <?= $c['price'] == 0 ? 'free' : '' ?>"><?= $c['price'] > 0 ? 'Rs ' . number_format((float) $c['price']) : 'Free' ?></span>
+                <span class="course-price <?= $c['price'] == 0 ? 'free' : '' ?>"><?= $c['price'] > 0 ? '$' . number_format((float) $c['price']) : 'Free' ?></span>
                 <span class="btn btn-outline btn-sm">View Course →</span>
             </div>
         </a>

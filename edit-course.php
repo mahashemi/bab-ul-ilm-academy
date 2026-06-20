@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
 <nav class="navbar">
-    <div class="nav-brand">🕌 <?= e(SITE_NAME) ?></div>
+    <div class="nav-brand">🕌 <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></div>
     <div class="nav-links"><a href="dashboard.php">Dashboard</a><a href="logout.php" class="nav-btn">Logout</a></div>
 </nav>
 
@@ -123,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <input type="text" name="language" class="form-control" value="<?= e($_POST['language'] ?? $course['language']) ?>">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Price (Rs) — 0 for free</label>
+                    <label class="form-label">Price ($) — 0 for free</label>
                     <input type="number" name="price" class="form-control" min="0" step="0.01" value="<?= e($_POST['price'] ?? $course['price']) ?>">
                 </div>
             </div>

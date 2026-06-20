@@ -9,6 +9,7 @@ define('DB_NAME', 'bab_ul_ilm');
 
 define('SITE_NAME', 'Bab ul Ilm Academy');
 define('SITE_TAGLINE', 'Seek Knowledge — From the Cradle to the Grave');
+define('SITE_AFFILIATION', 'Under Alia University of Holland');
 define('SITE_URL', '');             // e.g. https://babulilmacademy.com
 
 // Email verification: when true, the verification link is also shown on screen

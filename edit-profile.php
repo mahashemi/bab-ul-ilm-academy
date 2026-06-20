@@ -95,7 +95,7 @@ function cleanPhoneInput(el) {
 </head>
 <body>
 <nav class="navbar">
-    <div class="nav-brand">🕌 <?= e(SITE_NAME) ?></div>
+    <div class="nav-brand">🕌 <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></div>
     <div class="nav-links">
         <a href="courses.php">Courses</a>
         <a href="dashboard.php">Dashboard</a>

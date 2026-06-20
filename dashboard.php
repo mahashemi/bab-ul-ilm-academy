@@ -14,7 +14,7 @@ if ($user['role'] === 'admin') redirect('admin.php');
 </head>
 <body>
 <nav class="navbar">
-    <div class="nav-brand">🕌 <?= e(SITE_NAME) ?></div>
+    <div class="nav-brand">🕌 <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></div>
     <div class="nav-links">
         <a href="courses.php">Courses</a>
         <?php if ($user['role'] === 'teacher'): ?><a href="add-course.php">+ New Course</a><?php endif; ?>
@@ -59,7 +59,7 @@ if ($user['role'] === 'admin') redirect('admin.php');
                     <td><a href="course.php?id=<?= (int) $c['id'] ?>"><?= e($c['title']) ?></a></td>
                     <td><?= e($c['subject_name'] ?? '—') ?></td>
                     <td><span class="badge badge-<?= e($c['level']) ?>"><?= e(ucfirst($c['level'])) ?></span></td>
-                    <td><?= $c['price'] > 0 ? 'Rs ' . number_format((float) $c['price']) : 'Free' ?></td>
+                    <td><?= $c['price'] > 0 ? '$' . number_format((float) $c['price']) : 'Free' ?></td>
                     <td><?= (int) $c['student_count'] ?></td>
                     <td><span class="badge <?= $c['is_published'] ? 'badge-free' : 'badge-paid' ?>"><?= $c['is_published'] ? 'Published' : 'Draft' ?></span></td>
                     <td style="display:flex;gap:.4rem">

@@ -72,7 +72,7 @@ $progressPct = $lessons ? (int) round(count($completedLessons) / count($lessons)
 </head>
 <body>
 <nav class="navbar">
-    <div class="nav-brand">🕌 <?= e(SITE_NAME) ?></div>
+    <div class="nav-brand">🕌 <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></div>
     <div class="nav-links">
         <a href="courses.php">Courses</a>
         <?php if ($user): ?><a href="dashboard.php">Dashboard</a><a href="logout.php" class="nav-btn">Logout</a>
@@ -90,7 +90,7 @@ $progressPct = $lessons ? (int) round(count($completedLessons) / count($lessons)
         <div class="card-body">
             <div style="display:flex;gap:.6rem;margin-bottom:.6rem;flex-wrap:wrap">
                 <span class="badge badge-<?= e($course['level']) ?>"><?= e(ucfirst($course['level'])) ?></span>
-                <span class="badge <?= $course['price'] == 0 ? 'badge-free' : 'badge-paid' ?>"><?= $course['price'] > 0 ? 'Rs ' . number_format((float) $course['price']) : 'Free' ?></span>
+                <span class="badge <?= $course['price'] == 0 ? 'badge-free' : 'badge-paid' ?>"><?= $course['price'] > 0 ? '$' . number_format((float) $course['price']) : 'Free' ?></span>
                 <span class="badge" style="background:#f5f5f5;color:#555"><?= e($course['language']) ?></span>
             </div>
             <div style="display:flex;align-items:center;gap:.7rem;flex-wrap:wrap">
@@ -129,7 +129,7 @@ $progressPct = $lessons ? (int) round(count($completedLessons) / count($lessons)
             <?php else: ?>
                 <form method="post">
                     <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
-                    <button type="submit" name="enroll" value="1" class="btn btn-primary btn-full">Enroll Now <?= $course['price'] > 0 ? '— Rs ' . number_format((float) $course['price']) : '— Free' ?></button>
+                    <button type="submit" name="enroll" value="1" class="btn btn-primary btn-full">Enroll Now <?= $course['price'] > 0 ? '— $' . number_format((float) $course['price']) : '— Free' ?></button>
                 </form>
             <?php endif; ?>
         </div>

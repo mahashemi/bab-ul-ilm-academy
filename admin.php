@@ -126,7 +126,7 @@ $courses = $pdo->query(
                     <td><?= e($c['teacher_name']) ?></td>
                     <td><?= e($c['subject_name'] ?? '—') ?></td>
                     <td><span class="badge badge-<?= e($c['level']) ?>"><?= e(ucfirst($c['level'])) ?></span></td>
-                    <td><?= $c['price'] > 0 ? 'Rs ' . number_format((float) $c['price']) : 'Free' ?></td>
+                    <td><?= $c['price'] > 0 ? '$' . number_format((float) $c['price']) : 'Free' ?></td>
                     <td><?= (int) $c['student_count'] ?></td>
                     <td><span class="badge <?= $c['is_published'] ? 'badge-free' : 'badge-paid' ?>"><?= $c['is_published'] ? 'Published' : 'Draft' ?></span></td>
                     <td style="display:flex;gap:.4rem">

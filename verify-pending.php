@@ -41,5 +41,6 @@ $devToken = DEV_SHOW_VERIFY_LINK ? ($_GET['token'] ?? '') : '';
         </p>
     </div>
 </div>
+<script src="app.js" defer></script>
 </body>
 </html>

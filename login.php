@@ -81,5 +81,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <a href="register.php" class="btn btn-outline btn-full">✨ Create a Free Account</a>
     </div>
 </div>
+<script src="app.js" defer></script>
 </body>
 </html>

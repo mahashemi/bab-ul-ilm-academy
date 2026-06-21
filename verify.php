@@ -41,5 +41,6 @@ if (!$u) {
         <?php endif; ?>
     </div>
 </div>
+<script src="app.js" defer></script>
 </body>
 </html>

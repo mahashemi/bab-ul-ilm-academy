@@ -34,6 +34,8 @@ $stats = $pdo->query(
 
 <nav class="navbar">
     <div class="nav-brand">🕌 <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></div>
+    <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu">☰</button>
+    <div class="nav-scrim" onclick="toggleNav()"></div>
     <div class="nav-links">
         <a href="courses.php">Courses</a>
         <?php if ($user): ?>
@@ -129,5 +131,6 @@ $stats = $pdo->query(
     <div class="footer-bottom">&copy; <?= date('Y') ?> <?= e(SITE_NAME) ?>. Built with ❤️ for the Ummah.</div>
 </footer>
 
+<script src="app.js" defer></script>
 </body>
 </html>

@@ -161,5 +161,6 @@ function cleanPhoneInput(el) {
         </p>
     </div>
 </div>
+<script src="app.js" defer></script>
 </body>
 </html>

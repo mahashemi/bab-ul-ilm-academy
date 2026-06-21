@@ -16,6 +16,8 @@ if (($user['role'] ?? '') === 'admin') redirect('admin.php');
 <body>
 <nav class="navbar">
     <div class="nav-brand">🕌 <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></div>
+    <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu">☰</button>
+    <div class="nav-scrim" onclick="toggleNav()"></div>
     <div class="nav-links">
         <a href="courses.php">Courses</a>
         <?php if (($user['role'] ?? '') === 'teacher'): ?><a href="add-course.php">+ New Course</a><?php endif; ?>
@@ -52,18 +54,18 @@ if (($user['role'] ?? '') === 'admin') redirect('admin.php');
         <?php if (!$myCourses): ?>
             <div class="empty-state"><div class="icon">📚</div><h3>You haven't created any courses yet</h3></div>
         <?php else: ?>
-        <table class="table">
+        <table class="table table-cards">
             <thead><tr><th>Title</th><th>Subject</th><th>Level</th><th>Price</th><th>Students</th><th>Status</th><th></th></tr></thead>
             <tbody>
                 <?php foreach ($myCourses as $c): ?>
                 <tr>
-                    <td><a href="course.php?id=<?= (int) $c['id'] ?>"><?= e($c['title']) ?></a></td>
-                    <td><?= e($c['subject_name'] ?? '—') ?></td>
-                    <td><span class="badge badge-<?= e($c['level']) ?>"><?= e(ucfirst($c['level'])) ?></span></td>
-                    <td><?= $c['price'] > 0 ? '$' . number_format((float) $c['price']) : 'Free' ?></td>
-                    <td><?= (int) $c['student_count'] ?></td>
-                    <td><span class="badge <?= $c['is_published'] ? 'badge-free' : 'badge-paid' ?>"><?= $c['is_published'] ? 'Published' : 'Draft' ?></span></td>
-                    <td style="display:flex;gap:.4rem">
+                    <td data-label="Title"><a href="course.php?id=<?= (int) $c['id'] ?>"><?= e($c['title']) ?></a></td>
+                    <td data-label="Subject"><?= e($c['subject_name'] ?? '—') ?></td>
+                    <td data-label="Level"><span class="badge badge-<?= e($c['level']) ?>"><?= e(ucfirst($c['level'])) ?></span></td>
+                    <td data-label="Price"><?= $c['price'] > 0 ? '$' . number_format((float) $c['price']) : 'Free' ?></td>
+                    <td data-label="Students"><?= (int) $c['student_count'] ?></td>
+                    <td data-label="Status"><span class="badge <?= $c['is_published'] ? 'badge-free' : 'badge-paid' ?>"><?= $c['is_published'] ? 'Published' : 'Draft' ?></span></td>
+                    <td data-label="Actions" class="table-actions">
                         <a href="edit-course.php?id=<?= (int) $c['id'] ?>" class="btn btn-sm btn-outline">Edit</a>
                         <a href="add-lesson.php?course_id=<?= (int) $c['id'] ?>" class="btn btn-sm btn-outline">+ Lesson</a>
                     </td>
@@ -115,5 +117,6 @@ if (($user['role'] ?? '') === 'admin') redirect('admin.php');
         <?php endif; ?>
     <?php endif; ?>
 </div>
+<script src="app.js" defer></script>
 </body>
 </html>

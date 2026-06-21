@@ -20,7 +20,18 @@ if (!$isOwner && !$isAdmin) {
     die('<p style="font-family:sans-serif;padding:3rem;text-align:center">You do not have permission to edit this course. <a href="course.php?id=' . $id . '">Go back</a></p>');
 }
 
-$subjects = $pdo->query('SELECT * FROM subjects ORDER BY name')->fetchAll();
+$fields = $pdo->query(
+    "SELECT f.id AS field_id, f.name AS field_name, f.icon AS field_icon, s.id AS subject_id, s.name AS subject_name, s.icon AS subject_icon
+     FROM fields_of_study f LEFT JOIN subjects s ON s.field_of_study_id = f.id
+     ORDER BY f.id, s.name"
+)->fetchAll();
+$grouped = [];
+foreach ($fields as $row) {
+    $grouped[$row['field_id']]['label'] = $row['field_icon'] . ' ' . $row['field_name'];
+    if ($row['subject_id']) {
+        $grouped[$row['field_id']]['subjects'][] = $row;
+    }
+}
 $errors = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -61,10 +72,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
 <nav class="navbar">
-    <div class="nav-brand">🕌 <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></div>
+    <a class="nav-brand" href="index.php">🕌 <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></a>
     <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu">☰</button>
     <div class="nav-scrim" onclick="toggleNav()"></div>
-    <div class="nav-links"><a href="dashboard.php">Dashboard</a><a href="logout.php" class="nav-btn">Logout</a></div>
+    <div class="nav-links">
+        <span class="nav-user">👤 <?= e($user['name']) ?></span><a href="dashboard.php">Dashboard</a><a href="logout.php" class="nav-btn">Logout</a><a href="about.php">About</a><a href="feedback.php">Feedback</a></div>
 </nav>
 
 <div class="dashboard-wrap">
@@ -105,8 +117,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <label class="form-label">Subject</label>
                     <select name="subject_id" class="form-control">
                         <option value="">Select subject</option>
-                        <?php foreach ($subjects as $s): ?>
-                            <option value="<?= (int) $s['id'] ?>" <?= $course['subject_id'] == $s['id'] ? 'selected' : '' ?>><?= e($s['icon']) ?> <?= e($s['name']) ?></option>
+                        <?php foreach ($grouped as $g): ?>
+                            <?php if (!empty($g['subjects'])): ?>
+                            <optgroup label="<?= e($g['label']) ?>">
+                                <?php foreach ($g['subjects'] as $s): ?>
+                                    <option value="<?= (int) $s['subject_id'] ?>" <?= $course['subject_id'] == $s['subject_id'] ? 'selected' : '' ?>><?= e($s['subject_icon']) ?> <?= e($s['subject_name']) ?></option>
+                                <?php endforeach; ?>
+                            </optgroup>
+                            <?php endif; ?>
                         <?php endforeach; ?>
                     </select>
                 </div>

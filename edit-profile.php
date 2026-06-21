@@ -17,6 +17,11 @@ if ($me['phone'] && preg_match('/^(\+\d{1,4})\s+(\d+)$/', $me['phone'], $m)) {
 $errors = [];
 $success = false;
 
+$myStmt = $pdo->prepare('SELECT s.name FROM skills s JOIN user_skills us ON us.skill_id = s.id WHERE us.user_id = ? ORDER BY s.name');
+$myStmt->execute([$user['id']]);
+$mySkills = $myStmt->fetchAll(PDO::FETCH_COLUMN);
+$allSkills = $pdo->query('SELECT name FROM skills ORDER BY name')->fetchAll(PDO::FETCH_COLUMN);
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
 
@@ -28,6 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $phoneDigits   = preg_replace('/\D/', '', $_POST['phone_number'] ?? '');
     $currentPass   = $_POST['current_password'] ?? '';
     $newPass       = $_POST['new_password'] ?? '';
+    $skillsCsv     = trim($_POST['skills_csv'] ?? '');
 
     if ($name === '' || mb_strlen($name) < 2) $errors[] = 'Please enter your full name.';
     if ($country === '') $errors[] = 'Please select your country.';
@@ -54,6 +60,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare('UPDATE users SET name=?, country=?, bio=?, phone=?, qualification=? WHERE id=?')
                 ->execute([$name, $country, $bio, $phone, $qualToSave, $user['id']]);
         }
+
+        // Sync skills: reuse existing skill rows by name, create any new ones,
+        // so the same skill is shared (not duplicated) across all users.
+        $names = array_filter(array_unique(array_map('trim', explode(',', $skillsCsv))));
+        $skillIds = [];
+        foreach ($names as $skillName) {
+            if ($skillName === '') continue;
+            $pdo->prepare('INSERT INTO skills (name) VALUES (?) ON DUPLICATE KEY UPDATE id = id')->execute([$skillName]);
+            $idStmt = $pdo->prepare('SELECT id FROM skills WHERE name = ?');
+            $idStmt->execute([$skillName]);
+            $skillIds[] = (int) $idStmt->fetchColumn();
+        }
+        $pdo->prepare('DELETE FROM user_skills WHERE user_id = ?')->execute([$user['id']]);
+        if ($skillIds) {
+            $values = implode(',', array_fill(0, count($skillIds), '(?, ?)'));
+            $params = [];
+            foreach ($skillIds as $sid) { $params[] = $user['id']; $params[] = $sid; }
+            $pdo->prepare("INSERT INTO user_skills (user_id, skill_id) VALUES $values")->execute($params);
+        }
+        $mySkills = $names;
 
         $_SESSION['user']['name'] = $name;
         $success = true;
@@ -92,17 +118,53 @@ function updateDialCode() {
 function cleanPhoneInput(el) {
     el.value = el.value.replace(/\D/g, '').slice(0, 10);
 }
+
+let skills = <?= json_encode(array_values($mySkills)) ?>;
+function renderSkillChips() {
+    const wrap = document.getElementById('skillChips');
+    wrap.innerHTML = '';
+    skills.forEach((s, i) => {
+        const chip = document.createElement('span');
+        chip.className = 'cat-chip';
+        chip.style.cursor = 'default';
+        chip.innerHTML = s.replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])) + ' <span style="cursor:pointer;font-weight:700;margin-left:.3rem" onclick="removeSkill(' + i + ')">×</span>';
+        wrap.appendChild(chip);
+    });
+    document.getElementById('skillsCsv').value = skills.join(',');
+}
+function removeSkill(i) {
+    skills.splice(i, 1);
+    renderSkillChips();
+}
+document.addEventListener('DOMContentLoaded', function () {
+    renderSkillChips();
+    const input = document.getElementById('skillInput');
+    input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const val = input.value.trim();
+            if (val && !skills.includes(val)) {
+                skills.push(val);
+                renderSkillChips();
+            }
+            input.value = '';
+        }
+    });
+});
 </script>
 </head>
 <body>
 <nav class="navbar">
-    <div class="nav-brand">🕌 <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></div>
+    <a class="nav-brand" href="index.php">🕌 <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></a>
     <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu">☰</button>
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <div class="nav-links">
+        <span class="nav-user">👤 <?= e($user['name']) ?></span>
         <a href="courses.php">Courses</a>
         <a href="dashboard.php">Dashboard</a>
         <a href="logout.php" class="nav-btn">Logout</a>
+        <a href="about.php">About</a>
+        <a href="feedback.php">Feedback</a>
     </div>
 </nav>
 
@@ -161,6 +223,17 @@ function cleanPhoneInput(el) {
                 <textarea name="qualification" class="form-control"><?= e($me['qualification'] ?? '') ?></textarea>
             </div>
             <?php endif; ?>
+
+            <div class="form-group">
+                <label class="form-label">Skills</label>
+                <div id="skillChips" style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.5rem"></div>
+                <input type="text" id="skillInput" class="form-control" list="skillSuggestions" placeholder="Type a skill and press Enter (e.g. Public Speaking, Arabic Grammar)">
+                <datalist id="skillSuggestions">
+                    <?php foreach ($allSkills as $s): ?><option value="<?= e($s) ?>"><?php endforeach; ?>
+                </datalist>
+                <input type="hidden" name="skills_csv" id="skillsCsv" value="<?= e(implode(',', $mySkills)) ?>">
+                <div class="form-hint">Skills are shared across all users — start typing to reuse an existing one, or add a new one.</div>
+            </div>
 
             <hr style="border:none;border-top:1px solid var(--border);margin:1.2rem 0">
             <h3 style="font-size:1rem;margin-bottom:.8rem">Change Password (optional)</h3>

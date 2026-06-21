@@ -11,7 +11,7 @@ define('DB_NAME', 'bab_ul_ilm');
 // `settings` database table (editable by admins at /admin.php → Settings tab).
 // These are just the fallback defaults used if the table is empty or missing.
 define('SITE_NAME_DEFAULT', 'Bab ul Ilm Academy');
-define('SITE_TAGLINE_DEFAULT', 'Seek Knowledge — From the Cradle to the Grave');
+define('SITE_TAGLINE_DEFAULT', 'Teach and Learn Any Subject — All Levels, Anywhere, Everywhere');
 define('SITE_AFFILIATION_DEFAULT', 'Under Alia University of Holland');
 define('SITE_URL', '');             // e.g. https://babulilmacademy.com
 

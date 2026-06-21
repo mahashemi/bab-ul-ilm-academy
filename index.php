@@ -38,12 +38,12 @@ $stats = $pdo->query(
 <body>
 
 <nav class="navbar">
-    <div class="nav-brand">🕌 <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></div>
+    <a class="nav-brand" href="index.php">🕌 <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></a>
     <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu">☰</button>
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <div class="nav-links">
         <a href="courses.php">Courses</a>
-        <?php if ($user): ?>
+        <?php if ($user): ?><span class="nav-user">👤 <?= e($user['name']) ?></span>
             <a href="dashboard.php">Dashboard</a>
             <?php if (($user['role'] ?? '') === 'admin'): ?><a href="admin.php">Admin</a><?php endif; ?>
             <a href="logout.php" class="nav-btn">Logout</a>
@@ -51,13 +51,15 @@ $stats = $pdo->query(
             <a href="login.php">Login</a>
             <a href="register.php" class="nav-btn">Join Free</a>
         <?php endif; ?>
+        <a href="about.php">About</a>
+        <a href="feedback.php">Feedback</a>
     </div>
 </nav>
 
 <header class="hero">
     <div class="hero-content">
         <div class="hero-arabic">باب العلم</div>
-        <h1>Seek Knowledge — <span>From the Cradle to the Grave</span></h1>
+        <h1>Teach and Learn Any Subject — <span>All Levels, Anywhere, Everywhere</span></h1>
         <p style="font-size:1.15rem;font-weight:600;opacity:.9;margin-bottom:.8rem;letter-spacing:.3px;color:var(--gold)"><?= e(SITE_AFFILIATION) ?></p>
         <p>Islamic studies and core academics — from Quran, Hadith, and Fiqh to Mathematics, Science, and Bachelor-level streams — taught by qualified teachers, anywhere in the world. Structured courses, real progress tracking, sincere teaching, Grade 1 through university.</p>
         <div class="hero-actions">

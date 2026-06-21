@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS settings (
 
 INSERT INTO settings (setting_key, setting_value) VALUES
 ('SITE_NAME', 'Bab ul Ilm Academy'),
-('SITE_TAGLINE', 'Seek Knowledge — From the Cradle to the Grave'),
+('SITE_TAGLINE', 'Teach and Learn Any Subject — All Levels, Anywhere, Everywhere'),
 ('SITE_AFFILIATION', 'Under Alia University of Holland');
 
 -- ── Users (Teachers & Students) ───────────────────────────────────────────
@@ -42,33 +42,47 @@ CREATE TABLE IF NOT EXISTS users (
     INDEX idx_role (role)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── Course Categories ─────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS subjects (
+-- ── Fields of Study (top-level grouping for Subjects) ──────────────────────
+CREATE TABLE IF NOT EXISTS fields_of_study (
     id   INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     icon VARCHAR(10)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO subjects (name, icon) VALUES
-('Quran & Tajweed',               '📖'),
-('Hadith & Sunnah',               '☪️'),
-('Islamic Jurisprudence (Fiqh)',   '⚖️'),
-('Arabic Language',               '🌙'),
-('Islamic History',               '🏛️'),
-('Aqeedah (Belief)',              '✨'),
-('Akhlaq & Spirituality',         '🌿'),
-('Children''s Education',         '🧒'),
+INSERT INTO fields_of_study (name, icon) VALUES
+('Islamic Studies',  '🕌'),
+('School Subjects',  '🎒'),
+('Bachelor Streams', '🎓');
+
+-- ── Course Categories ─────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS subjects (
+    id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    field_of_study_id INT UNSIGNED NULL,
+    name              VARCHAR(100) NOT NULL,
+    icon              VARCHAR(10),
+    FOREIGN KEY (field_of_study_id) REFERENCES fields_of_study(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO subjects (field_of_study_id, name, icon) VALUES
+(1, 'Quran & Tajweed',               '📖'),
+(1, 'Hadith & Sunnah',               '☪️'),
+(1, 'Islamic Jurisprudence (Fiqh)',   '⚖️'),
+(1, 'Arabic Language',               '🌙'),
+(1, 'Islamic History',               '🏛️'),
+(1, 'Aqeedah (Belief)',              '✨'),
+(1, 'Akhlaq & Spirituality',         '🌿'),
+(1, 'Children''s Education',         '🧒'),
 -- School subjects (Grade 1–12)
-('Mathematics',                   '🔢'),
-('Science',                       '🔬'),
-('English Language & Literature', '📚'),
-('Computer Science / ICT',        '💻'),
-('Social Studies (History & Geography)', '🌍'),
+(2, 'Mathematics',                   '🔢'),
+(2, 'Science',                       '🔬'),
+(2, 'English Language & Literature', '📚'),
+(2, 'Computer Science / ICT',        '💻'),
+(2, 'Social Studies (History & Geography)', '🌍'),
 -- Bachelor-level streams
-('Pre-Medical Studies',           '🩺'),
-('Pre-Engineering Studies',       '⚙️'),
-('Business & Commerce',          '💼'),
-('Arts & Humanities',            '🎨');
+(3, 'Pre-Medical Studies',           '🩺'),
+(3, 'Pre-Engineering Studies',       '⚙️'),
+(3, 'Business & Commerce',          '💼'),
+(3, 'Arts & Humanities',            '🎨');
 
 -- ── Courses ───────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS courses (
@@ -137,6 +151,32 @@ CREATE TABLE IF NOT EXISTS course_reviews (
     UNIQUE KEY one_review (course_id, student_id),
     FOREIGN KEY (course_id)  REFERENCES courses(id) ON DELETE CASCADE,
     FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── Skills (reusable across all users — managed from Edit Profile) ────────
+CREATE TABLE IF NOT EXISTS skills (
+    id   INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS user_skills (
+    user_id  INT UNSIGNED NOT NULL,
+    skill_id INT UNSIGNED NOT NULL,
+    PRIMARY KEY (user_id, skill_id),
+    FOREIGN KEY (user_id)  REFERENCES users(id)  ON DELETE CASCADE,
+    FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── Feedback / Advice ────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS feedback (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT UNSIGNED NULL,
+    name        VARCHAR(100) NOT NULL,
+    email       VARCHAR(150) NOT NULL,
+    message     TEXT NOT NULL,
+    is_read     TINYINT(1) NOT NULL DEFAULT 0,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── Initial Admin Account ───────────────────────────────────────────────

@@ -45,6 +45,12 @@ img { max-width: 100%; height: auto; display: block; }
 .nav-links a { color: rgba(255,255,255,.8); font-size: .9rem; font-weight: 500; padding: .4rem .8rem; border-radius: 6px; transition: var(--transition); }
 .nav-links a:hover { background: rgba(255,255,255,.1); color: var(--gold); }
 .nav-btn { background: var(--gold) !important; color: var(--green-deep) !important; font-weight: 700 !important; border-radius: 20px !important; }
+.nav-user {
+    display: inline-flex; align-items: center; gap: .3rem;
+    color: var(--gold); font-size: .85rem; font-weight: 600;
+    padding: .35rem .7rem; background: rgba(255,255,255,.08); border-radius: var(--radius-full);
+    white-space: nowrap; max-width: 160px; overflow: hidden; text-overflow: ellipsis;
+}
 
 /* ── Hero ── */
 .hero {
@@ -298,6 +304,7 @@ footer { background: var(--green-deep); color: rgba(255,255,255,.75); padding: 3
     }
     .nav-links.nav-open { transform: translateX(0); }
     .nav-links a { width: 100%; padding: .85rem 1rem; font-size: 1rem; border-radius: 12px; }
+    .nav-user { width: 100%; max-width: none; padding: .85rem 1rem; font-size: 1rem; margin-bottom: .3rem; box-sizing: border-box; }
     .nav-scrim {
         display: block; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 150;
         opacity: 0; pointer-events: none; transition: opacity .28s ease;

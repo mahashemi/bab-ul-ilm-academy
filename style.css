@@ -117,6 +117,44 @@ img { max-width: 100%; height: auto; display: block; }
 .course-price { font-size: 1.1rem; font-weight: 700; color: var(--green-deep); }
 .course-price.free { color: #2e7d32; }
 
+/* ── Filter Chips (Material Design 3 filter-chip pattern) ──
+   A scrollable single-row strip, not a wrapping wall of chips — keeps any
+   number of subjects from overwhelming the page vertically, especially
+   on mobile. Chips use M3's "small" 8px shape (not a pill) so they read as
+   filters, distinct from pill-shaped call-to-action buttons. */
+.chip-row {
+    display: flex; gap: .6rem; flex-wrap: nowrap;
+    overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    padding-bottom: .35rem; margin-bottom: 1.6rem;
+}
+.chip-row::-webkit-scrollbar { display: none; }
+.cat-chip {
+    display: inline-flex; align-items: center; gap: .4rem; flex-shrink: 0;
+    padding: .55rem 1.1rem;
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: .85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    text-decoration: none;
+    color: var(--text);
+    white-space: nowrap;
+}
+.cat-chip:hover { border-color: var(--teal-mid); }
+.cat-chip.active {
+    background: var(--teal-deep);
+    color: var(--gold);
+    border-color: var(--teal-deep);
+}
+.chip-view-all {
+    display: inline-flex; align-items: center; gap: .3rem; flex-shrink: 0;
+    font-size: .85rem; font-weight: 600; color: var(--teal-mid);
+    padding: .55rem .2rem; white-space: nowrap; text-decoration: none;
+}
+.chip-view-all:hover { color: var(--gold-dark); }
+
 /* ── Lesson List ── */
 .lesson-list { list-style: none; }
 .lesson-item {
@@ -217,10 +255,18 @@ footer { background: var(--green-deep); color: rgba(255,255,255,.75); padding: 3
 /* ── Mobile nav drawer (Material Design 3 modal navigation drawer) ── */
 .nav-toggle { display: none; background: none; border: none; color: var(--white); font-size: 1.5rem; cursor: pointer; padding: .3rem .5rem; line-height: 1; }
 .nav-scrim { display: none; }
+.nav-brand { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Tablet: tighten the desktop nav row before it switches to a drawer ── */
+@media (max-width: 1024px) {
+    .navbar { padding: 0 1.1rem; }
+    .nav-links { gap: 1rem; }
+    .nav-links a { font-size: .85rem; padding: .35rem .6rem; }
+}
 
 @media (max-width: 768px) {
     .navbar { padding: 0 1rem; height: 60px; flex-direction: row; align-items: center; }
-    .nav-brand { font-size: 1.05rem; }
+    .nav-brand { font-size: 1.05rem; max-width: 65vw; }
     .nav-brand small { font-size: .68rem; }
     .nav-toggle { display: block; }
     .nav-links {
@@ -273,6 +319,12 @@ footer { background: var(--green-deep); color: rgba(255,255,255,.75); padding: 3
     .table td:last-child { justify-content: flex-end; }
 
     .role-switch { flex-direction: column; }
+
+    /* ── Footer: stack and center instead of left-aligning a single column ── */
+    footer { padding: 2.2rem 1.2rem 1.2rem; margin-top: 3rem; }
+    .footer-grid { grid-template-columns: 1fr; gap: 1.8rem; text-align: center; }
+    .footer-links { display: flex; flex-direction: column; align-items: center; gap: .3rem; }
+    .footer-links li { margin-bottom: 0; }
 }
 @media (max-width: 420px) {
     .hero h1 { font-size: 1.4rem; }

@@ -49,7 +49,7 @@ $courses = $stmt->fetchAll();
         <button type="submit" class="btn btn-primary">Search</button>
     </form>
 
-    <div class="category-grid" style="display:flex;flex-wrap:wrap;gap:.7rem;margin-bottom:2rem">
+    <div class="chip-row">
         <a href="courses.php" class="cat-chip <?= $subjectId === 0 ? 'active' : '' ?>">📚 All Subjects</a>
         <?php foreach ($subjects as $s): ?>
             <a href="?subject=<?= (int) $s['id'] ?>" class="cat-chip <?= $subjectId === (int) $s['id'] ? 'active' : '' ?>"><?= e($s['icon']) ?> <?= e($s['name']) ?></a>

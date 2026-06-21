@@ -2,7 +2,12 @@
 require_once __DIR__ . '/db.php';
 $user = auth();
 
-$subjects = $pdo->query('SELECT * FROM subjects ORDER BY name')->fetchAll();
+// Landing page shows only the most active subjects (by published course count) to avoid
+// overwhelming visitors with the full subject list — the rest live on courses.php.
+$subjects = $pdo->query(
+    "SELECT s.*, (SELECT COUNT(*) FROM courses c WHERE c.subject_id = s.id AND c.is_published = 1) AS course_count
+     FROM subjects s ORDER BY course_count DESC, s.name ASC LIMIT 8"
+)->fetchAll();
 
 $courses = $pdo->query(
     "SELECT c.*, u.name AS teacher_name, s.name AS subject_name, s.icon AS subject_icon,
@@ -73,10 +78,11 @@ $stats = $pdo->query(
 
 <div class="container section" id="courses">
     <h2 class="section-title">Browse by <span>Subject</span></h2>
-    <div class="category-grid" style="display:flex;flex-wrap:wrap;gap:.7rem;margin-bottom:2.5rem">
+    <div class="chip-row">
         <?php foreach ($subjects as $s): ?>
             <a href="courses.php?subject=<?= (int) $s['id'] ?>" class="cat-chip"><?= e($s['icon']) ?> <?= e($s['name']) ?></a>
         <?php endforeach; ?>
+        <a href="courses.php" class="chip-view-all">View All Subjects →</a>
     </div>
 
     <h2 class="section-title">Featured <span>Courses</span></h2>

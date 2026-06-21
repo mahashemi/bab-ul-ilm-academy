@@ -21,6 +21,27 @@ try {
     </div>');
 }
 
+// ── Site Settings (editable by admins, stored in DB, with safe defaults) ──
+function loadSiteSettings(PDO $pdo, array $defaults): void {
+    $map = [];
+    try {
+        $rows = $pdo->query('SELECT setting_key, setting_value FROM settings')->fetchAll();
+        foreach ($rows as $r) { $map[$r['setting_key']] = $r['setting_value']; }
+    } catch (Exception $e) {
+        // settings table doesn't exist yet — fall back to defaults silently
+    }
+    foreach ($defaults as $key => $default) {
+        if (!defined($key)) {
+            define($key, $map[$key] ?? $default);
+        }
+    }
+}
+loadSiteSettings($pdo, [
+    'SITE_NAME'        => SITE_NAME_DEFAULT,
+    'SITE_TAGLINE'      => SITE_TAGLINE_DEFAULT,
+    'SITE_AFFILIATION'  => SITE_AFFILIATION_DEFAULT,
+]);
+
 function e(string $s): string {
     return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
 }

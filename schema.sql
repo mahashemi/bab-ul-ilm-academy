@@ -8,6 +8,19 @@ CREATE DATABASE IF NOT EXISTS bab_ul_ilm
 
 USE bab_ul_ilm;
 
+-- ── Site Settings (editable by admins at /admin.php) ───────────────────────
+CREATE TABLE IF NOT EXISTS settings (
+    id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    setting_key   VARCHAR(50) NOT NULL UNIQUE,
+    setting_value TEXT,
+    updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO settings (setting_key, setting_value) VALUES
+('SITE_NAME', 'Bab ul Ilm Academy'),
+('SITE_TAGLINE', 'Seek Knowledge — From the Cradle to the Grave'),
+('SITE_AFFILIATION', 'Under Alia University of Holland');
+
 -- ── Users (Teachers & Students) ───────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS users (
     id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

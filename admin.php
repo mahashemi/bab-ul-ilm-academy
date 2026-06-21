@@ -43,6 +43,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($targetId !== (int) $user['id'] && in_array($newRole, ['student','teacher','admin'], true)) {
             $pdo->prepare('UPDATE users SET role = ? WHERE id = ?')->execute([$newRole, $targetId]);
         }
+    } elseif (isset($_POST['add_subject'])) {
+        $name = trim($_POST['name'] ?? '');
+        $icon = trim($_POST['icon'] ?? '');
+        if ($name !== '') {
+            $pdo->prepare('INSERT INTO subjects (name, icon) VALUES (?, ?)')->execute([$name, $icon]);
+        }
+    } elseif (isset($_POST['edit_subject'])) {
+        $pdo->prepare('UPDATE subjects SET name=?, icon=? WHERE id=?')
+            ->execute([trim($_POST['name']), trim($_POST['icon']), (int) $_POST['edit_subject']]);
+    } elseif (isset($_POST['delete_subject'])) {
+        $pdo->prepare('DELETE FROM subjects WHERE id = ?')->execute([(int) $_POST['delete_subject']]);
+    } elseif (isset($_POST['save_settings'])) {
+        foreach (['SITE_NAME', 'SITE_TAGLINE', 'SITE_AFFILIATION'] as $key) {
+            $val = trim($_POST[$key] ?? '');
+            $pdo->prepare('INSERT INTO settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?')
+                ->execute([$key, $val, $val]);
+        }
+        flash('success', 'Settings updated.');
     }
     redirect('admin.php?tab=' . ($_GET['tab'] ?? 'users'));
 }
@@ -64,6 +82,8 @@ $courses = $pdo->query(
      FROM courses c JOIN users u ON u.id = c.teacher_id LEFT JOIN subjects s ON s.id = c.subject_id
      ORDER BY c.created_at DESC"
 )->fetchAll();
+$subjects = $pdo->query('SELECT * FROM subjects ORDER BY name')->fetchAll();
+$currentSettings = $pdo->query('SELECT setting_key, setting_value FROM settings')->fetchAll(PDO::FETCH_KEY_PAIR);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -112,6 +132,8 @@ $courses = $pdo->query(
     <div class="tabs">
         <a href="?tab=users" class="tab-btn <?= $tab === 'users' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center">👥 Users (<?= count($users) ?>)</a>
         <a href="?tab=courses" class="tab-btn <?= $tab === 'courses' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center">📚 Courses (<?= count($courses) ?>)</a>
+        <a href="?tab=subjects" class="tab-btn <?= $tab === 'subjects' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center">🏷️ Subjects (<?= count($subjects) ?>)</a>
+        <a href="?tab=settings" class="tab-btn <?= $tab === 'settings' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center">⚙️ Settings</a>
     </div>
 
     <?php if ($tab === 'courses'): ?>
@@ -138,6 +160,59 @@ $courses = $pdo->query(
                 <?php endforeach; ?>
             </tbody>
         </table>
+    <?php elseif ($tab === 'subjects'): ?>
+        <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
+            <h3 style="font-size:1rem;margin-bottom:1rem">+ Add New Subject</h3>
+            <form method="post" style="display:grid;grid-template-columns:1fr 100px auto;gap:.6rem;align-items:end">
+                <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+                <div class="form-group" style="margin:0"><label class="form-label">Name</label><input type="text" name="name" class="form-control" required></div>
+                <div class="form-group" style="margin:0"><label class="form-label">Icon</label><input type="text" name="icon" class="form-control" placeholder="📖"></div>
+                <button type="submit" name="add_subject" value="1" class="btn btn-primary">+ Add</button>
+            </form>
+        </div></div>
+
+        <table class="table">
+            <thead><tr><th>Icon</th><th>Name</th><th>Actions</th></tr></thead>
+            <tbody>
+                <?php foreach ($subjects as $s): $fid = 'subj-' . (int) $s['id']; ?>
+                <tr>
+                    <td><input type="text" name="icon" form="<?= $fid ?>" value="<?= e($s['icon']) ?>" class="form-control" style="width:70px;padding:.4rem"></td>
+                    <td><input type="text" name="name" form="<?= $fid ?>" value="<?= e($s['name']) ?>" class="form-control" style="padding:.4rem"></td>
+                    <td style="display:flex;gap:.4rem">
+                        <form method="post" id="<?= $fid ?>" style="display:inline">
+                            <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+                            <button type="submit" name="edit_subject" value="<?= (int) $s['id'] ?>" class="btn btn-sm btn-outline">Save</button>
+                        </form>
+                        <form method="post" onsubmit="return confirm('Delete this subject? Courses using it will become uncategorized.')" style="display:inline">
+                            <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+                            <button type="submit" name="delete_subject" value="<?= (int) $s['id'] ?>" class="btn btn-sm btn-outline" style="color:#c00;border-color:#c00">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php elseif ($tab === 'settings'): ?>
+        <?php if (flash('success')): ?><div class="alert alert-success"><?= e(flash('success')) ?></div><?php endif; ?>
+        <div class="card"><div class="card-body">
+            <h3 style="font-size:1rem;margin-bottom:1rem">Site Branding</h3>
+            <form method="post">
+                <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+                <div class="form-group">
+                    <label class="form-label">Site Name</label>
+                    <input type="text" name="SITE_NAME" class="form-control" value="<?= e($currentSettings['SITE_NAME'] ?? SITE_NAME) ?>" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tagline</label>
+                    <input type="text" name="SITE_TAGLINE" class="form-control" value="<?= e($currentSettings['SITE_TAGLINE'] ?? SITE_TAGLINE) ?>">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Affiliation (shown below the site name in the header)</label>
+                    <input type="text" name="SITE_AFFILIATION" class="form-control" value="<?= e($currentSettings['SITE_AFFILIATION'] ?? SITE_AFFILIATION) ?>">
+                </div>
+                <button type="submit" name="save_settings" value="1" class="btn btn-primary">Save Settings</button>
+            </form>
+        </div></div>
     <?php else: ?>
         <div style="display:flex;justify-content:flex-end;margin-bottom:1rem">
             <a href="?export=users" class="btn btn-outline btn-sm">⬇ Download CSV</a>

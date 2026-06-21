@@ -35,7 +35,7 @@ img { max-width: 100%; height: auto; display: block; }
     box-shadow: 0 2px 12px rgba(0,0,0,.25);
 }
 .nav-brand { font-size: 1.3rem; font-weight: 700; color: var(--gold); }
-.nav-brand small { display: block; font-size: .7rem; color: rgba(255,255,255,.6); font-weight: 400; letter-spacing: .5px; }
+.nav-brand small { display: block; font-size: .85rem; color: rgba(255,255,255,.75); font-weight: 500; letter-spacing: .5px; }
 .nav-links { display: flex; align-items: center; gap: 1.2rem; }
 .nav-links a { color: rgba(255,255,255,.8); font-size: .9rem; font-weight: 500; padding: .4rem .8rem; border-radius: 6px; transition: var(--transition); }
 .nav-links a:hover { background: rgba(255,255,255,.1); color: var(--gold); }
@@ -215,7 +215,7 @@ footer { background: var(--green-deep); color: rgba(255,255,255,.75); padding: 3
         padding: .7rem 1rem; gap: .5rem;
     }
     .nav-brand { font-size: 1.1rem; text-align: center; }
-    .nav-brand small { font-size: .65rem; }
+    .nav-brand small { font-size: .72rem; }
     .nav-links { flex-wrap: wrap; justify-content: center; gap: .4rem .6rem; width: 100%; }
     .nav-links a { font-size: .82rem; padding: .35rem .65rem; }
     .hero { padding: 2.5rem 1rem; }

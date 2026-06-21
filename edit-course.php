@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu">☰</button>
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <div class="nav-links">
-        <span class="nav-user">👤 <?= e($user['name']) ?></span><a href="dashboard.php">Dashboard</a><a href="logout.php" class="nav-btn">Logout</a><a href="about.php">About</a><a href="feedback.php">Feedback</a></div>
+        <span class="nav-user">👤 <?= e($user['name']) ?></span><a href="chat.php">Messages</a><a href="dashboard.php">Dashboard</a><a href="logout.php" class="nav-btn">Logout</a><a href="about.php">About</a><a href="feedback.php">Feedback</a></div>
 </nav>
 
 <div class="dashboard-wrap">

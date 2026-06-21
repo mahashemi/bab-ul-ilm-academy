@@ -136,6 +136,34 @@ img { max-width: 100%; height: auto; display: block; }
 .course-price { font-size: 1.1rem; font-weight: 700; color: var(--green-deep); }
 .course-price.free { color: #2e7d32; }
 
+/* ── Student Roster Cards (teacher's per-course student list) ── */
+.student-card {
+    background: var(--white); border-radius: var(--radius); border: 1.5px solid var(--border);
+    box-shadow: var(--shadow); padding: 1.1rem; display: flex; align-items: center; gap: .9rem;
+}
+.student-avatar {
+    width: 44px; height: 44px; border-radius: 50%; background: var(--teal-mid); color: var(--white);
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.05rem;
+    flex-shrink: 0;
+}
+.student-info { flex: 1; min-width: 0; }
+.student-name { font-weight: 600; font-size: .95rem; }
+.student-meta { font-size: .78rem; color: var(--text-light); }
+
+/* ── Chat (Teacher ↔ Student messaging) ── */
+.chat-wrap { display: flex; height: calc(100vh - 64px); max-width: 1180px; margin: 0 auto; }
+.chat-list { width: 280px; border-right: 1px solid var(--border); overflow-y: auto; background: var(--white); }
+.chat-list-item { padding: 1rem; border-bottom: 1px solid var(--border); cursor: pointer; transition: var(--transition); display: flex; gap: .8rem; align-items: center; text-decoration: none; color: inherit; }
+.chat-list-item:hover, .chat-list-item.active { background: var(--cream); }
+.chat-main { flex: 1; display: flex; flex-direction: column; background: var(--cream); }
+.chat-messages { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: .6rem; }
+.msg { max-width: 60%; padding: .7rem 1rem; border-radius: 16px; font-size: .9rem; line-height: 1.5; }
+.msg-sent { background: var(--teal-mid); color: var(--white); margin-left: auto; border-bottom-right-radius: 4px; }
+.msg-recv { background: var(--white); color: var(--text); border-bottom-left-radius: 4px; box-shadow: var(--shadow); }
+.chat-input-bar { padding: 1rem; background: var(--white); border-top: 1px solid var(--border); display: flex; gap: .8rem; }
+.chat-input { flex: 1; padding: .7rem 1rem; border: 1.5px solid var(--border); border-radius: var(--radius-full); outline: none; font-size: .95rem; }
+.chat-input:focus { border-color: var(--teal-mid); }
+
 /* ── Filter Chips (Material Design 3 filter-chip pattern) ──
    A scrollable single-row strip, not a wrapping wall of chips — keeps any
    number of subjects from overwhelming the page vertically, especially
@@ -347,6 +375,8 @@ footer { background: var(--green-deep); color: rgba(255,255,255,.75); padding: 3
     .table td:last-child { justify-content: flex-end; }
 
     .role-switch { flex-direction: column; }
+    .chat-list { width: 80px; }
+    .chat-list-item .chat-preview { display: none; }
 
     /* ── Footer: stack and center instead of left-aligning a single column ── */
     footer { padding: 2.2rem 1.2rem 1.2rem; margin-top: 3rem; }

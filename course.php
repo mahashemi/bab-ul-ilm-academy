@@ -78,7 +78,7 @@ $progressPct = $lessons ? (int) round(count($completedLessons) / count($lessons)
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <div class="nav-links">
         <a href="courses.php">Courses</a>
-        <?php if ($user): ?><span class="nav-user">👤 <?= e($user['name']) ?></span><a href="dashboard.php">Dashboard</a><a href="logout.php" class="nav-btn">Logout</a>
+        <?php if ($user): ?><span class="nav-user">👤 <?= e($user['name']) ?></span><a href="chat.php">Messages</a><a href="dashboard.php">Dashboard</a><a href="logout.php" class="nav-btn">Logout</a>
         <?php else: ?><a href="login.php" class="nav-btn">Login</a><?php endif; ?>
         <a href="about.php">About</a>
         <a href="feedback.php">Feedback</a>
@@ -118,7 +118,12 @@ $progressPct = $lessons ? (int) round(count($completedLessons) / count($lessons)
                     <div style="font-weight:600"><?= e($course['teacher_name']) ?></div>
                     <div style="font-size:.82rem;color:var(--text-light)"><?= e($course['qualification'] ?: 'Qualified Teacher') ?></div>
                 </div>
-                <div style="margin-left:auto;font-size:.85rem;color:var(--text-light)">🎓 <?= (int) $studentCount ?> students enrolled</div>
+                <div style="margin-left:auto;display:flex;align-items:center;gap:1rem">
+                    <span style="font-size:.85rem;color:var(--text-light)">🎓 <?= (int) $studentCount ?> students enrolled</span>
+                    <?php if ($isEnrolled): ?>
+                        <a href="chat.php?with=<?= (int) $course['teacher_id'] ?>&course=<?= (int) $course['id'] ?>" class="btn btn-sm btn-outline">💬 Message Teacher</a>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
 

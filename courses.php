@@ -14,7 +14,7 @@ $sql = "SELECT c.*, u.name AS teacher_name, s.name AS subject_name, s.icon AS su
         WHERE c.is_published = 1";
 $params = [];
 if ($subjectId > 0) { $sql .= ' AND c.subject_id = ?'; $params[] = $subjectId; }
-if ($q !== '') { $sql .= ' AND (c.title LIKE ? OR c.description LIKE ?)'; $params[] = "%$q%"; $params[] = "%$q%"; }
+if ($q !== '') { $sql .= ' AND (c.title LIKE ? OR c.description LIKE ? OR u.name LIKE ? OR s.name LIKE ?)'; array_push($params, "%$q%", "%$q%", "%$q%", "%$q%"); }
 $sql .= ' ORDER BY c.created_at DESC';
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
@@ -36,7 +36,7 @@ $courses = $stmt->fetchAll();
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <div class="nav-links">
         <a href="courses.php">Courses</a>
-        <?php if ($user): ?><span class="nav-user">👤 <?= e($user['name']) ?></span><a href="dashboard.php">Dashboard</a><a href="logout.php" class="nav-btn">Logout</a>
+        <?php if ($user): ?><span class="nav-user">👤 <?= e($user['name']) ?></span><a href="chat.php">Messages</a><a href="dashboard.php">Dashboard</a><a href="logout.php" class="nav-btn">Logout</a>
         <?php else: ?><a href="login.php" class="nav-btn">Login</a><?php endif; ?>
         <a href="about.php">About</a>
         <a href="feedback.php">Feedback</a>
@@ -47,7 +47,7 @@ $courses = $stmt->fetchAll();
     <h2 class="section-title">All <span>Courses</span></h2>
 
     <form method="get" style="display:flex;gap:.6rem;margin-bottom:1.5rem;max-width:500px">
-        <input type="text" name="q" class="form-control" placeholder="Search courses..." value="<?= e($q) ?>">
+        <input type="text" name="q" class="form-control" placeholder="Search by course, teacher, or subject..." value="<?= e($q) ?>">
         <button type="submit" class="btn btn-primary">Search</button>
     </form>
 

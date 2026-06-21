@@ -122,7 +122,7 @@ $feedback = $pdo->query('SELECT * FROM feedback ORDER BY created_at DESC')->fetc
     <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu">☰</button>
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <div class="nav-links">
-        <span class="nav-user">👤 <?= e($user['name']) ?></span>
+        <span class="nav-user">👤 <?= e($user['name']) ?></span><a href="chat.php">Messages</a>
         <a href="index.php">Site</a>
         <a href="dashboard.php">Dashboard</a>
         <a href="logout.php" class="nav-btn">Logout</a>
@@ -182,6 +182,7 @@ $feedback = $pdo->query('SELECT * FROM feedback ORDER BY created_at DESC')->fetc
                     <td><span class="badge <?= $c['is_published'] ? 'badge-free' : 'badge-paid' ?>"><?= $c['is_published'] ? 'Published' : 'Draft' ?></span></td>
                     <td style="display:flex;gap:.4rem">
                         <a href="edit-course.php?id=<?= (int) $c['id'] ?>" class="btn btn-sm btn-outline">Edit</a>
+                        <a href="course-students.php?id=<?= (int) $c['id'] ?>" class="btn btn-sm btn-outline">Students (<?= (int) $c['student_count'] ?>)</a>
                         <form method="post"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_published" value="<?= (int) $c['id'] ?>" class="btn btn-sm btn-outline"><?= $c['is_published'] ? 'Unpublish' : 'Publish' ?></button></form>
                     </td>
                 </tr>

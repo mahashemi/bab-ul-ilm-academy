@@ -50,9 +50,10 @@ CREATE TABLE IF NOT EXISTS fields_of_study (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO fields_of_study (name, icon) VALUES
-('Islamic Studies',  '🕌'),
-('School Subjects',  '🎒'),
-('Bachelor Streams', '🎓');
+('Islamic Studies',    '🕌'),
+('School Subjects',    '🎒'),
+('Bachelor Streams',   '🎓'),
+('Exam Preparation',   '🎯');
 
 -- ── Course Categories ─────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS subjects (
@@ -82,7 +83,11 @@ INSERT INTO subjects (field_of_study_id, name, icon) VALUES
 (3, 'Pre-Medical Studies',           '🩺'),
 (3, 'Pre-Engineering Studies',       '⚙️'),
 (3, 'Business & Commerce',          '💼'),
-(3, 'Arts & Humanities',            '🎨');
+(3, 'Arts & Humanities',            '🎨'),
+-- Standardized exam preparation
+(4, 'GCSE',                         '📜'),
+(4, 'GED',                          '🎓'),
+(4, 'SAT',                          '✏️');
 
 -- ── Courses ───────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS courses (
@@ -151,6 +156,22 @@ CREATE TABLE IF NOT EXISTS course_reviews (
     UNIQUE KEY one_review (course_id, student_id),
     FOREIGN KEY (course_id)  REFERENCES courses(id) ON DELETE CASCADE,
     FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── Messages (Teacher ↔ Student) ──────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS messages (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    sender_id   INT UNSIGNED NOT NULL,
+    receiver_id INT UNSIGNED NOT NULL,
+    course_id   INT UNSIGNED NULL,
+    body        TEXT NOT NULL,
+    is_read     TINYINT(1) DEFAULT 0,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (sender_id)   REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (course_id)   REFERENCES courses(id) ON DELETE SET NULL,
+    INDEX idx_conversation (sender_id, receiver_id),
+    INDEX idx_receiver (receiver_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── Skills (reusable across all users — managed from Edit Profile) ────────

@@ -19,7 +19,7 @@ if (($user['role'] ?? '') === 'admin') redirect('admin.php');
     <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu">☰</button>
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <div class="nav-links">
-        <span class="nav-user">👤 <?= e($user['name']) ?></span>
+        <span class="nav-user">👤 <?= e($user['name']) ?></span><a href="chat.php">Messages</a>
         <a href="courses.php">Courses</a>
         <?php if (($user['role'] ?? '') === 'teacher'): ?><a href="add-course.php">+ New Course</a><?php endif; ?>
         <a href="edit-profile.php">Edit Profile</a>
@@ -71,6 +71,7 @@ if (($user['role'] ?? '') === 'admin') redirect('admin.php');
                     <td data-label="Actions" class="table-actions">
                         <a href="edit-course.php?id=<?= (int) $c['id'] ?>" class="btn btn-sm btn-outline">Edit</a>
                         <a href="add-lesson.php?course_id=<?= (int) $c['id'] ?>" class="btn btn-sm btn-outline">+ Lesson</a>
+                        <a href="course-students.php?id=<?= (int) $c['id'] ?>" class="btn btn-sm btn-outline">Students (<?= (int) $c['student_count'] ?>)</a>
                     </td>
                 </tr>
                 <?php endforeach; ?>

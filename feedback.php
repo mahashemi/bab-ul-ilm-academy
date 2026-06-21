@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <div class="nav-links">
         <a href="courses.php">Courses</a>
-        <?php if ($user): ?><span class="nav-user">👤 <?= e($user['name']) ?></span>
+        <?php if ($user): ?><span class="nav-user">👤 <?= e($user['name']) ?></span><a href="chat.php">Messages</a>
             <a href="dashboard.php">Dashboard</a>
             <?php if (($user['role'] ?? '') === 'admin'): ?><a href="admin.php">Admin</a><?php endif; ?>
             <a href="logout.php" class="nav-btn">Logout</a>

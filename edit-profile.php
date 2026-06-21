@@ -159,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function () {
     <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu">☰</button>
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <div class="nav-links">
-        <span class="nav-user">👤 <?= e($user['name']) ?></span>
+        <span class="nav-user">👤 <?= e($user['name']) ?></span><a href="chat.php">Messages</a>
         <a href="courses.php">Courses</a>
         <a href="dashboard.php">Dashboard</a>
         <a href="logout.php" class="nav-btn">Logout</a>

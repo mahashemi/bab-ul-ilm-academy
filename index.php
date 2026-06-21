@@ -2,11 +2,18 @@
 require_once __DIR__ . '/db.php';
 $user = auth();
 
-// Landing page shows only the most active subjects (by published course count) to avoid
-// overwhelming visitors with the full subject list — the rest live on courses.php.
+// Landing page shows only the most popular subjects to avoid overwhelming visitors
+// with the full subject list (the rest live on courses.php). Popularity = real
+// student demand (enrollments) and teacher supply (distinct teachers), so this
+// list re-ranks itself automatically as the platform grows — no manual curation.
 $subjects = $pdo->query(
-    "SELECT s.*, (SELECT COUNT(*) FROM courses c WHERE c.subject_id = s.id AND c.is_published = 1) AS course_count
-     FROM subjects s ORDER BY course_count DESC, s.name ASC LIMIT 8"
+    "SELECT s.*,
+            (SELECT COUNT(*) FROM courses c WHERE c.subject_id = s.id AND c.is_published = 1) AS course_count,
+            (SELECT COUNT(DISTINCT c.teacher_id) FROM courses c WHERE c.subject_id = s.id AND c.is_published = 1) AS teacher_count,
+            (SELECT COUNT(*) FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.subject_id = s.id AND c.is_published = 1) AS enrollment_count
+     FROM subjects s
+     ORDER BY enrollment_count DESC, teacher_count DESC, course_count DESC, s.name ASC
+     LIMIT 8"
 )->fetchAll();
 
 $courses = $pdo->query(
@@ -43,7 +50,7 @@ $stats = $pdo->query(
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <div class="nav-links">
         <a href="courses.php">Courses</a>
-        <?php if ($user): ?><span class="nav-user">👤 <?= e($user['name']) ?></span>
+        <?php if ($user): ?><span class="nav-user">👤 <?= e($user['name']) ?></span><a href="chat.php">Messages</a>
             <a href="dashboard.php">Dashboard</a>
             <?php if (($user['role'] ?? '') === 'admin'): ?><a href="admin.php">Admin</a><?php endif; ?>
             <a href="logout.php" class="nav-btn">Logout</a>

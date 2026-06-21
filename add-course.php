@@ -33,13 +33,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!$errors) {
         $imagePath = handleImageUpload('cover', 'courses');
+        // New courses always start as 'pending' — they're not visible to students until
+        // an admin reviews and approves them, regardless of the teacher's publish intent.
         $stmt = $pdo->prepare(
-            'INSERT INTO courses (teacher_id, subject_id, title, description, level, language, price, cover_url, is_published)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)'
+            "INSERT INTO courses (teacher_id, subject_id, title, description, level, language, price, cover_url, is_published, moderation_status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 'pending')"
         );
         $stmt->execute([$user['id'], $subjectId ?: null, $title, $description, $level, $language, $price, $imagePath]);
         $newId = (int) $pdo->lastInsertId();
-        flash('success', 'Course created! Now add some lessons.');
+        flash('success', 'Course created! It will be reviewed by an admin before it appears publicly. Now add some lessons.');
         redirect('add-lesson.php?course_id=' . $newId);
     }
 }

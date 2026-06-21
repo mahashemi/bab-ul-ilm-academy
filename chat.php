@@ -16,11 +16,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['body'])) {
     redirect('chat.php?with=' . $withId . ($courseId ? '&course=' . $courseId : ''));
 }
 
-// List of conversations
+// List of conversations, with unread count per conversation
 $convos = $pdo->prepare(
     "SELECT u.id, u.name,
             (SELECT body FROM messages m2 WHERE (m2.sender_id=u.id AND m2.receiver_id=?) OR (m2.sender_id=? AND m2.receiver_id=u.id) ORDER BY m2.created_at DESC LIMIT 1) AS last_msg,
-            (SELECT created_at FROM messages m3 WHERE (m3.sender_id=u.id AND m3.receiver_id=?) OR (m3.sender_id=? AND m3.receiver_id=u.id) ORDER BY m3.created_at DESC LIMIT 1) AS last_at
+            (SELECT created_at FROM messages m3 WHERE (m3.sender_id=u.id AND m3.receiver_id=?) OR (m3.sender_id=? AND m3.receiver_id=u.id) ORDER BY m3.created_at DESC LIMIT 1) AS last_at,
+            (SELECT COUNT(*) FROM messages m4 WHERE m4.sender_id=u.id AND m4.receiver_id=? AND m4.is_read=0) AS unread_count
      FROM users u
      WHERE u.id IN (
         SELECT sender_id FROM messages WHERE receiver_id = ?
@@ -29,7 +30,7 @@ $convos = $pdo->prepare(
      )
      ORDER BY last_at DESC"
 );
-$convos->execute([$user['id'], $user['id'], $user['id'], $user['id'], $user['id'], $user['id']]);
+$convos->execute([$user['id'], $user['id'], $user['id'], $user['id'], $user['id'], $user['id'], $user['id']]);
 $conversations = $convos->fetchAll();
 
 $activeMessages = [];
@@ -46,6 +47,23 @@ if ($withId > 0) {
     $activeMessages = $stmt->fetchAll();
 
     $pdo->prepare('UPDATE messages SET is_read = 1 WHERE sender_id = ? AND receiver_id = ?')->execute([$withId, $user['id']]);
+}
+
+// Group consecutive messages from the same sender so avatars/timestamps don't repeat every line
+$groups = [];
+foreach ($activeMessages as $m) {
+    $last = end($groups);
+    if ($last !== false && $last['sender_id'] == $m['sender_id'] && (strtotime($m['created_at']) - strtotime(end($last['messages'])['created_at'])) < 300) {
+        $groups[key($groups)]['messages'][] = $m;
+    } else {
+        $groups[] = ['sender_id' => $m['sender_id'], 'messages' => [$m]];
+    }
+}
+
+function chatTime(string $dt): string {
+    $ts = strtotime($dt);
+    $today = date('Y-m-d', $ts) === date('Y-m-d');
+    return $today ? date('g:i A', $ts) : date('M j, g:i A', $ts);
 }
 ?>
 <!DOCTYPE html>
@@ -64,9 +82,8 @@ if ($withId > 0) {
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <div class="nav-links">
         <a href="courses.php">Courses</a>
-        <span class="nav-user">👤 <?= e($user['name']) ?></span>
+        <span class="nav-user">👤 <?= e($user['name']) ?></span><a href="chat.php">Messages</a>
         <a href="dashboard.php">Dashboard</a>
-        <a href="chat.php">Messages</a>
         <?php if (($user['role'] ?? '') === 'admin'): ?><a href="admin.php">Admin</a><?php endif; ?>
         <a href="logout.php" class="nav-btn">Logout</a>
         <a href="about.php">About</a>
@@ -74,46 +91,87 @@ if ($withId > 0) {
     </div>
 </nav>
 
-<div class="chat-wrap">
-    <div class="chat-list">
-        <?php if (!$conversations): ?>
-            <div style="padding:1.5rem;text-align:center;color:var(--text-light);font-size:.88rem">No conversations yet. Teachers can message students from their course's student list; students can message a teacher from the course page.</div>
-        <?php endif; ?>
-        <?php foreach ($conversations as $c): ?>
-            <a href="chat.php?with=<?= (int) $c['id'] ?>" class="chat-list-item <?= $c['id'] == $withId ? 'active' : '' ?>">
-                <div class="student-avatar"><?= e(mb_substr($c['name'], 0, 1)) ?></div>
-                <div class="chat-preview" style="overflow:hidden">
-                    <div style="font-weight:600;font-size:.88rem"><?= e($c['name']) ?></div>
-                    <div style="font-size:.78rem;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><?= e($c['last_msg'] ?? '') ?></div>
-                </div>
-            </a>
-        <?php endforeach; ?>
-    </div>
-
-    <div class="chat-main">
-        <?php if (!$activeUser): ?>
-            <div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-light)">
-                <div style="text-align:center"><div style="font-size:3rem">💬</div>Select a conversation to start chatting</div>
-            </div>
-        <?php else: ?>
-            <div style="padding:1rem 1.5rem;background:var(--white);border-bottom:1px solid var(--border);font-weight:700">
-                <?= e($activeUser['name']) ?>
-            </div>
-            <div class="chat-messages">
-                <?php foreach ($activeMessages as $m): ?>
-                    <div class="msg <?= $m['sender_id'] == $user['id'] ? 'msg-sent' : 'msg-recv' ?>">
-                        <?= e($m['body']) ?>
+<div class="chat-page">
+    <div class="chat-wrap <?= $withId ? 'thread-open' : '' ?>">
+        <div class="chat-list">
+            <div class="chat-list-header">Messages</div>
+            <?php if (!$conversations): ?>
+                <div class="chat-empty-list">💬<br>No conversations yet.<br>Teachers can message students from their course's student list; students can message a teacher from the course page.</div>
+            <?php endif; ?>
+            <?php foreach ($conversations as $c): ?>
+                <a href="chat.php?with=<?= (int) $c['id'] ?>" class="chat-list-item <?= $c['id'] == $withId ? 'active' : '' ?>">
+                    <div class="chat-avatar"><?= e(mb_substr($c['name'], 0, 1)) ?></div>
+                    <div style="overflow:hidden;flex:1;min-width:0">
+                        <div class="chat-preview-top">
+                            <span class="chat-preview-name"><?= e($c['name']) ?></span>
+                            <span class="chat-preview-time"><?= $c['last_at'] ? chatTime($c['last_at']) : '' ?></span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem">
+                            <span class="chat-preview-msg"><?= e($c['last_msg'] ?? '') ?></span>
+                            <?php if ((int) $c['unread_count'] > 0): ?><span class="chat-unread-dot"></span><?php endif; ?>
+                        </div>
                     </div>
-                <?php endforeach; ?>
-            </div>
-            <form method="post" class="chat-input-bar">
-                <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
-                <input type="text" name="body" class="chat-input" placeholder="Type a message..." required autocomplete="off">
-                <button type="submit" class="btn btn-primary">Send</button>
-            </form>
-        <?php endif; ?>
+                </a>
+            <?php endforeach; ?>
+        </div>
+
+        <div class="chat-main">
+            <?php if (!$activeUser): ?>
+                <div class="chat-empty-thread">
+                    <div><div class="icon">💬</div>Select a conversation to start chatting</div>
+                </div>
+            <?php else: ?>
+                <div class="chat-header">
+                    <button class="chat-back" onclick="location.href='chat.php'" aria-label="Back to conversations">←</button>
+                    <div class="chat-avatar"><?= e(mb_substr($activeUser['name'], 0, 1)) ?></div>
+                    <div>
+                        <div class="chat-header-name"><?= e($activeUser['name']) ?></div>
+                    </div>
+                </div>
+                <div class="chat-messages" id="chatMessages">
+                    <?php foreach ($groups as $g): $isSent = $g['sender_id'] == $user['id']; ?>
+                    <div class="msg-group <?= $isSent ? 'sent' : '' ?>">
+                        <div class="msg-group-avatar"><?= e(mb_substr($isSent ? $user['name'] : $activeUser['name'], 0, 1)) ?></div>
+                        <div class="msg-bubbles">
+                            <?php foreach ($g['messages'] as $m): ?>
+                                <div class="msg <?= $isSent ? 'msg-sent' : 'msg-recv' ?>"><?= e($m['body']) ?></div>
+                            <?php endforeach; ?>
+                            <div class="msg-time"><?= chatTime(end($g['messages'])['created_at']) ?></div>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <form method="post" class="chat-input-bar" id="chatForm">
+                    <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+                    <textarea name="body" id="chatBody" class="chat-input" rows="1" placeholder="Type a message..." required autocomplete="off"></textarea>
+                    <button type="submit" class="chat-send-btn" aria-label="Send">➤</button>
+                </form>
+            <?php endif; ?>
+        </div>
     </div>
 </div>
+
+<script>
+(function () {
+    var box = document.getElementById('chatMessages');
+    if (box) box.scrollTop = box.scrollHeight;
+
+    var textarea = document.getElementById('chatBody');
+    var form = document.getElementById('chatForm');
+    if (textarea && form) {
+        textarea.addEventListener('input', function () {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 110) + 'px';
+        });
+        textarea.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (textarea.value.trim() !== '') form.submit();
+            }
+        });
+    }
+})();
+</script>
 <script src="app.js" defer></script>
 </body>
 </html>

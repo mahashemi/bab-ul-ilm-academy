@@ -8,9 +8,9 @@ $user = auth();
 // list re-ranks itself automatically as the platform grows — no manual curation.
 $subjects = $pdo->query(
     "SELECT s.*,
-            (SELECT COUNT(*) FROM courses c WHERE c.subject_id = s.id AND c.is_published = 1) AS course_count,
-            (SELECT COUNT(DISTINCT c.teacher_id) FROM courses c WHERE c.subject_id = s.id AND c.is_published = 1) AS teacher_count,
-            (SELECT COUNT(*) FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.subject_id = s.id AND c.is_published = 1) AS enrollment_count
+            (SELECT COUNT(*) FROM courses c WHERE c.subject_id = s.id AND c.is_published = 1 AND c.moderation_status = 'approved') AS course_count,
+            (SELECT COUNT(DISTINCT c.teacher_id) FROM courses c WHERE c.subject_id = s.id AND c.is_published = 1 AND c.moderation_status = 'approved') AS teacher_count,
+            (SELECT COUNT(*) FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.subject_id = s.id AND c.is_published = 1 AND c.moderation_status = 'approved') AS enrollment_count
      FROM subjects s
      ORDER BY enrollment_count DESC, teacher_count DESC, course_count DESC, s.name ASC
      LIMIT 8"
@@ -22,7 +22,7 @@ $courses = $pdo->query(
      FROM courses c
      JOIN users u ON u.id = c.teacher_id
      LEFT JOIN subjects s ON s.id = c.subject_id
-     WHERE c.is_published = 1
+     WHERE c.is_published = 1 AND c.moderation_status = 'approved'
      ORDER BY c.created_at DESC LIMIT 12"
 )->fetchAll();
 
@@ -30,7 +30,7 @@ $stats = $pdo->query(
     "SELECT
         (SELECT COUNT(*) FROM users WHERE role='teacher') AS teachers,
         (SELECT COUNT(*) FROM users WHERE role='student') AS students,
-        (SELECT COUNT(*) FROM courses WHERE is_published=1) AS courses"
+        (SELECT COUNT(*) FROM courses WHERE is_published=1 AND moderation_status='approved') AS courses"
 )->fetch();
 ?>
 <!DOCTYPE html>

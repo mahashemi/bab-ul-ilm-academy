@@ -38,6 +38,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare('UPDATE users SET is_verified = 1, verification_token = NULL, verification_expires = NULL WHERE id = ?')->execute([(int) $_POST['toggle_verified']]);
     } elseif (isset($_POST['toggle_published'])) {
         $pdo->prepare('UPDATE courses SET is_published = 1 - is_published WHERE id = ?')->execute([(int) $_POST['toggle_published']]);
+    } elseif (isset($_POST['approve_course'])) {
+        $pdo->prepare("UPDATE courses SET moderation_status = 'approved', is_published = 1 WHERE id = ?")->execute([(int) $_POST['approve_course']]);
+    } elseif (isset($_POST['reject_course'])) {
+        $pdo->prepare("UPDATE courses SET moderation_status = 'rejected', is_published = 0 WHERE id = ?")->execute([(int) $_POST['reject_course']]);
     } elseif (isset($_POST['set_role']) && $_POST['set_role'] !== '') {
         $targetId = (int) $_POST['user_id'];
         $newRole = $_POST['set_role'];
@@ -100,12 +104,29 @@ $courses = $pdo->query(
      FROM courses c JOIN users u ON u.id = c.teacher_id LEFT JOIN subjects s ON s.id = c.subject_id
      ORDER BY c.created_at DESC"
 )->fetchAll();
+$pendingCourses = array_values(array_filter($courses, fn($c) => $c['moderation_status'] === 'pending'));
 $fieldsOfStudy = $pdo->query('SELECT * FROM fields_of_study ORDER BY name')->fetchAll();
 $subjects = $pdo->query(
     'SELECT s.*, f.name AS field_name FROM subjects s LEFT JOIN fields_of_study f ON f.id = s.field_of_study_id ORDER BY f.name, s.name'
 )->fetchAll();
 $currentSettings = $pdo->query('SELECT setting_key, setting_value FROM settings')->fetchAll(PDO::FETCH_KEY_PAIR);
 $feedback = $pdo->query('SELECT * FROM feedback ORDER BY created_at DESC')->fetchAll();
+// All distinct conversations platform-wide, for admin oversight — pairs are normalized
+// (lower id, higher id) so each conversation appears once regardless of who sent last.
+$allConvos = $pdo->query(
+    "SELECT pair.u1, pair.u2, pair.message_count, pair.last_at, usr1.name AS u1_name, usr2.name AS u2_name,
+            (SELECT body FROM messages m2
+             WHERE (m2.sender_id = pair.u1 AND m2.receiver_id = pair.u2) OR (m2.sender_id = pair.u2 AND m2.receiver_id = pair.u1)
+             ORDER BY m2.created_at DESC LIMIT 1) AS last_msg
+     FROM (
+        SELECT LEAST(sender_id, receiver_id) AS u1, GREATEST(sender_id, receiver_id) AS u2,
+               COUNT(*) AS message_count, MAX(created_at) AS last_at
+        FROM messages GROUP BY u1, u2
+     ) pair
+     JOIN users usr1 ON usr1.id = pair.u1
+     JOIN users usr2 ON usr2.id = pair.u2
+     ORDER BY pair.last_at DESC"
+)->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -158,13 +179,37 @@ $feedback = $pdo->query('SELECT * FROM feedback ORDER BY created_at DESC')->fetc
 
     <div class="tabs">
         <a href="?tab=users" class="tab-btn <?= $tab === 'users' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center">👥 Users (<?= count($users) ?>)</a>
+        <a href="?tab=pending" class="tab-btn <?= $tab === 'pending' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center">⏳ Pending Review (<?= count($pendingCourses) ?>)</a>
         <a href="?tab=courses" class="tab-btn <?= $tab === 'courses' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center">📚 Courses (<?= count($courses) ?>)</a>
         <a href="?tab=subjects" class="tab-btn <?= $tab === 'subjects' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center">🏷️ Subjects (<?= count($subjects) ?>)</a>
         <a href="?tab=settings" class="tab-btn <?= $tab === 'settings' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center">⚙️ Settings</a>
         <a href="?tab=feedback" class="tab-btn <?= $tab === 'feedback' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center">💬 Feedback (<?= count($feedback) ?>)</a>
+        <a href="?tab=messages" class="tab-btn <?= $tab === 'messages' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center">👁️ All Chats (<?= count($allConvos) ?>)</a>
     </div>
 
-    <?php if ($tab === 'courses'): ?>
+    <?php if ($tab === 'pending'): ?>
+        <?php if (!$pendingCourses): ?>
+            <div class="empty-state"><div class="icon">✅</div><h3>No courses awaiting review</h3></div>
+        <?php else: ?>
+        <div class="grid-2">
+            <?php foreach ($pendingCourses as $c): ?>
+            <div class="card"><div class="card-body">
+                <h3 style="font-size:1.05rem;margin-bottom:.3rem"><a href="course.php?id=<?= (int) $c['id'] ?>" target="_blank"><?= e($c['title']) ?></a></h3>
+                <p style="font-size:.85rem;color:var(--text-mid);margin-bottom:.6rem">By <?= e($c['teacher_name']) ?> · <?= e($c['subject_name'] ?? 'No subject') ?></p>
+                <div style="display:flex;gap:.5rem;margin-bottom:1rem">
+                    <span class="badge badge-<?= e($c['level']) ?>"><?= e(ucfirst($c['level'])) ?></span>
+                    <span class="badge <?= $c['price'] == 0 ? 'badge-free' : 'badge-paid' ?>"><?= $c['price'] > 0 ? '$' . number_format((float) $c['price']) : 'Free' ?></span>
+                </div>
+                <div style="display:flex;gap:.5rem">
+                    <form method="post" style="flex:1"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="approve_course" value="<?= (int) $c['id'] ?>" class="btn btn-green btn-full btn-sm">✅ Approve</button></form>
+                    <form method="post" style="flex:1" onsubmit="return confirm('Reject this course? It will not be visible to students.')"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="reject_course" value="<?= (int) $c['id'] ?>" class="btn btn-outline btn-full btn-sm" style="color:#c00;border-color:#c00">✕ Reject</button></form>
+                    <a href="chat.php?with=<?= (int) $c['teacher_id'] ?>&course=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="Message teacher" aria-label="Message teacher">💬</a>
+                </div>
+            </div></div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+    <?php elseif ($tab === 'courses'): ?>
         <div style="display:flex;justify-content:flex-end;margin-bottom:1rem">
             <a href="?export=courses" class="btn btn-outline btn-sm">⬇ Download CSV</a>
         </div>
@@ -179,13 +224,19 @@ $feedback = $pdo->query('SELECT * FROM feedback ORDER BY created_at DESC')->fetc
                     <td><span class="badge badge-<?= e($c['level']) ?>"><?= e(ucfirst($c['level'])) ?></span></td>
                     <td><?= $c['price'] > 0 ? '$' . number_format((float) $c['price']) : 'Free' ?></td>
                     <td><?= (int) $c['student_count'] ?></td>
-                    <td><span class="badge <?= $c['is_published'] ? 'badge-free' : 'badge-paid' ?>"><?= $c['is_published'] ? 'Published' : 'Draft' ?></span></td>
+                    <td>
+                        <span class="badge <?= $c['moderation_status'] === 'approved' ? 'badge-free' : ($c['moderation_status'] === 'rejected' ? 'badge-paid' : 'badge-pending') ?>"><?= e(ucfirst($c['moderation_status'])) ?></span>
+                        <?php if ($c['moderation_status'] === 'approved'): ?><span class="badge <?= $c['is_published'] ? 'badge-free' : 'badge-paid' ?>"><?= $c['is_published'] ? 'Published' : 'Draft' ?></span><?php endif; ?>
+                    </td>
                     <td class="action-row">
                         <a href="edit-course.php?id=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="Edit course" aria-label="Edit course">✏️</a>
                         <a href="course-students.php?id=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="View students" aria-label="View students">
                             👥<?php if ((int) $c['student_count'] > 0): ?><span class="count-badge"><?= (int) $c['student_count'] ?></span><?php endif; ?>
                         </a>
+                        <a href="chat.php?with=<?= (int) $c['teacher_id'] ?>&course=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="Message teacher" aria-label="Message teacher">💬</a>
+                        <?php if ($c['moderation_status'] === 'approved'): ?>
                         <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_published" value="<?= (int) $c['id'] ?>" class="icon-btn" data-tip="<?= $c['is_published'] ? 'Unpublish' : 'Publish' ?>" aria-label="<?= $c['is_published'] ? 'Unpublish' : 'Publish' ?>"><?= $c['is_published'] ? '⛔' : '✅' ?></button></form>
+                        <?php endif; ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>
@@ -318,6 +369,28 @@ $feedback = $pdo->query('SELECT * FROM feedback ORDER BY created_at DESC')->fetc
             </tbody>
         </table>
         <?php endif; ?>
+    <?php elseif ($tab === 'messages'): ?>
+        <p class="section-sub">Read-only oversight of every conversation on the platform.</p>
+        <?php if (!$allConvos): ?>
+            <div class="empty-state"><div class="icon">👁️</div><h3>No conversations yet</h3></div>
+        <?php else: ?>
+        <table class="table">
+            <thead><tr><th>Participants</th><th>Last Message</th><th>Messages</th><th>Last Activity</th><th>Actions</th></tr></thead>
+            <tbody>
+                <?php foreach ($allConvos as $c): ?>
+                <tr>
+                    <td><?= e($c['u1_name']) ?> ↔ <?= e($c['u2_name']) ?></td>
+                    <td style="max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><?= e($c['last_msg'] ?? '') ?></td>
+                    <td><?= (int) $c['message_count'] ?></td>
+                    <td><?= date('M j, Y g:i A', strtotime($c['last_at'])) ?></td>
+                    <td class="action-row">
+                        <a href="admin-chat-view.php?u1=<?= (int) $c['u1'] ?>&u2=<?= (int) $c['u2'] ?>" class="icon-btn" data-tip="View conversation" aria-label="View conversation">👁️</a>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php endif; ?>
     <?php else: ?>
         <div style="display:flex;justify-content:flex-end;margin-bottom:1rem">
             <a href="?export=users" class="btn btn-outline btn-sm">⬇ Download CSV</a>
@@ -336,6 +409,7 @@ $feedback = $pdo->query('SELECT * FROM feedback ORDER BY created_at DESC')->fetc
                     <td><?= $u['is_verified'] ? '✓ Verified' : '—' ?></td>
                     <td><?= date('M j, Y', strtotime($u['created_at'])) ?></td>
                     <td class="action-row">
+                        <a href="chat.php?with=<?= (int) $u['id'] ?>" class="icon-btn" data-tip="Message" aria-label="Message">💬</a>
                         <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_approved" value="<?= (int) $u['id'] ?>" class="icon-btn <?= $u['is_approved'] ? 'icon-btn-danger' : '' ?>" data-tip="<?= $u['is_approved'] ? 'Suspend' : 'Reactivate' ?>" aria-label="<?= $u['is_approved'] ? 'Suspend' : 'Reactivate' ?>"><?= $u['is_approved'] ? '⏸️' : '▶️' ?></button></form>
                         <?php if (!$u['is_verified']): ?>
                         <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_verified" value="<?= (int) $u['id'] ?>" class="icon-btn" data-tip="Verify email" aria-label="Verify email">✔️</button></form>

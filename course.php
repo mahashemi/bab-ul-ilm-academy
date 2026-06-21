@@ -18,6 +18,12 @@ if (!$course) {
     die('<p style="font-family:sans-serif;padding:3rem;text-align:center">Course not found. <a href="courses.php">Go back</a></p>');
 }
 
+$isOwnerOrAdmin = $user && ((int) $course['teacher_id'] === (int) $user['id'] || ($user['role'] ?? '') === 'admin');
+if ($course['moderation_status'] !== 'approved' && !$isOwnerOrAdmin) {
+    http_response_code(403);
+    die('<p style="font-family:sans-serif;padding:3rem;text-align:center">This course is awaiting admin review and isn\'t public yet. <a href="courses.php">Go back</a></p>');
+}
+
 $lessons = $pdo->prepare('SELECT * FROM lessons WHERE course_id = ? ORDER BY sort_order ASC, id ASC');
 $lessons->execute([$id]);
 $lessons = $lessons->fetchAll();
@@ -100,10 +106,15 @@ $progressPct = $lessons ? (int) round(count($completedLessons) / count($lessons)
             </div>
             <div style="display:flex;align-items:center;gap:.7rem;flex-wrap:wrap">
                 <h1 style="font-size:1.5rem;margin-bottom:.6rem"><?= e($course['title']) ?></h1>
-                <?php if ($user && ($user['id'] == $course['teacher_id'] || ($user['role'] ?? '') === 'admin')): ?>
+                <?php if ($isOwnerOrAdmin): ?>
                     <a href="edit-course.php?id=<?= $id ?>" class="btn btn-sm btn-outline">✏️ Edit</a>
                 <?php endif; ?>
             </div>
+            <?php if ($isOwnerOrAdmin && $course['moderation_status'] !== 'approved'): ?>
+                <div class="alert <?= $course['moderation_status'] === 'rejected' ? 'alert-error' : 'alert-info' ?>" style="margin-bottom:1rem">
+                    <?= $course['moderation_status'] === 'rejected' ? '⛔ This course was rejected by an admin and is not visible to students.' : '⏳ This course is awaiting admin review and is not yet visible to students.' ?>
+                </div>
+            <?php endif; ?>
             <p style="color:var(--text-mid);margin-bottom:1rem"><?= e($course['description']) ?></p>
             <?php if ($course['editor_name']): ?>
                 <div style="font-size:.78rem;color:var(--text-light);margin-bottom:1rem">

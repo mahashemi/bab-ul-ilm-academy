@@ -1,0 +1,104 @@
+<?php
+require_once __DIR__ . '/db.php';
+requireAuth();
+$user = auth();
+if (($user['role'] ?? '') !== 'admin') {
+    http_response_code(403);
+    die('<p style="font-family:sans-serif;padding:3rem;text-align:center">Access denied. Admins only. <a href="index.php">Go back</a></p>');
+}
+
+$u1 = (int) ($_GET['u1'] ?? 0);
+$u2 = (int) ($_GET['u2'] ?? 0);
+
+$stmt = $pdo->prepare('SELECT id, name FROM users WHERE id IN (?, ?)');
+$stmt->execute([$u1, $u2]);
+$people = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+if (count($people) !== 2) {
+    http_response_code(404);
+    die('<p style="font-family:sans-serif;padding:3rem;text-align:center">Conversation not found. <a href="admin.php?tab=messages">Go back</a></p>');
+}
+
+$stmt = $pdo->prepare(
+    'SELECT * FROM messages WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?) ORDER BY created_at ASC'
+);
+$stmt->execute([$u1, $u2, $u2, $u1]);
+$messages = $stmt->fetchAll();
+
+$groups = [];
+foreach ($messages as $m) {
+    $last = end($groups);
+    if ($last !== false && $last['sender_id'] == $m['sender_id'] && (strtotime($m['created_at']) - strtotime(end($last['messages'])['created_at'])) < 300) {
+        $groups[key($groups)]['messages'][] = $m;
+    } else {
+        $groups[] = ['sender_id' => $m['sender_id'], 'messages' => [$m]];
+    }
+}
+
+function chatTime(string $dt): string {
+    $ts = strtotime($dt);
+    $today = date('Y-m-d', $ts) === date('Y-m-d');
+    return $today ? date('g:i A', $ts) : date('M j, g:i A', $ts);
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conversation Oversight — <?= e(SITE_NAME) ?></title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%95%8C%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav class="navbar">
+    <a class="nav-brand" href="index.php">🕌 <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></a>
+    <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu">☰</button>
+    <div class="nav-scrim" onclick="toggleNav()"></div>
+    <div class="nav-links">
+        <span class="nav-user">👤 <?= e($user['name']) ?></span>
+        <a href="admin.php?tab=messages">Admin</a>
+        <a href="logout.php" class="nav-btn">Logout</a>
+    </div>
+</nav>
+
+<div class="chat-page">
+    <div class="chat-wrap thread-open">
+        <div class="chat-main" style="display:flex">
+            <div class="chat-header">
+                <button class="chat-back" onclick="location.href='admin.php?tab=messages'" aria-label="Back to all chats" style="display:inline-flex">←</button>
+                <div class="chat-avatar">👁️</div>
+                <div>
+                    <div class="chat-header-name"><?= e($people[$u1]) ?> ↔ <?= e($people[$u2]) ?></div>
+                    <div class="chat-header-sub">Read-only admin oversight — <?= count($messages) ?> message(s)</div>
+                </div>
+            </div>
+            <div class="chat-messages" id="chatMessages">
+                <?php foreach ($groups as $g): $isU1 = $g['sender_id'] == $u1; ?>
+                <div class="msg-group <?= $isU1 ? '' : 'sent' ?>">
+                    <div class="msg-group-avatar"><?= e(mb_substr($people[$g['sender_id']], 0, 1)) ?></div>
+                    <div class="msg-bubbles">
+                        <div style="font-size:.7rem;color:var(--text-light);padding:0 .3rem"><?= e($people[$g['sender_id']]) ?></div>
+                        <?php foreach ($g['messages'] as $m): ?>
+                            <div class="msg <?= $isU1 ? 'msg-recv' : 'msg-sent' ?>"><?= e($m['body']) ?></div>
+                        <?php endforeach; ?>
+                        <div class="msg-time"><?= chatTime(end($g['messages'])['created_at']) ?></div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <div style="padding:.9rem 1.1rem;background:var(--white);border-top:1px solid var(--border);text-align:center;font-size:.8rem;color:var(--text-light)">
+                👁️ Admin oversight mode — this conversation cannot be replied to from here
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var box = document.getElementById('chatMessages');
+    if (box) box.scrollTop = box.scrollHeight;
+})();
+</script>
+</body>
+</html>

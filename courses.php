@@ -11,7 +11,7 @@ $sql = "SELECT c.*, u.name AS teacher_name, s.name AS subject_name, s.icon AS su
         FROM courses c
         JOIN users u ON u.id = c.teacher_id
         LEFT JOIN subjects s ON s.id = c.subject_id
-        WHERE c.is_published = 1";
+        WHERE c.is_published = 1 AND c.moderation_status = 'approved'";
 $params = [];
 if ($subjectId > 0) { $sql .= ' AND c.subject_id = ?'; $params[] = $subjectId; }
 if ($q !== '') { $sql .= ' AND (c.title LIKE ? OR c.description LIKE ? OR u.name LIKE ? OR s.name LIKE ?)'; array_push($params, "%$q%", "%$q%", "%$q%", "%$q%"); }

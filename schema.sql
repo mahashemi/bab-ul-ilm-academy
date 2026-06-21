@@ -101,6 +101,7 @@ CREATE TABLE IF NOT EXISTS courses (
     price        DECIMAL(10,2) DEFAULT 0.00,   -- 0 = free
     cover_url    VARCHAR(500),
     is_published TINYINT(1) DEFAULT 0,
+    moderation_status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
     created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_by   INT UNSIGNED NULL,
     updated_at   TIMESTAMP NULL,
@@ -108,7 +109,8 @@ CREATE TABLE IF NOT EXISTS courses (
     FOREIGN KEY (subject_id)  REFERENCES subjects(id) ON DELETE SET NULL,
     FOREIGN KEY (updated_by)  REFERENCES users(id) ON DELETE SET NULL,
     INDEX idx_teacher (teacher_id),
-    INDEX idx_published (is_published)
+    INDEX idx_published (is_published),
+    INDEX idx_moderation (moderation_status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── Lessons ───────────────────────────────────────────────────────────────

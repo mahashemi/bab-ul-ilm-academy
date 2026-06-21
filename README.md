@@ -33,10 +33,17 @@ Bab ul Ilm Academy is a dual-role e-learning platform:
 | Student: enroll and mark lessons complete, see progress bar | ✅ |
 | Country selector with auto-filled dial code + validated 10-digit phone | ✅ |
 | Admin panel — manage users & courses, change roles, suspend accounts, export CSV | ✅ |
+| Admin-managed subjects (add/edit/delete) — covers K-12 + Bachelor-level streams alongside Islamic studies | ✅ |
+| Admin-editable site settings (name, tagline, "Under Alia University of Holland" affiliation line) | ✅ |
 | Cover image upload for courses (JPG/PNG/WEBP, 5MB max, validated server-side) | ✅ |
+| Mobile-first responsive design — Material Design 3 navigation drawer, card-based tables on small screens | ✅ |
 | Certificates on course completion | 🔜 planned |
 | Video lesson embedding (YouTube/Vimeo URL field exists, not yet rendered) | 🔜 planned |
 | Paid course checkout | 🔜 planned |
+
+## Design System
+
+Built on Material Design 3 structural conventions (Roboto type, M3 elevation tiers, 8/12/16px shape scale, modal navigation drawer pattern on mobile) layered on top of the site's own teal-green-and-gold academic branding — not Google's default color palette. See `style.css` for the token definitions (`:root`).
 
 ## Project Structure
 
@@ -93,6 +100,8 @@ Visit `/admin.php` while logged in as the admin account (`role = 'admin'`) to:
 - View and CSV-export all users; suspend/reactivate accounts (suspended users are blocked at login)
 - **Change any user's role** (student / teacher / admin) via a dropdown — you cannot change your own role
 - View, edit, publish/unpublish, and CSV-export all courses
+- **Subjects tab** — add, edit, or delete subjects (name, icon) without touching code
+- **Settings tab** — edit the site name, tagline, and affiliation line shown across the app
 
 ## Email Verification
 

@@ -180,10 +180,12 @@ $feedback = $pdo->query('SELECT * FROM feedback ORDER BY created_at DESC')->fetc
                     <td><?= $c['price'] > 0 ? '$' . number_format((float) $c['price']) : 'Free' ?></td>
                     <td><?= (int) $c['student_count'] ?></td>
                     <td><span class="badge <?= $c['is_published'] ? 'badge-free' : 'badge-paid' ?>"><?= $c['is_published'] ? 'Published' : 'Draft' ?></span></td>
-                    <td style="display:flex;gap:.4rem">
-                        <a href="edit-course.php?id=<?= (int) $c['id'] ?>" class="btn btn-sm btn-outline">Edit</a>
-                        <a href="course-students.php?id=<?= (int) $c['id'] ?>" class="btn btn-sm btn-outline">Students (<?= (int) $c['student_count'] ?>)</a>
-                        <form method="post"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_published" value="<?= (int) $c['id'] ?>" class="btn btn-sm btn-outline"><?= $c['is_published'] ? 'Unpublish' : 'Publish' ?></button></form>
+                    <td class="action-row">
+                        <a href="edit-course.php?id=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="Edit course" aria-label="Edit course">✏️</a>
+                        <a href="course-students.php?id=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="View students" aria-label="View students">
+                            👥<?php if ((int) $c['student_count'] > 0): ?><span class="count-badge"><?= (int) $c['student_count'] ?></span><?php endif; ?>
+                        </a>
+                        <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_published" value="<?= (int) $c['id'] ?>" class="icon-btn" data-tip="<?= $c['is_published'] ? 'Unpublish' : 'Publish' ?>" aria-label="<?= $c['is_published'] ? 'Unpublish' : 'Publish' ?>"><?= $c['is_published'] ? '⛔' : '✅' ?></button></form>
                     </td>
                 </tr>
                 <?php endforeach; ?>
@@ -205,14 +207,14 @@ $feedback = $pdo->query('SELECT * FROM feedback ORDER BY created_at DESC')->fetc
                     <tr>
                         <td><input type="text" name="icon" form="<?= $ffid ?>" value="<?= e($f['icon']) ?>" class="form-control" style="width:70px;padding:.4rem"></td>
                         <td><input type="text" name="name" form="<?= $ffid ?>" value="<?= e($f['name']) ?>" class="form-control" style="padding:.4rem"></td>
-                        <td style="display:flex;gap:.4rem">
+                        <td class="action-row">
                             <form method="post" id="<?= $ffid ?>" style="display:inline">
                                 <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
-                                <button type="submit" name="edit_field" value="<?= (int) $f['id'] ?>" class="btn btn-sm btn-outline">Save</button>
+                                <button type="submit" name="edit_field" value="<?= (int) $f['id'] ?>" class="icon-btn" data-tip="Save" aria-label="Save">💾</button>
                             </form>
                             <form method="post" onsubmit="return confirm('Delete this field of study? Subjects in it will become ungrouped.')" style="display:inline">
                                 <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
-                                <button type="submit" name="delete_field" value="<?= (int) $f['id'] ?>" class="btn btn-sm btn-outline" style="color:#c00;border-color:#c00">Delete</button>
+                                <button type="submit" name="delete_field" value="<?= (int) $f['id'] ?>" class="icon-btn icon-btn-danger" data-tip="Delete" aria-label="Delete">🗑️</button>
                             </form>
                         </td>
                     </tr>
@@ -255,14 +257,14 @@ $feedback = $pdo->query('SELECT * FROM feedback ORDER BY created_at DESC')->fetc
                             <?php endforeach; ?>
                         </select>
                     </td>
-                    <td style="display:flex;gap:.4rem">
+                    <td class="action-row">
                         <form method="post" id="<?= $fid ?>" style="display:inline">
                             <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
-                            <button type="submit" name="edit_subject" value="<?= (int) $s['id'] ?>" class="btn btn-sm btn-outline">Save</button>
+                            <button type="submit" name="edit_subject" value="<?= (int) $s['id'] ?>" class="icon-btn" data-tip="Save" aria-label="Save">💾</button>
                         </form>
                         <form method="post" onsubmit="return confirm('Delete this subject? Courses using it will become uncategorized.')" style="display:inline">
                             <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
-                            <button type="submit" name="delete_subject" value="<?= (int) $s['id'] ?>" class="btn btn-sm btn-outline" style="color:#c00;border-color:#c00">Delete</button>
+                            <button type="submit" name="delete_subject" value="<?= (int) $s['id'] ?>" class="icon-btn icon-btn-danger" data-tip="Delete" aria-label="Delete">🗑️</button>
                         </form>
                     </td>
                 </tr>
@@ -307,9 +309,9 @@ $feedback = $pdo->query('SELECT * FROM feedback ORDER BY created_at DESC')->fetc
                     <td style="max-width:320px"><?= e($f['message']) ?></td>
                     <td><?= date('M j, Y', strtotime($f['created_at'])) ?></td>
                     <td><span class="badge <?= $f['is_read'] ? 'badge-paid' : 'badge-free' ?>"><?= $f['is_read'] ? 'Read' : 'New' ?></span></td>
-                    <td style="display:flex;gap:.4rem">
-                        <form method="post"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_feedback_read" value="<?= (int) $f['id'] ?>" class="btn btn-sm btn-outline"><?= $f['is_read'] ? 'Mark Unread' : 'Mark Read' ?></button></form>
-                        <form method="post" onsubmit="return confirm('Delete this feedback?')"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="delete_feedback" value="<?= (int) $f['id'] ?>" class="btn btn-sm btn-outline" style="color:#c00;border-color:#c00">Delete</button></form>
+                    <td class="action-row">
+                        <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_feedback_read" value="<?= (int) $f['id'] ?>" class="icon-btn" data-tip="<?= $f['is_read'] ? 'Mark unread' : 'Mark read' ?>" aria-label="<?= $f['is_read'] ? 'Mark unread' : 'Mark read' ?>"><?= $f['is_read'] ? '📩' : '✔️' ?></button></form>
+                        <form method="post" onsubmit="return confirm('Delete this feedback?')" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="delete_feedback" value="<?= (int) $f['id'] ?>" class="icon-btn icon-btn-danger" data-tip="Delete" aria-label="Delete">🗑️</button></form>
                     </td>
                 </tr>
                 <?php endforeach; ?>
@@ -333,10 +335,10 @@ $feedback = $pdo->query('SELECT * FROM feedback ORDER BY created_at DESC')->fetc
                     <td><span class="badge <?= $u['is_approved'] ? 'badge-free' : 'badge-paid' ?>"><?= $u['is_approved'] ? 'Active' : 'Suspended' ?></span></td>
                     <td><?= $u['is_verified'] ? '✓ Verified' : '—' ?></td>
                     <td><?= date('M j, Y', strtotime($u['created_at'])) ?></td>
-                    <td style="display:flex;gap:.4rem">
-                        <form method="post"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_approved" value="<?= (int) $u['id'] ?>" class="btn btn-sm btn-outline"><?= $u['is_approved'] ? 'Suspend' : 'Reactivate' ?></button></form>
+                    <td class="action-row">
+                        <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_approved" value="<?= (int) $u['id'] ?>" class="icon-btn <?= $u['is_approved'] ? 'icon-btn-danger' : '' ?>" data-tip="<?= $u['is_approved'] ? 'Suspend' : 'Reactivate' ?>" aria-label="<?= $u['is_approved'] ? 'Suspend' : 'Reactivate' ?>"><?= $u['is_approved'] ? '⏸️' : '▶️' ?></button></form>
                         <?php if (!$u['is_verified']): ?>
-                        <form method="post"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_verified" value="<?= (int) $u['id'] ?>" class="btn btn-sm btn-outline">Verify</button></form>
+                        <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_verified" value="<?= (int) $u['id'] ?>" class="icon-btn" data-tip="Verify email" aria-label="Verify email">✔️</button></form>
                         <?php endif; ?>
                         <?php if ((int) $u['id'] !== (int) $user['id']): ?>
                         <form method="post" onsubmit="return confirm('Change <?= e($u['name']) ?>\'s role?')">

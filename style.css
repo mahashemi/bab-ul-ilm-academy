@@ -99,6 +99,37 @@ img { max-width: 100%; height: auto; display: block; }
 .btn-sm { padding: .4rem 1rem; font-size: .85rem; }
 .btn-full { width: 100%; justify-content: center; }
 
+/* ── Icon Buttons (Material Design 3 icon-button + tooltip pattern) ──
+   M3 spec: 24dp icon in a 48dp touch target, with a plain tooltip showing
+   the action's label on hover/focus — used for compact row actions instead
+   of multi-word buttons that wrap and break card layouts on mobile. */
+.action-row { display: flex; gap: .4rem; flex-wrap: nowrap; align-items: center; justify-content: flex-end; }
+.icon-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; min-width: 40px; padding: 0;
+    border-radius: 50%; border: 1.5px solid var(--border);
+    background: var(--white); color: var(--text-mid);
+    font-size: 1.05rem; line-height: 1; cursor: pointer;
+    transition: var(--transition); position: relative; flex-shrink: 0;
+}
+.icon-btn:hover, .icon-btn:focus-visible { background: var(--cream); border-color: var(--teal-mid); color: var(--teal-mid); outline: none; }
+.icon-btn.icon-btn-danger:hover { background: #fdecea; border-color: #c00; color: #c00; }
+.icon-btn .count-badge {
+    position: absolute; top: -5px; right: -5px;
+    background: var(--gold); color: var(--green-deep);
+    font-size: .62rem; font-weight: 700; border-radius: 999px;
+    padding: 0 4px; min-width: 16px; height: 16px;
+    display: flex; align-items: center; justify-content: center; line-height: 1;
+}
+.icon-btn[data-tip]::after {
+    content: attr(data-tip);
+    position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+    background: #1a1a1a; color: #fff; font-size: .72rem; font-weight: 500;
+    padding: .35rem .6rem; border-radius: 6px; white-space: nowrap;
+    opacity: 0; pointer-events: none; transition: opacity .15s ease; z-index: 50;
+}
+.icon-btn[data-tip]:hover::after, .icon-btn[data-tip]:focus-visible::after { opacity: 1; }
+
 /* ── Container ── */
 .container { max-width: 1180px; margin: 0 auto; padding: 0 1.5rem; }
 /* Only vertical padding — must NOT touch left/right, or it zeroes out

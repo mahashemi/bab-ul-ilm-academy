@@ -68,10 +68,12 @@ if (($user['role'] ?? '') === 'admin') redirect('admin.php');
                     <td data-label="Price"><?= $c['price'] > 0 ? '$' . number_format((float) $c['price']) : 'Free' ?></td>
                     <td data-label="Students"><?= (int) $c['student_count'] ?></td>
                     <td data-label="Status"><span class="badge <?= $c['is_published'] ? 'badge-free' : 'badge-paid' ?>"><?= $c['is_published'] ? 'Published' : 'Draft' ?></span></td>
-                    <td data-label="Actions" class="table-actions">
-                        <a href="edit-course.php?id=<?= (int) $c['id'] ?>" class="btn btn-sm btn-outline">Edit</a>
-                        <a href="add-lesson.php?course_id=<?= (int) $c['id'] ?>" class="btn btn-sm btn-outline">+ Lesson</a>
-                        <a href="course-students.php?id=<?= (int) $c['id'] ?>" class="btn btn-sm btn-outline">Students (<?= (int) $c['student_count'] ?>)</a>
+                    <td data-label="Actions" class="action-row">
+                        <a href="edit-course.php?id=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="Edit course" aria-label="Edit course">✏️</a>
+                        <a href="add-lesson.php?course_id=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="Add lesson" aria-label="Add lesson">➕</a>
+                        <a href="course-students.php?id=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="View students" aria-label="View students">
+                            👥<?php if ((int) $c['student_count'] > 0): ?><span class="count-badge"><?= (int) $c['student_count'] ?></span><?php endif; ?>
+                        </a>
                     </td>
                 </tr>
                 <?php endforeach; ?>

@@ -31,7 +31,7 @@ if (($user['role'] ?? '') === 'admin') redirect('admin.php');
     <div class="dashboard-header">
         <h2>👋 Welcome, <?= e($user['name']) ?></h2>
         <p><?= ($user['role'] ?? '') === 'teacher' ? 'Manage your courses and track your students.' : 'Continue your learning journey.' ?></p>
-        <span class="dashboard-role badge-<?= e(($user['role'] ?? '')) ?>"><?= e(ucfirst(($user['role'] ?? ''))) ?></span>
+        <span class="dashboard-role"><?= e(ucfirst(($user['role'] ?? ''))) ?></span>
     </div>
 
     <?php if (flash('success')): ?><div class="alert alert-success"><?= e(flash('success')) ?></div><?php endif; ?>

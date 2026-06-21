@@ -67,6 +67,17 @@ img { max-width: 100%; height: auto; display: block; }
 .hero-stat .num { font-size: 2rem; font-weight: 800; color: var(--gold); }
 .hero-stat .lbl { font-size: .8rem; opacity: .7; }
 
+/* ── Mission/Vision band (shown to logged-out visitors only) ──
+   Helps a returning visitor whose session expired understand what this
+   platform is and that they need to log back in, instead of landing on an
+   ambiguous page with no context. */
+.mission-band { background: var(--white); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 3rem 1.5rem; }
+.mission-grid { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; align-items: start; }
+.mission-grid h3 { font-size: 1.1rem; color: var(--green-deep); margin-bottom: .5rem; font-weight: 700; }
+.mission-grid p { color: var(--text-mid); font-size: .95rem; }
+.mission-cta { text-align: center; margin-top: 2.2rem; padding-top: 2rem; border-top: 1px solid var(--border); max-width: 1180px; margin-left: auto; margin-right: auto; }
+.mission-cta p { color: var(--text-mid); margin-bottom: 1rem; font-size: .95rem; font-weight: 600; }
+
 /* ── Buttons ── */
 .btn { display: inline-flex; align-items: center; gap: .4rem; padding: .7rem 1.6rem; border-radius: 25px; font-size: .95rem; font-weight: 600; cursor: pointer; border: none; transition: var(--transition); text-decoration: none; }
 .btn-primary  { background: var(--gold); color: var(--green-deep); }
@@ -84,7 +95,9 @@ img { max-width: 100%; height: auto; display: block; }
 
 /* ── Container ── */
 .container { max-width: 1180px; margin: 0 auto; padding: 0 1.5rem; }
-.section { padding: 4rem 0; }
+/* Only vertical padding — must NOT touch left/right, or it zeroes out
+   .container's horizontal padding when both classes are combined. */
+.section { padding-top: 4rem; padding-bottom: 4rem; }
 .section-title { font-size: 1.8rem; font-weight: 700; color: var(--green-deep); margin-bottom: .4rem; }
 .section-title span { color: var(--gold-dark); }
 .section-sub { color: var(--text-mid); margin-bottom: 2.5rem; }
@@ -126,6 +139,8 @@ img { max-width: 100%; height: auto; display: block; }
     display: flex; gap: .6rem; flex-wrap: nowrap;
     overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
     padding-bottom: .35rem; margin-bottom: 1.6rem;
+    mask-image: linear-gradient(to right, black 0%, black 94%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 0%, black 94%, transparent 100%);
 }
 .chip-row::-webkit-scrollbar { display: none; }
 .cat-chip {
@@ -180,7 +195,11 @@ img { max-width: 100%; height: auto; display: block; }
 .dashboard-header { background: linear-gradient(135deg, var(--green-deep), var(--teal-deep)); color: var(--white); border-radius: var(--radius); padding: 1.8rem 2rem; margin-bottom: 1.5rem; }
 .dashboard-header h2 { font-size: 1.5rem; font-weight: 700; }
 .dashboard-header p  { opacity: .8; font-size: .9rem; margin-top: .3rem; }
-.dashboard-role { display: inline-flex; align-items: center; gap: .3rem; background: rgba(212,175,90,.2); color: var(--gold); border-radius: 12px; padding: .2rem .8rem; font-size: .78rem; font-weight: 700; text-transform: uppercase; margin-top: .8rem; }
+/* Self-contained, high-contrast pill for the dark dashboard-header gradient —
+   must not rely on .badge-* tints (those assume a light page background and
+   become nearly invisible here; combining classes also let .badge-* win the
+   cascade and override these colors entirely). */
+.dashboard-role { display: inline-flex; align-items: center; gap: .3rem; background: rgba(255,255,255,.18); color: var(--white); border: 1px solid rgba(255,255,255,.35); border-radius: 12px; padding: .25rem .9rem; font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; margin-top: .8rem; }
 
 /* ── Auth ── */
 .auth-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--green-deep) 0%, var(--teal-deep) 100%); padding: 2rem; }
@@ -291,6 +310,8 @@ footer { background: var(--green-deep); color: rgba(255,255,255,.75); padding: 3
     .hero-actions { flex-direction: column; align-items: stretch; }
     .hero-stats { gap: 1.5rem; }
     .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    .mission-grid { grid-template-columns: 1fr; gap: 1.8rem; }
+    .mission-band { padding: 2.2rem 1.2rem; }
     .form-row { grid-template-columns: 1fr; }
     .auth-box { padding: 1.5rem; }
     .container, .section { padding-left: 1rem; padding-right: 1rem; }

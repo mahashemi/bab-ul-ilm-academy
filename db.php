@@ -1,6 +1,11 @@
 <?php
 require_once __DIR__ . '/config.php';
 
+// Prevent the browser's back/forward cache from showing a stale "logged in"
+// page after the user has logged out or their session has timed out.
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+
 try {
     $pdo = new PDO(
         'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4',
@@ -47,11 +52,25 @@ function e(string $s): string {
 }
 
 function auth(): ?array {
-    return $_SESSION['user'] ?? null;
+    if (!isset($_SESSION['user'])) {
+        return null;
+    }
+    // Idle timeout: if too long has passed since the last authenticated
+    // request, treat the session as expired instead of leaving it valid
+    // indefinitely (PHP's own session garbage collection is unreliable for
+    // this — it's probabilistic and may not run for a long time).
+    $lastActivity = $_SESSION['last_activity'] ?? time();
+    if ((time() - $lastActivity) > SESSION_IDLE_TIMEOUT) {
+        session_unset();
+        session_destroy();
+        return null;
+    }
+    $_SESSION['last_activity'] = time();
+    return $_SESSION['user'];
 }
 
 function requireAuth(string $redirect = 'login.php'): void {
-    if (!isset($_SESSION['user'])) {
+    if (!auth()) {
         header('Location: ' . $redirect);
         exit;
     }
@@ -59,7 +78,7 @@ function requireAuth(string $redirect = 'login.php'): void {
 
 function requireRole(string $role): void {
     requireAuth();
-    if (($_SESSION['user']['role'] ?? '') !== $role) {
+    if ((auth()['role'] ?? '') !== $role) {
         header('Location: dashboard.php');
         exit;
     }

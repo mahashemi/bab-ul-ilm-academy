@@ -76,6 +76,28 @@ $stats = $pdo->query(
     </div>
 </header>
 
+<?php if (!$user): ?>
+<section class="mission-band">
+    <div class="mission-grid">
+        <div>
+            <h3>🎯 Our Vision</h3>
+            <p>To become the foremost online learning institution for the Muslim Ummah — connecting qualified scholars and teachers with students worldwide, making both sacred knowledge and core academic education accessible to every Muslim, regardless of geography or resources.</p>
+        </div>
+        <div>
+            <h3>🌍 Our Mission</h3>
+            <p>A structured, trust-based e-learning platform spanning two pillars: Islamic studies (Quran, Hadith, Fiqh, Arabic) and core academics (Grade 1 through Bachelor-level streams). Teachers publish courses, students track real progress — knowledge, religious or worldly, is one of the highest acts of worship.</p>
+        </div>
+    </div>
+    <div class="mission-cta">
+        <p>Already have an account?</p>
+        <div class="hero-actions" style="justify-content:center">
+            <a href="login.php" class="btn btn-primary">Log In</a>
+            <a href="register.php" class="btn btn-outline">Create Free Account</a>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
 <div class="container section" id="courses">
     <h2 class="section-title">Browse by <span>Subject</span></h2>
     <div class="chip-row">

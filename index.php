@@ -45,12 +45,12 @@ $stats = $pdo->query(
 <body>
 
 <nav class="navbar">
-    <a class="nav-brand" href="index.php">🕌 <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></a>
-    <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu">☰</button>
+    <a class="nav-brand" href="index.php"><i data-lucide="landmark" class="lucide-icon"></i> <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></a>
+    <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu"><i data-lucide="menu" class="lucide-icon"></i></button>
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <div class="nav-links">
         <a href="courses.php">Courses</a>
-        <?php if ($user): ?><span class="nav-user">👤 <?= e($user['name']) ?></span><a href="chat.php">Messages</a>
+        <?php if ($user): ?><span class="nav-user"><i data-lucide="user" class="lucide-icon"></i> <?= e($user['name']) ?></span><a href="chat.php">Messages</a>
             <a href="dashboard.php">Dashboard</a>
             <?php if (($user['role'] ?? '') === 'admin'): ?><a href="admin.php">Admin</a><?php endif; ?>
             <a href="logout.php" class="nav-btn">Logout</a>
@@ -89,11 +89,11 @@ $stats = $pdo->query(
 <section class="mission-band">
     <div class="mission-grid">
         <div>
-            <h3>🎯 Our Vision</h3>
+            <h3><i data-lucide="target" class="lucide-icon"></i> Our Vision</h3>
             <p>To become the foremost online learning institution for the Muslim Ummah — connecting qualified scholars and teachers with students worldwide, making both sacred knowledge and core academic education accessible to every Muslim, regardless of geography or resources.</p>
         </div>
         <div>
-            <h3>🌍 Our Mission</h3>
+            <h3><i data-lucide="globe" class="lucide-icon"></i> Our Mission</h3>
             <p>A structured, trust-based e-learning platform spanning two pillars: Islamic studies (Quran, Hadith, Fiqh, Arabic) and core academics (Grade 1 through Bachelor-level streams). Teachers publish courses, students track real progress — knowledge, religious or worldly, is one of the highest acts of worship.</p>
         </div>
     </div>
@@ -111,9 +111,9 @@ $stats = $pdo->query(
     <h2 class="section-title">Browse by <span>Subject</span></h2>
     <div class="chip-row">
         <?php foreach ($subjects as $s): ?>
-            <a href="courses.php?subject=<?= (int) $s['id'] ?>" class="cat-chip"><?= e($s['icon']) ?> <?= e($s['name']) ?></a>
+            <a href="courses.php?subject=<?= (int) $s['id'] ?>" class="cat-chip"><?= catIcon($s['icon']) ?> <?= e($s['name']) ?></a>
         <?php endforeach; ?>
-        <a href="courses.php" class="chip-view-all">View All Subjects →</a>
+        <a href="courses.php" class="chip-view-all">View All Subjects <i data-lucide="arrow-right" class="lucide-icon"></i></a>
     </div>
 
     <h2 class="section-title">Featured <span>Courses</span></h2>
@@ -123,7 +123,7 @@ $stats = $pdo->query(
         <?php foreach ($courses as $c): ?>
         <a href="course.php?id=<?= (int) $c['id'] ?>" class="course-card" style="text-decoration:none;color:inherit">
             <div class="course-cover">
-                <?php if ($c['cover_url']): ?><img src="<?= e($c['cover_url']) ?>" alt=""><?php else: ?><?= e($c['subject_icon'] ?: '📖') ?><?php endif; ?>
+                <?php if ($c['cover_url']): ?><img src="<?= e($c['cover_url']) ?>" alt=""><?php else: ?><?= catIcon($c['subject_icon']) ?><?php endif; ?>
                 <span class="badge badge-<?= e($c['level']) ?> course-level"><?= e(ucfirst($c['level'])) ?></span>
             </div>
             <div class="course-body">
@@ -131,13 +131,13 @@ $stats = $pdo->query(
                 <div class="course-title"><?= e($c['title']) ?></div>
                 <div class="course-desc"><?= e($c['description']) ?></div>
                 <div class="course-meta">
-                    <span>👨‍🏫 <?= e($c['teacher_name']) ?></span>
-                    <span>🎓 <?= (int) $c['student_count'] ?> enrolled</span>
+                    <span><i data-lucide="user" class="lucide-icon"></i> <?= e($c['teacher_name']) ?></span>
+                    <span><i data-lucide="graduation-cap" class="lucide-icon"></i> <?= (int) $c['student_count'] ?> enrolled</span>
                 </div>
             </div>
             <div class="course-footer">
                 <span class="course-price <?= $c['price'] == 0 ? 'free' : '' ?>"><?= $c['price'] > 0 ? '$' . number_format((float) $c['price']) : 'Free' ?></span>
-                <span class="btn btn-outline btn-sm">View Course →</span>
+                <span class="btn btn-outline btn-sm">View Course <i data-lucide="arrow-right" class="lucide-icon"></i></span>
             </div>
         </a>
         <?php endforeach; ?>
@@ -147,7 +147,7 @@ $stats = $pdo->query(
 <footer>
     <div class="footer-grid">
         <div>
-            <div class="footer-brand">🕌 <?= e(SITE_NAME) ?></div>
+            <div class="footer-brand"><i data-lucide="landmark" class="lucide-icon"></i> <?= e(SITE_NAME) ?></div>
             <p>Seek Knowledge — From the Cradle to the Grave.</p>
         </div>
         <div>
@@ -165,9 +165,11 @@ $stats = $pdo->query(
             </ul>
         </div>
     </div>
-    <div class="footer-bottom">&copy; <?= date('Y') ?> <?= e(SITE_NAME) ?>. Built with ❤️ for the Ummah.</div>
+    <div class="footer-bottom">&copy; <?= date('Y') ?> <?= e(SITE_NAME) ?>. Built with <i data-lucide="heart" class="lucide-icon"></i> for the Ummah.</div>
 </footer>
 
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <script src="app.js" defer></script>
+<script>if (window.lucide) lucide.createIcons();</script>
 </body>
 </html>

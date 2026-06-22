@@ -17,7 +17,7 @@ $devToken = DEV_SHOW_VERIFY_LINK ? ($_GET['token'] ?? '') : '';
 <div class="auth-wrap">
     <div class="auth-box" style="text-align:center">
         <div class="auth-logo">
-            <h2>📧 Check Your Email</h2>
+            <h2><i data-lucide="mail" class="lucide-icon"></i> Check Your Email</h2>
         </div>
 
         <p style="color:var(--text-mid);margin-bottom:1rem">
@@ -41,6 +41,8 @@ $devToken = DEV_SHOW_VERIFY_LINK ? ($_GET['token'] ?? '') : '';
         </p>
     </div>
 </div>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <script src="app.js" defer></script>
+<script>if (window.lucide) lucide.createIcons();</script>
 </body>
 </html>

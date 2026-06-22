@@ -139,11 +139,11 @@ $allConvos = $pdo->query(
 </head>
 <body>
 <nav class="navbar">
-    <a class="nav-brand" href="index.php">🕌 <?= e(SITE_NAME) ?> <small style="color:var(--gold)">ADMIN</small></a>
-    <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu">☰</button>
+    <a class="nav-brand" href="index.php"><i data-lucide="landmark" class="lucide-icon"></i> <?= e(SITE_NAME) ?> <small style="color:var(--gold)">ADMIN</small></a>
+    <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu"><i data-lucide="menu" class="lucide-icon"></i></button>
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <div class="nav-links">
-        <span class="nav-user">👤 <?= e($user['name']) ?></span><a href="chat.php">Messages</a>
+        <span class="nav-user"><i data-lucide="user" class="lucide-icon"></i> <?= e($user['name']) ?></span><a href="chat.php">Messages</a>
         <a href="index.php">Site</a>
         <a href="dashboard.php">Dashboard</a>
         <a href="logout.php" class="nav-btn">Logout</a>
@@ -154,7 +154,7 @@ $allConvos = $pdo->query(
 
 <div class="dashboard-wrap" style="max-width:1100px">
     <div class="dashboard-header">
-        <h2>🛠️ Admin Panel</h2>
+        <h2><i data-lucide="wrench" class="lucide-icon"></i> Admin Panel</h2>
         <p>Manage teachers, students, and courses.</p>
     </div>
 
@@ -178,18 +178,18 @@ $allConvos = $pdo->query(
     </div>
 
     <div class="tabs">
-        <a href="?tab=users" class="tab-btn <?= $tab === 'users' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center">👥 Users (<?= count($users) ?>)</a>
+        <a href="?tab=users" class="tab-btn <?= $tab === 'users' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="users" class="lucide-icon"></i> Users (<?= count($users) ?>)</a>
         <a href="?tab=pending" class="tab-btn <?= $tab === 'pending' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center">⏳ Pending Review (<?= count($pendingCourses) ?>)</a>
-        <a href="?tab=courses" class="tab-btn <?= $tab === 'courses' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center">📚 Courses (<?= count($courses) ?>)</a>
-        <a href="?tab=subjects" class="tab-btn <?= $tab === 'subjects' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center">🏷️ Subjects (<?= count($subjects) ?>)</a>
-        <a href="?tab=settings" class="tab-btn <?= $tab === 'settings' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center">⚙️ Settings</a>
-        <a href="?tab=feedback" class="tab-btn <?= $tab === 'feedback' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center">💬 Feedback (<?= count($feedback) ?>)</a>
-        <a href="?tab=messages" class="tab-btn <?= $tab === 'messages' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center">👁️ All Chats (<?= count($allConvos) ?>)</a>
+        <a href="?tab=courses" class="tab-btn <?= $tab === 'courses' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="library" class="lucide-icon"></i> Courses (<?= count($courses) ?>)</a>
+        <a href="?tab=subjects" class="tab-btn <?= $tab === 'subjects' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="tag" class="lucide-icon"></i> Subjects (<?= count($subjects) ?>)</a>
+        <a href="?tab=settings" class="tab-btn <?= $tab === 'settings' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="settings" class="lucide-icon"></i> Settings</a>
+        <a href="?tab=feedback" class="tab-btn <?= $tab === 'feedback' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="message-circle" class="lucide-icon"></i> Feedback (<?= count($feedback) ?>)</a>
+        <a href="?tab=messages" class="tab-btn <?= $tab === 'messages' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="eye" class="lucide-icon"></i> All Chats (<?= count($allConvos) ?>)</a>
     </div>
 
     <?php if ($tab === 'pending'): ?>
         <?php if (!$pendingCourses): ?>
-            <div class="empty-state"><div class="icon">✅</div><h3>No courses awaiting review</h3></div>
+            <div class="empty-state"><div class="icon"><i data-lucide="check-circle-2" class="lucide-icon"></i></div><h3>No courses awaiting review</h3></div>
         <?php else: ?>
         <div class="grid-2">
             <?php foreach ($pendingCourses as $c): ?>
@@ -201,9 +201,9 @@ $allConvos = $pdo->query(
                     <span class="badge <?= $c['price'] == 0 ? 'badge-free' : 'badge-paid' ?>"><?= $c['price'] > 0 ? '$' . number_format((float) $c['price']) : 'Free' ?></span>
                 </div>
                 <div style="display:flex;gap:.5rem">
-                    <form method="post" style="flex:1"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="approve_course" value="<?= (int) $c['id'] ?>" class="btn btn-green btn-full btn-sm">✅ Approve</button></form>
-                    <form method="post" style="flex:1" onsubmit="return confirm('Reject this course? It will not be visible to students.')"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="reject_course" value="<?= (int) $c['id'] ?>" class="btn btn-outline btn-full btn-sm" style="color:#c00;border-color:#c00">✕ Reject</button></form>
-                    <a href="chat.php?with=<?= (int) $c['teacher_id'] ?>&course=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="Message teacher" aria-label="Message teacher">💬</a>
+                    <form method="post" style="flex:1"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="approve_course" value="<?= (int) $c['id'] ?>" class="btn btn-green btn-full btn-sm"><i data-lucide="check-circle-2" class="lucide-icon"></i> Approve</button></form>
+                    <form method="post" style="flex:1" onsubmit="return confirm('Reject this course? It will not be visible to students.')"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="reject_course" value="<?= (int) $c['id'] ?>" class="btn btn-outline btn-full btn-sm" style="color:#c00;border-color:#c00"><i data-lucide="x" class="lucide-icon"></i> Reject</button></form>
+                    <a href="chat.php?with=<?= (int) $c['teacher_id'] ?>&course=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="Message teacher" aria-label="Message teacher"><i data-lucide="message-circle" class="lucide-icon"></i></a>
                 </div>
             </div></div>
             <?php endforeach; ?>
@@ -211,7 +211,7 @@ $allConvos = $pdo->query(
         <?php endif; ?>
     <?php elseif ($tab === 'courses'): ?>
         <div style="display:flex;justify-content:flex-end;margin-bottom:1rem">
-            <a href="?export=courses" class="btn btn-outline btn-sm">⬇ Download CSV</a>
+            <a href="?export=courses" class="btn btn-outline btn-sm"><i data-lucide="download" class="lucide-icon"></i> Download CSV</a>
         </div>
         <table class="table">
             <thead><tr><th>Title</th><th>Teacher</th><th>Subject</th><th>Level</th><th>Price</th><th>Students</th><th>Status</th><th>Actions</th></tr></thead>
@@ -229,13 +229,13 @@ $allConvos = $pdo->query(
                         <?php if ($c['moderation_status'] === 'approved'): ?><span class="badge <?= $c['is_published'] ? 'badge-free' : 'badge-paid' ?>"><?= $c['is_published'] ? 'Published' : 'Draft' ?></span><?php endif; ?>
                     </td>
                     <td class="action-row">
-                        <a href="edit-course.php?id=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="Edit course" aria-label="Edit course">✏️</a>
+                        <a href="edit-course.php?id=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="Edit course" aria-label="Edit course"><i data-lucide="pencil" class="lucide-icon"></i></a>
                         <a href="course-students.php?id=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="View students" aria-label="View students">
-                            👥<?php if ((int) $c['student_count'] > 0): ?><span class="count-badge"><?= (int) $c['student_count'] ?></span><?php endif; ?>
+                            <i data-lucide="users" class="lucide-icon"></i><?php if ((int) $c['student_count'] > 0): ?><span class="count-badge"><?= (int) $c['student_count'] ?></span><?php endif; ?>
                         </a>
-                        <a href="chat.php?with=<?= (int) $c['teacher_id'] ?>&course=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="Message teacher" aria-label="Message teacher">💬</a>
+                        <a href="chat.php?with=<?= (int) $c['teacher_id'] ?>&course=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="Message teacher" aria-label="Message teacher"><i data-lucide="message-circle" class="lucide-icon"></i></a>
                         <?php if ($c['moderation_status'] === 'approved'): ?>
-                        <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_published" value="<?= (int) $c['id'] ?>" class="icon-btn" data-tip="<?= $c['is_published'] ? 'Unpublish' : 'Publish' ?>" aria-label="<?= $c['is_published'] ? 'Unpublish' : 'Publish' ?>"><?= $c['is_published'] ? '⛔' : '✅' ?></button></form>
+                        <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_published" value="<?= (int) $c['id'] ?>" class="icon-btn" data-tip="<?= $c['is_published'] ? 'Unpublish' : 'Publish' ?>" aria-label="<?= $c['is_published'] ? 'Unpublish' : 'Publish' ?>"><?= $c['is_published'] ? '<i data-lucide="ban" class="lucide-icon"></i>' : '<i data-lucide="check-circle-2" class="lucide-icon"></i>' ?></button></form>
                         <?php endif; ?>
                     </td>
                 </tr>
@@ -245,10 +245,11 @@ $allConvos = $pdo->query(
     <?php elseif ($tab === 'subjects'): ?>
         <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
             <h3 style="font-size:1rem;margin-bottom:1rem">Fields of Study (top-level grouping)</h3>
+            <p style="font-size:.78rem;color:var(--text-light);margin-bottom:.8rem">Icon must be a name from <a href="https://lucide.dev/icons" target="_blank" rel="noopener">lucide.dev/icons</a> (e.g. "moon-star", "graduation-cap").</p>
             <form method="post" style="display:grid;grid-template-columns:1fr 100px auto;gap:.6rem;align-items:end;margin-bottom:1.2rem">
                 <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
                 <div class="form-group" style="margin:0"><label class="form-label">Name</label><input type="text" name="name" class="form-control" required></div>
-                <div class="form-group" style="margin:0"><label class="form-label">Icon</label><input type="text" name="icon" class="form-control" placeholder="🕌"></div>
+                <div class="form-group" style="margin:0"><label class="form-label">Icon</label><input type="text" name="icon" class="form-control" placeholder="e.g. moon-star"></div>
                 <button type="submit" name="add_field" value="1" class="btn btn-primary">+ Add Field</button>
             </form>
             <table class="table" style="margin:0">
@@ -261,11 +262,11 @@ $allConvos = $pdo->query(
                         <td class="action-row">
                             <form method="post" id="<?= $ffid ?>" style="display:inline">
                                 <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
-                                <button type="submit" name="edit_field" value="<?= (int) $f['id'] ?>" class="icon-btn" data-tip="Save" aria-label="Save">💾</button>
+                                <button type="submit" name="edit_field" value="<?= (int) $f['id'] ?>" class="icon-btn" data-tip="Save" aria-label="Save"><i data-lucide="save" class="lucide-icon"></i></button>
                             </form>
                             <form method="post" onsubmit="return confirm('Delete this field of study? Subjects in it will become ungrouped.')" style="display:inline">
                                 <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
-                                <button type="submit" name="delete_field" value="<?= (int) $f['id'] ?>" class="icon-btn icon-btn-danger" data-tip="Delete" aria-label="Delete">🗑️</button>
+                                <button type="submit" name="delete_field" value="<?= (int) $f['id'] ?>" class="icon-btn icon-btn-danger" data-tip="Delete" aria-label="Delete"><i data-lucide="trash-2" class="lucide-icon"></i></button>
                             </form>
                         </td>
                     </tr>
@@ -276,6 +277,7 @@ $allConvos = $pdo->query(
 
         <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
             <h3 style="font-size:1rem;margin-bottom:1rem">+ Add New Subject</h3>
+            <p style="font-size:.78rem;color:var(--text-light);margin-bottom:.8rem">Icon must be a name from <a href="https://lucide.dev/icons" target="_blank" rel="noopener">lucide.dev/icons</a> (e.g. "book-open", "calculator").</p>
             <form method="post" style="display:grid;grid-template-columns:1fr 1fr 100px auto;gap:.6rem;align-items:end">
                 <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
                 <div class="form-group" style="margin:0">
@@ -283,12 +285,12 @@ $allConvos = $pdo->query(
                     <select name="field_of_study_id" class="form-control">
                         <option value="">— None —</option>
                         <?php foreach ($fieldsOfStudy as $f): ?>
-                            <option value="<?= (int) $f['id'] ?>"><?= e($f['icon']) ?> <?= e($f['name']) ?></option>
+                            <option value="<?= (int) $f['id'] ?>"><?= e($f['name']) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
                 <div class="form-group" style="margin:0"><label class="form-label">Name</label><input type="text" name="name" class="form-control" required></div>
-                <div class="form-group" style="margin:0"><label class="form-label">Icon</label><input type="text" name="icon" class="form-control" placeholder="📖"></div>
+                <div class="form-group" style="margin:0"><label class="form-label">Icon</label><input type="text" name="icon" class="form-control" placeholder="e.g. book-open"></div>
                 <button type="submit" name="add_subject" value="1" class="btn btn-primary">+ Add</button>
             </form>
         </div></div>
@@ -304,18 +306,18 @@ $allConvos = $pdo->query(
                         <select name="field_of_study_id" form="<?= $fid ?>" class="form-control" style="padding:.4rem">
                             <option value="">— None —</option>
                             <?php foreach ($fieldsOfStudy as $f): ?>
-                                <option value="<?= (int) $f['id'] ?>" <?= (int) $s['field_of_study_id'] === (int) $f['id'] ? 'selected' : '' ?>><?= e($f['icon']) ?> <?= e($f['name']) ?></option>
+                                <option value="<?= (int) $f['id'] ?>" <?= (int) $s['field_of_study_id'] === (int) $f['id'] ? 'selected' : '' ?>><?= e($f['name']) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </td>
                     <td class="action-row">
                         <form method="post" id="<?= $fid ?>" style="display:inline">
                             <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
-                            <button type="submit" name="edit_subject" value="<?= (int) $s['id'] ?>" class="icon-btn" data-tip="Save" aria-label="Save">💾</button>
+                            <button type="submit" name="edit_subject" value="<?= (int) $s['id'] ?>" class="icon-btn" data-tip="Save" aria-label="Save"><i data-lucide="save" class="lucide-icon"></i></button>
                         </form>
                         <form method="post" onsubmit="return confirm('Delete this subject? Courses using it will become uncategorized.')" style="display:inline">
                             <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
-                            <button type="submit" name="delete_subject" value="<?= (int) $s['id'] ?>" class="icon-btn icon-btn-danger" data-tip="Delete" aria-label="Delete">🗑️</button>
+                            <button type="submit" name="delete_subject" value="<?= (int) $s['id'] ?>" class="icon-btn icon-btn-danger" data-tip="Delete" aria-label="Delete"><i data-lucide="trash-2" class="lucide-icon"></i></button>
                         </form>
                     </td>
                 </tr>
@@ -345,10 +347,10 @@ $allConvos = $pdo->query(
         </div></div>
     <?php elseif ($tab === 'feedback'): ?>
         <div style="display:flex;justify-content:flex-end;margin-bottom:1rem">
-            <a href="?export=feedback" class="btn btn-outline btn-sm">⬇ Download CSV</a>
+            <a href="?export=feedback" class="btn btn-outline btn-sm"><i data-lucide="download" class="lucide-icon"></i> Download CSV</a>
         </div>
         <?php if (!$feedback): ?>
-            <div class="empty-state"><div class="icon">💬</div><h3>No feedback yet</h3></div>
+            <div class="empty-state"><div class="icon"><i data-lucide="message-circle" class="lucide-icon"></i></div><h3>No feedback yet</h3></div>
         <?php else: ?>
         <table class="table">
             <thead><tr><th>From</th><th>Email</th><th>Message</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
@@ -361,8 +363,8 @@ $allConvos = $pdo->query(
                     <td><?= date('M j, Y', strtotime($f['created_at'])) ?></td>
                     <td><span class="badge <?= $f['is_read'] ? 'badge-paid' : 'badge-free' ?>"><?= $f['is_read'] ? 'Read' : 'New' ?></span></td>
                     <td class="action-row">
-                        <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_feedback_read" value="<?= (int) $f['id'] ?>" class="icon-btn" data-tip="<?= $f['is_read'] ? 'Mark unread' : 'Mark read' ?>" aria-label="<?= $f['is_read'] ? 'Mark unread' : 'Mark read' ?>"><?= $f['is_read'] ? '📩' : '✔️' ?></button></form>
-                        <form method="post" onsubmit="return confirm('Delete this feedback?')" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="delete_feedback" value="<?= (int) $f['id'] ?>" class="icon-btn icon-btn-danger" data-tip="Delete" aria-label="Delete">🗑️</button></form>
+                        <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_feedback_read" value="<?= (int) $f['id'] ?>" class="icon-btn" data-tip="<?= $f['is_read'] ? 'Mark unread' : 'Mark read' ?>" aria-label="<?= $f['is_read'] ? 'Mark unread' : 'Mark read' ?>"><?= $f['is_read'] ? '<i data-lucide="mail" class="lucide-icon"></i>' : '<i data-lucide="badge-check" class="lucide-icon"></i>' ?></button></form>
+                        <form method="post" onsubmit="return confirm('Delete this feedback?')" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="delete_feedback" value="<?= (int) $f['id'] ?>" class="icon-btn icon-btn-danger" data-tip="Delete" aria-label="Delete"><i data-lucide="trash-2" class="lucide-icon"></i></button></form>
                     </td>
                 </tr>
                 <?php endforeach; ?>
@@ -372,19 +374,19 @@ $allConvos = $pdo->query(
     <?php elseif ($tab === 'messages'): ?>
         <p class="section-sub">Read-only oversight of every conversation on the platform.</p>
         <?php if (!$allConvos): ?>
-            <div class="empty-state"><div class="icon">👁️</div><h3>No conversations yet</h3></div>
+            <div class="empty-state"><div class="icon"><i data-lucide="eye" class="lucide-icon"></i></div><h3>No conversations yet</h3></div>
         <?php else: ?>
         <table class="table">
             <thead><tr><th>Participants</th><th>Last Message</th><th>Messages</th><th>Last Activity</th><th>Actions</th></tr></thead>
             <tbody>
                 <?php foreach ($allConvos as $c): ?>
                 <tr>
-                    <td><?= e($c['u1_name']) ?> ↔ <?= e($c['u2_name']) ?></td>
+                    <td><?= e($c['u1_name']) ?> <i data-lucide="arrow-left-right" class="lucide-icon"></i> <?= e($c['u2_name']) ?></td>
                     <td style="max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><?= e($c['last_msg'] ?? '') ?></td>
                     <td><?= (int) $c['message_count'] ?></td>
                     <td><?= date('M j, Y g:i A', strtotime($c['last_at'])) ?></td>
                     <td class="action-row">
-                        <a href="admin-chat-view.php?u1=<?= (int) $c['u1'] ?>&u2=<?= (int) $c['u2'] ?>" class="icon-btn" data-tip="View conversation" aria-label="View conversation">👁️</a>
+                        <a href="admin-chat-view.php?u1=<?= (int) $c['u1'] ?>&u2=<?= (int) $c['u2'] ?>" class="icon-btn" data-tip="View conversation" aria-label="View conversation"><i data-lucide="eye" class="lucide-icon"></i></a>
                     </td>
                 </tr>
                 <?php endforeach; ?>
@@ -393,7 +395,7 @@ $allConvos = $pdo->query(
         <?php endif; ?>
     <?php else: ?>
         <div style="display:flex;justify-content:flex-end;margin-bottom:1rem">
-            <a href="?export=users" class="btn btn-outline btn-sm">⬇ Download CSV</a>
+            <a href="?export=users" class="btn btn-outline btn-sm"><i data-lucide="download" class="lucide-icon"></i> Download CSV</a>
         </div>
         <table class="table">
             <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Country</th><th>Qualification</th><th>Status</th><th>Verified</th><th>Joined</th><th>Actions</th></tr></thead>
@@ -406,13 +408,13 @@ $allConvos = $pdo->query(
                     <td><?= e($u['country'] ?: '—') ?></td>
                     <td style="max-width:220px"><?= e($u['qualification'] ?: '—') ?></td>
                     <td><span class="badge <?= $u['is_approved'] ? 'badge-free' : 'badge-paid' ?>"><?= $u['is_approved'] ? 'Active' : 'Suspended' ?></span></td>
-                    <td><?= $u['is_verified'] ? '✓ Verified' : '—' ?></td>
+                    <td><?= $u['is_verified'] ? '<i data-lucide="check" class="lucide-icon"></i> Verified' : '—' ?></td>
                     <td><?= date('M j, Y', strtotime($u['created_at'])) ?></td>
                     <td class="action-row">
-                        <a href="chat.php?with=<?= (int) $u['id'] ?>" class="icon-btn" data-tip="Message" aria-label="Message">💬</a>
+                        <a href="chat.php?with=<?= (int) $u['id'] ?>" class="icon-btn" data-tip="Message" aria-label="Message"><i data-lucide="message-circle" class="lucide-icon"></i></a>
                         <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_approved" value="<?= (int) $u['id'] ?>" class="icon-btn <?= $u['is_approved'] ? 'icon-btn-danger' : '' ?>" data-tip="<?= $u['is_approved'] ? 'Suspend' : 'Reactivate' ?>" aria-label="<?= $u['is_approved'] ? 'Suspend' : 'Reactivate' ?>"><?= $u['is_approved'] ? '⏸️' : '▶️' ?></button></form>
                         <?php if (!$u['is_verified']): ?>
-                        <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_verified" value="<?= (int) $u['id'] ?>" class="icon-btn" data-tip="Verify email" aria-label="Verify email">✔️</button></form>
+                        <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_verified" value="<?= (int) $u['id'] ?>" class="icon-btn" data-tip="Verify email" aria-label="Verify email"><i data-lucide="badge-check" class="lucide-icon"></i></button></form>
                         <?php endif; ?>
                         <?php if ((int) $u['id'] !== (int) $user['id']): ?>
                         <form method="post" onsubmit="return confirm('Change <?= e($u['name']) ?>\'s role?')">
@@ -433,6 +435,8 @@ $allConvos = $pdo->query(
         </table>
     <?php endif; ?>
 </div>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <script src="app.js" defer></script>
+<script>if (window.lucide) lucide.createIcons();</script>
 </body>
 </html>

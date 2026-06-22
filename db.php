@@ -211,3 +211,7 @@ function handleImageUpload(string $fieldName, string $subDir): ?string {
 
     return 'uploads/' . $subDir . '/' . $filename;
 }
+
+function catIcon(?string $iconName): string {
+    return '<i data-lucide="' . e($iconName ?: 'book-open') . '" class="lucide-icon"></i>';
+}

@@ -46,48 +46,49 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS fields_of_study (
     id   INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
-    icon VARCHAR(10)
+    icon VARCHAR(30)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- icon = a Lucide (https://lucide.dev) icon name, rendered via <i data-lucide="...">
 INSERT INTO fields_of_study (name, icon) VALUES
-('Islamic Studies',    '🕌'),
-('School Subjects',    '🎒'),
-('Bachelor Streams',   '🎓'),
-('Exam Preparation',   '🎯');
+('Islamic Studies',    'moon-star'),
+('School Subjects',    'backpack'),
+('Bachelor Streams',   'graduation-cap'),
+('Exam Preparation',   'target');
 
 -- ── Course Categories ─────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS subjects (
     id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     field_of_study_id INT UNSIGNED NULL,
     name              VARCHAR(100) NOT NULL,
-    icon              VARCHAR(10),
+    icon              VARCHAR(30),
     FOREIGN KEY (field_of_study_id) REFERENCES fields_of_study(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO subjects (field_of_study_id, name, icon) VALUES
-(1, 'Quran & Tajweed',               '📖'),
-(1, 'Hadith & Sunnah',               '☪️'),
-(1, 'Islamic Jurisprudence (Fiqh)',   '⚖️'),
-(1, 'Arabic Language',               '🌙'),
-(1, 'Islamic History',               '🏛️'),
-(1, 'Aqeedah (Belief)',              '✨'),
-(1, 'Akhlaq & Spirituality',         '🌿'),
-(1, 'Children''s Education',         '🧒'),
+(1, 'Quran & Tajweed',               'book-open'),
+(1, 'Hadith & Sunnah',               'scroll-text'),
+(1, 'Islamic Jurisprudence (Fiqh)',   'scale'),
+(1, 'Arabic Language',               'languages'),
+(1, 'Islamic History',               'landmark'),
+(1, 'Aqeedah (Belief)',              'sparkles'),
+(1, 'Akhlaq & Spirituality',         'sprout'),
+(1, 'Children''s Education',         'baby'),
 -- School subjects (Grade 1–12)
-(2, 'Mathematics',                   '🔢'),
-(2, 'Science',                       '🔬'),
-(2, 'English Language & Literature', '📚'),
-(2, 'Computer Science / ICT',        '💻'),
-(2, 'Social Studies (History & Geography)', '🌍'),
+(2, 'Mathematics',                   'calculator'),
+(2, 'Science',                       'atom'),
+(2, 'English Language & Literature', 'library'),
+(2, 'Computer Science / ICT',        'laptop'),
+(2, 'Social Studies (History & Geography)', 'globe'),
 -- Bachelor-level streams
-(3, 'Pre-Medical Studies',           '🩺'),
-(3, 'Pre-Engineering Studies',       '⚙️'),
-(3, 'Business & Commerce',          '💼'),
-(3, 'Arts & Humanities',            '🎨'),
+(3, 'Pre-Medical Studies',           'stethoscope'),
+(3, 'Pre-Engineering Studies',       'cog'),
+(3, 'Business & Commerce',          'briefcase'),
+(3, 'Arts & Humanities',            'palette'),
 -- Standardized exam preparation
-(4, 'GCSE',                         '📜'),
-(4, 'GED',                          '🎓'),
-(4, 'SAT',                          '✏️');
+(4, 'GCSE',                         'file-text'),
+(4, 'GED',                          'graduation-cap'),
+(4, 'SAT',                          'pencil');
 
 -- ── Courses ───────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS courses (

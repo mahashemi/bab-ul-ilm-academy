@@ -77,12 +77,12 @@ function chatTime(string $dt): string {
 </head>
 <body>
 <nav class="navbar">
-    <a class="nav-brand" href="index.php">🕌 <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></a>
-    <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu">☰</button>
+    <a class="nav-brand" href="index.php"><i data-lucide="landmark" class="lucide-icon"></i> <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></a>
+    <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu"><i data-lucide="menu" class="lucide-icon"></i></button>
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <div class="nav-links">
         <a href="courses.php">Courses</a>
-        <span class="nav-user">👤 <?= e($user['name']) ?></span><a href="chat.php">Messages</a>
+        <span class="nav-user"><i data-lucide="user" class="lucide-icon"></i> <?= e($user['name']) ?></span><a href="chat.php">Messages</a>
         <a href="dashboard.php">Dashboard</a>
         <?php if (($user['role'] ?? '') === 'admin'): ?><a href="admin.php">Admin</a><?php endif; ?>
         <a href="logout.php" class="nav-btn">Logout</a>
@@ -96,7 +96,7 @@ function chatTime(string $dt): string {
         <div class="chat-list">
             <div class="chat-list-header">Messages</div>
             <?php if (!$conversations): ?>
-                <div class="chat-empty-list">💬<br>No conversations yet.<br>Teachers can message students from their course's student list; students can message a teacher from the course page.</div>
+                <div class="chat-empty-list"><i data-lucide="message-circle" class="lucide-icon"></i><br>No conversations yet.<br>Teachers can message students from their course's student list; students can message a teacher from the course page.</div>
             <?php endif; ?>
             <?php foreach ($conversations as $c): ?>
                 <a href="chat.php?with=<?= (int) $c['id'] ?>" class="chat-list-item <?= $c['id'] == $withId ? 'active' : '' ?>">
@@ -118,11 +118,11 @@ function chatTime(string $dt): string {
         <div class="chat-main">
             <?php if (!$activeUser): ?>
                 <div class="chat-empty-thread">
-                    <div><div class="icon">💬</div>Select a conversation to start chatting</div>
+                    <div><div class="icon"><i data-lucide="message-circle" class="lucide-icon"></i></div>Select a conversation to start chatting</div>
                 </div>
             <?php else: ?>
                 <div class="chat-header">
-                    <button class="chat-back" onclick="location.href='chat.php'" aria-label="Back to conversations">←</button>
+                    <button class="chat-back" onclick="location.href='chat.php'" aria-label="Back to conversations"><i data-lucide="arrow-left" class="lucide-icon"></i></button>
                     <div class="chat-avatar"><?= e(mb_substr($activeUser['name'], 0, 1)) ?></div>
                     <div>
                         <div class="chat-header-name"><?= e($activeUser['name']) ?></div>
@@ -144,7 +144,7 @@ function chatTime(string $dt): string {
                 <form method="post" class="chat-input-bar" id="chatForm">
                     <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
                     <textarea name="body" id="chatBody" class="chat-input" rows="1" placeholder="Type a message..." required autocomplete="off"></textarea>
-                    <button type="submit" class="chat-send-btn" aria-label="Send">➤</button>
+                    <button type="submit" class="chat-send-btn" aria-label="Send"><i data-lucide="send" class="lucide-icon"></i></button>
                 </form>
             <?php endif; ?>
         </div>
@@ -172,6 +172,8 @@ function chatTime(string $dt): string {
     }
 })();
 </script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <script src="app.js" defer></script>
+<script>if (window.lucide) lucide.createIcons();</script>
 </body>
 </html>

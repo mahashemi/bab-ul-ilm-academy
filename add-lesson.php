@@ -49,15 +49,15 @@ $lessons = $lessons->fetchAll();
 </head>
 <body>
 <nav class="navbar">
-    <a class="nav-brand" href="index.php">🕌 <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></a>
-    <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu">☰</button>
+    <a class="nav-brand" href="index.php"><i data-lucide="landmark" class="lucide-icon"></i> <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></a>
+    <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu"><i data-lucide="menu" class="lucide-icon"></i></button>
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <div class="nav-links">
-        <span class="nav-user">👤 <?= e($user['name']) ?></span><a href="chat.php">Messages</a><a href="dashboard.php">Dashboard</a><a href="logout.php" class="nav-btn">Logout</a><a href="about.php">About</a><a href="feedback.php">Feedback</a></div>
+        <span class="nav-user"><i data-lucide="user" class="lucide-icon"></i> <?= e($user['name']) ?></span><a href="chat.php">Messages</a><a href="dashboard.php">Dashboard</a><a href="logout.php" class="nav-btn">Logout</a><a href="about.php">About</a><a href="feedback.php">Feedback</a></div>
 </nav>
 
 <div class="dashboard-wrap">
-    <div class="dashboard-header"><h2>📋 Lessons — <?= e($course['title']) ?></h2><p>Add lessons in the order students should learn them.</p></div>
+    <div class="dashboard-header"><h2><i data-lucide="clipboard-list" class="lucide-icon"></i> Lessons — <?= e($course['title']) ?></h2><p>Add lessons in the order students should learn them.</p></div>
 
     <?php if (flash('success')): ?><div class="alert alert-success"><?= e(flash('success')) ?></div><?php endif; ?>
     <?php if ($errors): ?><div class="alert alert-error"><?php foreach ($errors as $err): ?><div><?= e($err) ?></div><?php endforeach; ?></div><?php endif; ?>
@@ -86,7 +86,7 @@ $lessons = $lessons->fetchAll();
     <h3 style="margin-bottom:1rem;font-size:1.1rem;color:var(--green-deep)">Current Lessons (<?= count($lessons) ?>)</h3>
     <div class="card">
         <?php if (!$lessons): ?>
-            <div class="empty-state"><div class="icon">📝</div><h3>No lessons yet</h3></div>
+            <div class="empty-state"><div class="icon"><i data-lucide="notebook-pen" class="lucide-icon"></i></div><h3>No lessons yet</h3></div>
         <?php else: ?>
         <ul class="lesson-list">
             <?php foreach ($lessons as $i => $l): ?>
@@ -99,8 +99,10 @@ $lessons = $lessons->fetchAll();
         <?php endif; ?>
     </div>
 
-    <p style="margin-top:1.5rem"><a href="course.php?id=<?= (int) $courseId ?>" class="btn btn-outline">View Course Page →</a></p>
+    <p style="margin-top:1.5rem"><a href="course.php?id=<?= (int) $courseId ?>" class="btn btn-outline">View Course Page <i data-lucide="arrow-right" class="lucide-icon"></i></a></p>
 </div>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <script src="app.js" defer></script>
+<script>if (window.lucide) lucide.createIcons();</script>
 </body>
 </html>

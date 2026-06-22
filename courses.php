@@ -31,12 +31,12 @@ $courses = $stmt->fetchAll();
 </head>
 <body>
 <nav class="navbar">
-    <a class="nav-brand" href="index.php">🕌 <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></a>
-    <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu">☰</button>
+    <a class="nav-brand" href="index.php"><i data-lucide="landmark" class="lucide-icon"></i> <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></a>
+    <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu"><i data-lucide="menu" class="lucide-icon"></i></button>
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <div class="nav-links">
         <a href="courses.php">Courses</a>
-        <?php if ($user): ?><span class="nav-user">👤 <?= e($user['name']) ?></span><a href="chat.php">Messages</a><a href="dashboard.php">Dashboard</a><a href="logout.php" class="nav-btn">Logout</a>
+        <?php if ($user): ?><span class="nav-user"><i data-lucide="user" class="lucide-icon"></i> <?= e($user['name']) ?></span><a href="chat.php">Messages</a><a href="dashboard.php">Dashboard</a><a href="logout.php" class="nav-btn">Logout</a>
         <?php else: ?><a href="login.php" class="nav-btn">Login</a><?php endif; ?>
         <a href="about.php">About</a>
         <a href="feedback.php">Feedback</a>
@@ -52,22 +52,22 @@ $courses = $stmt->fetchAll();
     </form>
 
     <div class="chip-row">
-        <a href="courses.php" class="cat-chip <?= $subjectId === 0 ? 'active' : '' ?>">📚 All Subjects</a>
+        <a href="courses.php" class="cat-chip <?= $subjectId === 0 ? 'active' : '' ?>"><i data-lucide="library" class="lucide-icon"></i> All Subjects</a>
         <?php foreach ($subjects as $s): ?>
-            <a href="?subject=<?= (int) $s['id'] ?>" class="cat-chip <?= $subjectId === (int) $s['id'] ? 'active' : '' ?>"><?= e($s['icon']) ?> <?= e($s['name']) ?></a>
+            <a href="?subject=<?= (int) $s['id'] ?>" class="cat-chip <?= $subjectId === (int) $s['id'] ? 'active' : '' ?>"><?= catIcon($s['icon']) ?> <?= e($s['name']) ?></a>
         <?php endforeach; ?>
     </div>
 
     <p class="section-sub"><?= count($courses) ?> course(s) found</p>
 
     <?php if (!$courses): ?>
-        <div class="empty-state"><div class="icon">📚</div><h3>No courses found</h3></div>
+        <div class="empty-state"><div class="icon"><i data-lucide="library" class="lucide-icon"></i></div><h3>No courses found</h3></div>
     <?php else: ?>
     <div class="grid-3">
         <?php foreach ($courses as $c): ?>
         <a href="course.php?id=<?= (int) $c['id'] ?>" class="course-card" style="text-decoration:none;color:inherit">
             <div class="course-cover">
-                <?php if ($c['cover_url']): ?><img src="<?= e($c['cover_url']) ?>" alt=""><?php else: ?><?= e($c['subject_icon'] ?: '📖') ?><?php endif; ?>
+                <?php if ($c['cover_url']): ?><img src="<?= e($c['cover_url']) ?>" alt=""><?php else: ?><?= catIcon($c['subject_icon']) ?><?php endif; ?>
                 <span class="badge badge-<?= e($c['level']) ?> course-level"><?= e(ucfirst($c['level'])) ?></span>
             </div>
             <div class="course-body">
@@ -75,19 +75,21 @@ $courses = $stmt->fetchAll();
                 <div class="course-title"><?= e($c['title']) ?></div>
                 <div class="course-desc"><?= e($c['description']) ?></div>
                 <div class="course-meta">
-                    <span>👨‍🏫 <?= e($c['teacher_name']) ?></span>
-                    <span>🎓 <?= (int) $c['student_count'] ?> enrolled</span>
+                    <span><i data-lucide="user" class="lucide-icon"></i> <?= e($c['teacher_name']) ?></span>
+                    <span><i data-lucide="graduation-cap" class="lucide-icon"></i> <?= (int) $c['student_count'] ?> enrolled</span>
                 </div>
             </div>
             <div class="course-footer">
                 <span class="course-price <?= $c['price'] == 0 ? 'free' : '' ?>"><?= $c['price'] > 0 ? '$' . number_format((float) $c['price']) : 'Free' ?></span>
-                <span class="btn btn-outline btn-sm">View →</span>
+                <span class="btn btn-outline btn-sm">View <i data-lucide="arrow-right" class="lucide-icon"></i></span>
             </div>
         </a>
         <?php endforeach; ?>
     </div>
     <?php endif; ?>
 </div>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <script src="app.js" defer></script>
+<script>if (window.lucide) lucide.createIcons();</script>
 </body>
 </html>

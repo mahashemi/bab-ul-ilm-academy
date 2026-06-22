@@ -52,11 +52,11 @@ function chatTime(string $dt): string {
 </head>
 <body>
 <nav class="navbar">
-    <a class="nav-brand" href="index.php">🕌 <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></a>
-    <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu">☰</button>
+    <a class="nav-brand" href="index.php"><i data-lucide="landmark" class="lucide-icon"></i> <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></a>
+    <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu"><i data-lucide="menu" class="lucide-icon"></i></button>
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <div class="nav-links">
-        <span class="nav-user">👤 <?= e($user['name']) ?></span>
+        <span class="nav-user"><i data-lucide="user" class="lucide-icon"></i> <?= e($user['name']) ?></span>
         <a href="admin.php?tab=messages">Admin</a>
         <a href="logout.php" class="nav-btn">Logout</a>
     </div>
@@ -66,10 +66,10 @@ function chatTime(string $dt): string {
     <div class="chat-wrap thread-open">
         <div class="chat-main" style="display:flex">
             <div class="chat-header">
-                <button class="chat-back" onclick="location.href='admin.php?tab=messages'" aria-label="Back to all chats" style="display:inline-flex">←</button>
-                <div class="chat-avatar">👁️</div>
+                <button class="chat-back" onclick="location.href='admin.php?tab=messages'" aria-label="Back to all chats" style="display:inline-flex"><i data-lucide="arrow-left" class="lucide-icon"></i></button>
+                <div class="chat-avatar"><i data-lucide="eye" class="lucide-icon"></i></div>
                 <div>
-                    <div class="chat-header-name"><?= e($people[$u1]) ?> ↔ <?= e($people[$u2]) ?></div>
+                    <div class="chat-header-name"><?= e($people[$u1]) ?> <i data-lucide="arrow-left-right" class="lucide-icon"></i> <?= e($people[$u2]) ?></div>
                     <div class="chat-header-sub">Read-only admin oversight — <?= count($messages) ?> message(s)</div>
                 </div>
             </div>
@@ -88,7 +88,7 @@ function chatTime(string $dt): string {
                 <?php endforeach; ?>
             </div>
             <div style="padding:.9rem 1.1rem;background:var(--white);border-top:1px solid var(--border);text-align:center;font-size:.8rem;color:var(--text-light)">
-                👁️ Admin oversight mode — this conversation cannot be replied to from here
+                <i data-lucide="eye" class="lucide-icon"></i> Admin oversight mode — this conversation cannot be replied to from here
             </div>
         </div>
     </div>

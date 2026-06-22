@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="auth-wrap">
     <div class="auth-box">
         <div class="auth-logo">
-            <h2>📧 Resend Verification</h2>
+            <h2><i data-lucide="mail" class="lucide-icon"></i> Resend Verification</h2>
         </div>
 
         <?php if ($sent): ?>
@@ -60,6 +60,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
     </div>
 </div>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <script src="app.js" defer></script>
+<script>if (window.lucide) lucide.createIcons();</script>
 </body>
 </html>

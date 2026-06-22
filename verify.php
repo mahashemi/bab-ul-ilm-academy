@@ -30,7 +30,7 @@ if (!$u) {
 <div class="auth-wrap">
     <div class="auth-box" style="text-align:center">
         <div class="auth-logo">
-            <h2><?= $success ? '✅ Verified!' : '⚠️ Verification Failed' ?></h2>
+            <h2><?= $success ? '<i data-lucide="check-circle-2" class="lucide-icon"></i> Verified!' : '<i data-lucide="triangle-alert" class="lucide-icon"></i> Verification Failed' ?></h2>
         </div>
         <p style="color:var(--text-mid);margin-bottom:1.5rem"><?= e($message) ?></p>
         <?php if ($success): ?>
@@ -41,6 +41,8 @@ if (!$u) {
         <?php endif; ?>
     </div>
 </div>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <script src="app.js" defer></script>
+<script>if (window.lucide) lucide.createIcons();</script>
 </body>
 </html>

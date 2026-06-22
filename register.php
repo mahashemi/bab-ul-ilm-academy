@@ -92,7 +92,7 @@ function cleanPhoneInput(el) {
 <div class="auth-wrap">
     <div class="auth-box">
         <div class="auth-logo">
-            <h2>🕌 <?= e(SITE_NAME) ?></h2>
+            <h2><i data-lucide="landmark" class="lucide-icon"></i> <?= e(SITE_NAME) ?></h2>
             <p><?= e(SITE_TAGLINE) ?></p>
             <p style="font-size:1rem;font-weight:600;color:var(--green-mid);margin-top:.3rem"><?= e(SITE_AFFILIATION) ?></p>
         </div>
@@ -104,8 +104,8 @@ function cleanPhoneInput(el) {
         <?php endif; ?>
 
         <div class="role-switch">
-            <div class="role-option <?= $role === 'student' ? 'active' : '' ?>" id="roleStudent" onclick="setRole('student')">🎓 I'm a Student</div>
-            <div class="role-option <?= $role === 'teacher' ? 'active' : '' ?>" id="roleTeacher" onclick="setRole('teacher')">📖 I'm a Teacher</div>
+            <div class="role-option <?= $role === 'student' ? 'active' : '' ?>" id="roleStudent" onclick="setRole('student')"><i data-lucide="graduation-cap" class="lucide-icon"></i> I'm a Student</div>
+            <div class="role-option <?= $role === 'teacher' ? 'active' : '' ?>" id="roleTeacher" onclick="setRole('teacher')"><i data-lucide="book-open" class="lucide-icon"></i> I'm a Teacher</div>
         </div>
 
         <form method="post" autocomplete="off">
@@ -161,6 +161,8 @@ function cleanPhoneInput(el) {
         </p>
     </div>
 </div>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <script src="app.js" defer></script>
+<script>if (window.lucide) lucide.createIcons();</script>
 </body>
 </html>

@@ -15,11 +15,11 @@ if (($user['role'] ?? '') === 'admin') redirect('admin.php');
 </head>
 <body>
 <nav class="navbar">
-    <a class="nav-brand" href="index.php">🕌 <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></a>
-    <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu">☰</button>
+    <a class="nav-brand" href="index.php"><i data-lucide="landmark" class="lucide-icon"></i> <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></a>
+    <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu"><i data-lucide="menu" class="lucide-icon"></i></button>
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <div class="nav-links">
-        <span class="nav-user">👤 <?= e($user['name']) ?></span><a href="chat.php">Messages</a>
+        <span class="nav-user"><i data-lucide="user" class="lucide-icon"></i> <?= e($user['name']) ?></span><a href="chat.php">Messages</a>
         <a href="courses.php">Courses</a>
         <?php if (($user['role'] ?? '') === 'teacher'): ?><a href="add-course.php">+ New Course</a><?php endif; ?>
         <a href="edit-profile.php">Edit Profile</a>
@@ -32,7 +32,7 @@ if (($user['role'] ?? '') === 'admin') redirect('admin.php');
 
 <div class="dashboard-wrap">
     <div class="dashboard-header">
-        <h2>👋 Welcome, <?= e($user['name']) ?></h2>
+        <h2>Welcome, <?= e($user['name']) ?></h2>
         <p><?= ($user['role'] ?? '') === 'teacher' ? 'Manage your courses and track your students.' : 'Continue your learning journey.' ?></p>
         <span class="dashboard-role"><?= e(ucfirst(($user['role'] ?? ''))) ?></span>
     </div>
@@ -55,7 +55,7 @@ if (($user['role'] ?? '') === 'admin') redirect('admin.php');
         </div>
 
         <?php if (!$myCourses): ?>
-            <div class="empty-state"><div class="icon">📚</div><h3>You haven't created any courses yet</h3></div>
+            <div class="empty-state"><div class="icon"><i data-lucide="library" class="lucide-icon"></i></div><h3>You haven't created any courses yet</h3></div>
         <?php else: ?>
         <table class="table table-cards">
             <thead><tr><th>Title</th><th>Subject</th><th>Level</th><th>Price</th><th>Students</th><th>Status</th><th></th></tr></thead>
@@ -71,16 +71,16 @@ if (($user['role'] ?? '') === 'admin') redirect('admin.php');
                         <?php if ($c['moderation_status'] === 'pending'): ?>
                             <span class="badge badge-pending">⏳ Pending Review</span>
                         <?php elseif ($c['moderation_status'] === 'rejected'): ?>
-                            <span class="badge badge-paid">⛔ Rejected</span>
+                            <span class="badge badge-paid"><i data-lucide="ban" class="lucide-icon"></i> Rejected</span>
                         <?php else: ?>
                             <span class="badge <?= $c['is_published'] ? 'badge-free' : 'badge-paid' ?>"><?= $c['is_published'] ? 'Published' : 'Draft' ?></span>
                         <?php endif; ?>
                     </td>
                     <td data-label="Actions" class="action-row">
-                        <a href="edit-course.php?id=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="Edit course" aria-label="Edit course">✏️</a>
-                        <a href="add-lesson.php?course_id=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="Add lesson" aria-label="Add lesson">➕</a>
+                        <a href="edit-course.php?id=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="Edit course" aria-label="Edit course"><i data-lucide="pencil" class="lucide-icon"></i></a>
+                        <a href="add-lesson.php?course_id=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="Add lesson" aria-label="Add lesson"><i data-lucide="plus" class="lucide-icon"></i></a>
                         <a href="course-students.php?id=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="View students" aria-label="View students">
-                            👥<?php if ((int) $c['student_count'] > 0): ?><span class="count-badge"><?= (int) $c['student_count'] ?></span><?php endif; ?>
+                            <i data-lucide="users" class="lucide-icon"></i><?php if ((int) $c['student_count'] > 0): ?><span class="count-badge"><?= (int) $c['student_count'] ?></span><?php endif; ?>
                         </a>
                     </td>
                 </tr>
@@ -109,7 +109,7 @@ if (($user['role'] ?? '') === 'admin') redirect('admin.php');
 
         <?php if (!$myCourses): ?>
             <div class="empty-state">
-                <div class="icon">🎓</div>
+                <div class="icon"><i data-lucide="graduation-cap" class="lucide-icon"></i></div>
                 <h3>You haven't enrolled in any courses yet</h3>
                 <p><a href="courses.php" class="btn btn-primary" style="margin-top:1rem">Browse Courses</a></p>
             </div>
@@ -121,7 +121,7 @@ if (($user['role'] ?? '') === 'admin') redirect('admin.php');
                 <div class="card-body">
                     <div class="course-subject"><?= e($c['subject_name'] ?? 'General') ?></div>
                     <div class="card-title"><?= e($c['title']) ?></div>
-                    <div style="font-size:.85rem;color:var(--text-light);margin-bottom:.6rem">👨‍🏫 <?= e($c['teacher_name']) ?></div>
+                    <div style="font-size:.85rem;color:var(--text-light);margin-bottom:.6rem"><i data-lucide="user" class="lucide-icon"></i> <?= e($c['teacher_name']) ?></div>
                     <div class="progress-bar"><div class="progress-fill" style="width:<?= $pct ?>%"></div></div>
                     <p style="font-size:.8rem;color:var(--text-light);margin-top:.4rem"><?= $pct ?>% complete (<?= (int) $c['completed_count'] ?>/<?= (int) $c['lesson_count'] ?> lessons)</p>
                 </div>
@@ -131,6 +131,8 @@ if (($user['role'] ?? '') === 'admin') redirect('admin.php');
         <?php endif; ?>
     <?php endif; ?>
 </div>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <script src="app.js" defer></script>
+<script>if (window.lucide) lucide.createIcons();</script>
 </body>
 </html>

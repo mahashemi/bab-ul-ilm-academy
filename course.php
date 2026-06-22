@@ -79,12 +79,12 @@ $progressPct = $lessons ? (int) round(count($completedLessons) / count($lessons)
 </head>
 <body>
 <nav class="navbar">
-    <a class="nav-brand" href="index.php">🕌 <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></a>
-    <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu">☰</button>
+    <a class="nav-brand" href="index.php"><i data-lucide="landmark" class="lucide-icon"></i> <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></a>
+    <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu"><i data-lucide="menu" class="lucide-icon"></i></button>
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <div class="nav-links">
         <a href="courses.php">Courses</a>
-        <?php if ($user): ?><span class="nav-user">👤 <?= e($user['name']) ?></span><a href="chat.php">Messages</a><a href="dashboard.php">Dashboard</a><a href="logout.php" class="nav-btn">Logout</a>
+        <?php if ($user): ?><span class="nav-user"><i data-lucide="user" class="lucide-icon"></i> <?= e($user['name']) ?></span><a href="chat.php">Messages</a><a href="dashboard.php">Dashboard</a><a href="logout.php" class="nav-btn">Logout</a>
         <?php else: ?><a href="login.php" class="nav-btn">Login</a><?php endif; ?>
         <a href="about.php">About</a>
         <a href="feedback.php">Feedback</a>
@@ -96,7 +96,7 @@ $progressPct = $lessons ? (int) round(count($completedLessons) / count($lessons)
 
     <div class="card">
         <div class="course-cover" style="height:200px;font-size:5rem">
-            <?php if ($course['cover_url']): ?><img src="<?= e($course['cover_url']) ?>" alt=""><?php else: ?><?= e($course['subject_icon'] ?: '📖') ?><?php endif; ?>
+            <?php if ($course['cover_url']): ?><img src="<?= e($course['cover_url']) ?>" alt=""><?php else: ?><?= catIcon($course['subject_icon']) ?><?php endif; ?>
         </div>
         <div class="card-body">
             <div style="display:flex;gap:.6rem;margin-bottom:.6rem;flex-wrap:wrap">
@@ -107,12 +107,12 @@ $progressPct = $lessons ? (int) round(count($completedLessons) / count($lessons)
             <div style="display:flex;align-items:center;gap:.7rem;flex-wrap:wrap">
                 <h1 style="font-size:1.5rem;margin-bottom:.6rem"><?= e($course['title']) ?></h1>
                 <?php if ($isOwnerOrAdmin): ?>
-                    <a href="edit-course.php?id=<?= $id ?>" class="btn btn-sm btn-outline">✏️ Edit</a>
+                    <a href="edit-course.php?id=<?= $id ?>" class="btn btn-sm btn-outline"><i data-lucide="pencil" class="lucide-icon"></i> Edit</a>
                 <?php endif; ?>
             </div>
             <?php if ($isOwnerOrAdmin && $course['moderation_status'] !== 'approved'): ?>
                 <div class="alert <?= $course['moderation_status'] === 'rejected' ? 'alert-error' : 'alert-info' ?>" style="margin-bottom:1rem">
-                    <?= $course['moderation_status'] === 'rejected' ? '⛔ This course was rejected by an admin and is not visible to students.' : '⏳ This course is awaiting admin review and is not yet visible to students.' ?>
+                    <?= $course['moderation_status'] === 'rejected' ? '<i data-lucide="ban" class="lucide-icon"></i> This course was rejected by an admin and is not visible to students.' : '⏳ This course is awaiting admin review and is not yet visible to students.' ?>
                 </div>
             <?php endif; ?>
             <p style="color:var(--text-mid);margin-bottom:1rem"><?= e($course['description']) ?></p>
@@ -130,9 +130,9 @@ $progressPct = $lessons ? (int) round(count($completedLessons) / count($lessons)
                     <div style="font-size:.82rem;color:var(--text-light)"><?= e($course['qualification'] ?: 'Qualified Teacher') ?></div>
                 </div>
                 <div style="margin-left:auto;display:flex;align-items:center;gap:1rem">
-                    <span style="font-size:.85rem;color:var(--text-light)">🎓 <?= (int) $studentCount ?> students enrolled</span>
+                    <span style="font-size:.85rem;color:var(--text-light)"><i data-lucide="graduation-cap" class="lucide-icon"></i> <?= (int) $studentCount ?> students enrolled</span>
                     <?php if ($isEnrolled): ?>
-                        <a href="chat.php?with=<?= (int) $course['teacher_id'] ?>&course=<?= (int) $course['id'] ?>" class="btn btn-sm btn-outline">💬 Message Teacher</a>
+                        <a href="chat.php?with=<?= (int) $course['teacher_id'] ?>&course=<?= (int) $course['id'] ?>" class="btn btn-sm btn-outline"><i data-lucide="message-circle" class="lucide-icon"></i> Message Teacher</a>
                     <?php endif; ?>
                 </div>
             </div>
@@ -144,7 +144,7 @@ $progressPct = $lessons ? (int) round(count($completedLessons) / count($lessons)
             <?php elseif (($user['role'] ?? '') !== 'student'): ?>
                 <div class="alert alert-info">Only students can enroll in courses.</div>
             <?php elseif ($isEnrolled): ?>
-                <div class="alert alert-success">✓ You are enrolled in this course</div>
+                <div class="alert alert-success"><i data-lucide="check" class="lucide-icon"></i> You are enrolled in this course</div>
                 <div class="progress-bar"><div class="progress-fill" style="width:<?= $progressPct ?>%"></div></div>
                 <p style="font-size:.85rem;color:var(--text-light);margin-top:.4rem"><?= $progressPct ?>% complete (<?= count($completedLessons) ?>/<?= count($lessons) ?> lessons)</p>
             <?php else: ?>
@@ -156,13 +156,13 @@ $progressPct = $lessons ? (int) round(count($completedLessons) / count($lessons)
         </div>
     </div>
 
-    <h3 style="margin:1.8rem 0 1rem;font-size:1.2rem;color:var(--green-deep)">📋 Lessons (<?= count($lessons) ?>)</h3>
+    <h3 style="margin:1.8rem 0 1rem;font-size:1.2rem;color:var(--green-deep)"><i data-lucide="clipboard-list" class="lucide-icon"></i> Lessons (<?= count($lessons) ?>)</h3>
     <div class="card">
         <ul class="lesson-list">
             <?php foreach ($lessons as $i => $l): ?>
                 <?php $done = in_array($l['id'], $completedLessons); ?>
                 <li class="lesson-item <?= $done ? 'done' : '' ?>">
-                    <div class="lesson-num"><?= $done ? '✓' : $i + 1 ?></div>
+                    <div class="lesson-num"><?= $done ? '<i data-lucide="check" class="lucide-icon"></i>' : $i + 1 ?></div>
                     <div style="flex:1">
                         <div class="lesson-title"><?= e($l['title']) ?></div>
                     </div>
@@ -172,13 +172,15 @@ $progressPct = $lessons ? (int) round(count($completedLessons) / count($lessons)
                             <button type="submit" name="complete_lesson" value="<?= (int) $l['id'] ?>" class="btn btn-sm btn-outline">Mark Done</button>
                         </form>
                     <?php elseif ($done): ?>
-                        <span class="lesson-check">✓</span>
+                        <span class="lesson-check"><i data-lucide="check" class="lucide-icon"></i></span>
                     <?php endif; ?>
                 </li>
             <?php endforeach; ?>
         </ul>
     </div>
 </div>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <script src="app.js" defer></script>
+<script>if (window.lucide) lucide.createIcons();</script>
 </body>
 </html>

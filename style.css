@@ -45,6 +45,16 @@ img { max-width: 100%; height: auto; display: block; }
 .nav-links a { color: rgba(255,255,255,.8); font-size: .9rem; font-weight: 500; padding: .4rem .8rem; border-radius: 6px; transition: var(--transition); }
 .nav-links a:hover { background: rgba(255,255,255,.1); color: var(--gold); }
 .nav-btn { background: var(--gold) !important; color: var(--green-deep) !important; font-weight: 700 !important; border-radius: 20px !important; }
+.lucide-icon {
+    width: 1em; height: 1em; stroke: currentColor; stroke-width: 2;
+    vertical-align: -0.125em; flex-shrink: 0; display: inline-block;
+}
+.step-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 1.7em; height: 1.7em; border-radius: var(--radius-full);
+    background: var(--green-deep); color: var(--white); font-weight: 700;
+    font-size: 0.85em; flex-shrink: 0;
+}
 .nav-user {
     display: inline-flex; align-items: center; gap: .3rem;
     color: var(--gold); font-size: .85rem; font-weight: 600;

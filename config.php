@@ -8,7 +8,7 @@ define('DB_PASS', '');              // Change to your DB password
 define('DB_NAME', 'bab_ul_ilm');
 
 // SITE_NAME, SITE_TAGLINE, and SITE_AFFILIATION are loaded dynamically from the
-// `settings` database table (editable by admins at /admin.php <i data-lucide="arrow-right" class="lucide-icon"></i> Settings tab).
+// `settings` database table (editable by admins at /admin.php -> Settings tab).
 // These are just the fallback defaults used if the table is empty or missing.
 define('SITE_NAME_DEFAULT', 'Bab ul Ilm Academy');
 define('SITE_TAGLINE_DEFAULT', 'Teach and Learn Any Subject — All Levels, Anywhere, Everywhere');

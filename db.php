@@ -129,13 +129,49 @@ function siteBaseUrl(): string {
 function sendVerificationEmail(string $toEmail, string $name, string $token): bool {
     $link = siteBaseUrl() . '/verify.php?token=' . $token;
     $subject = 'Verify your ' . SITE_NAME . ' account';
-    $body = "Assalamu Alaikum $name,\n\n"
-        . "Thank you for joining " . SITE_NAME . ". Please verify your email address by clicking the link below:\n\n"
-        . "$link\n\n"
-        . "This link expires in 24 hours. If you did not create this account, you can ignore this email.\n\n"
-        . "- " . SITE_NAME . " Team";
-    $headers = 'From: no-reply@' . preg_replace('/^www\./', '', $_SERVER['HTTP_HOST'] ?? 'localhost');
-    return @mail($toEmail, $subject, $body, $headers);
+    $domain = preg_replace('/^www\./', '', $_SERVER['HTTP_HOST'] ?? 'localhost');
+    $nameSafe = e($name);
+    $siteSafe = e(SITE_NAME);
+    $year = date('Y');
+
+    $html = <<<HTML
+<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#faf8f4;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#faf8f4;padding:32px 16px;">
+<tr><td align="center">
+<table width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e0dbd2;max-width:480px;">
+<tr><td style="background:#083344;padding:24px 32px;text-align:center;">
+<span style="font-size:22px;color:#d4af5a;font-weight:bold;">🕌 {$siteSafe}</span>
+</td></tr>
+<tr><td style="padding:32px;">
+<p style="font-size:16px;color:#1a1a1a;margin:0 0 16px;">Assalamu Alaikum {$nameSafe},</p>
+<p style="font-size:15px;color:#444444;line-height:1.6;margin:0 0 28px;">Thank you for joining {$siteSafe}. Please confirm your email address to activate your account and start learning or teaching.</p>
+<table cellpadding="0" cellspacing="0" style="margin:0 auto 28px;">
+<tr><td style="border-radius:25px;background:#0e5272;">
+<a href="{$link}" style="display:inline-block;padding:14px 36px;color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold;border-radius:25px;">Verify My Account</a>
+</td></tr>
+</table>
+<p style="font-size:13px;color:#888888;line-height:1.6;margin:0 0 4px;">Or copy and paste this link into your browser:</p>
+<p style="font-size:13px;margin:0 0 24px;"><a href="{$link}" style="color:#0e5272;word-break:break-all;">{$link}</a></p>
+<p style="font-size:13px;color:#888888;margin:0;">This link expires in 24 hours. If you didn't create this account, you can safely ignore this email.</p>
+</td></tr>
+<tr><td style="background:#faf8f4;padding:16px 32px;text-align:center;border-top:1px solid #e0dbd2;">
+<span style="font-size:12px;color:#aaaaaa;">© {$year} {$siteSafe}</span>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>
+HTML;
+
+    $headers  = "From: {$siteSafe} <no-reply@{$domain}>\r\n";
+    $headers .= "Reply-To: no-reply@{$domain}\r\n";
+    $headers .= "MIME-Version: 1.0\r\n";
+    $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+
+    return @mail($toEmail, $subject, $html, $headers);
 }
 
 // ── Image Upload ──────────────────────────────────────────────────────────

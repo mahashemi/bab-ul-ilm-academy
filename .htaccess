@@ -1,0 +1,5 @@
+# Force HTTPS — without this, valid SSL certs are installed but browsers
+# still show "Not Secure" because nothing redirects plain http:// requests.
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]

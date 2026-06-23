@@ -81,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('success', 'Settings updated.');
     } elseif (isset($_POST['upload_site_image'])) {
         $slot = $_POST['upload_site_image'];
-        if ($slot === 'home_hero_bg') {
+        if (in_array($slot, ['home_hero_bg', 'dashboard_banner_bg'], true)) {
             $path = handleImageUpload('image', 'site');
             if ($path) {
                 $pdo->prepare('INSERT INTO settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?')
@@ -93,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif (isset($_POST['remove_site_image'])) {
         $slot = $_POST['remove_site_image'];
-        if ($slot === 'home_hero_bg') {
+        if (in_array($slot, ['home_hero_bg', 'dashboard_banner_bg'], true)) {
             $pdo->prepare('DELETE FROM settings WHERE setting_key = ?')->execute([$slot]);
         }
     } elseif (isset($_POST['toggle_feedback_read'])) {
@@ -399,6 +399,28 @@ $allConvos = $pdo->query(
             <form method="post" onsubmit="return confirm('Remove this image and revert to the default?')" style="margin-top:.5rem">
                 <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
                 <button type="submit" name="remove_site_image" value="home_hero_bg" class="btn btn-outline btn-sm">Remove</button>
+            </form>
+            <?php endif; ?>
+        </div></div>
+
+        <?php $dashBg = siteSetting($pdo, 'dashboard_banner_bg'); ?>
+        <div class="card" style="margin-top:1.5rem"><div class="card-body">
+            <h3 style="font-size:1rem;margin-bottom:.4rem">Dashboard Welcome Banner</h3>
+            <p style="font-size:.8rem;color:var(--text-light);margin-bottom:1rem">Shown behind "Welcome, [name]" on the student/teacher dashboard. A dark gradient is applied over the left side so text stays readable. Recommended: wide image, at least 1600x400.</p>
+            <?php if ($dashBg): ?>
+                <img src="<?= e($dashBg) ?>" alt="" style="width:100%;height:140px;object-fit:cover;border-radius:var(--radius);margin-bottom:1rem">
+            <?php else: ?>
+                <div style="width:100%;height:140px;border-radius:var(--radius);margin-bottom:1rem;background:var(--cream);display:flex;align-items:center;justify-content:center;color:var(--text-light);font-size:.85rem">No image set — using default gradient</div>
+            <?php endif; ?>
+            <form method="post" enctype="multipart/form-data" style="display:flex;gap:.6rem;align-items:center">
+                <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+                <input type="file" name="image" accept="image/jpeg,image/png,image/webp" required style="flex:1;font-size:.82rem">
+                <button type="submit" name="upload_site_image" value="dashboard_banner_bg" class="btn btn-primary btn-sm">Upload</button>
+            </form>
+            <?php if ($dashBg): ?>
+            <form method="post" onsubmit="return confirm('Remove this image and revert to the default?')" style="margin-top:.5rem">
+                <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+                <button type="submit" name="remove_site_image" value="dashboard_banner_bg" class="btn btn-outline btn-sm">Remove</button>
             </form>
             <?php endif; ?>
         </div></div>

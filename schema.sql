@@ -51,10 +51,11 @@ CREATE TABLE IF NOT EXISTS fields_of_study (
 
 -- icon = a Lucide (https://lucide.dev) icon name, rendered via <i data-lucide="...">
 INSERT INTO fields_of_study (name, icon) VALUES
-('Islamic Studies',    'moon-star'),
-('School Subjects',    'backpack'),
-('Bachelor Streams',   'graduation-cap'),
-('Exam Preparation',   'target');
+('Islamic Studies',      'moon-star'),
+('School Subjects',      'backpack'),
+('Bachelor Streams',     'graduation-cap'),
+('Exam Preparation',     'target'),
+('Postgraduate / PhD',   'award');
 
 -- ── Course Categories ─────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS subjects (
@@ -203,9 +204,16 @@ CREATE TABLE IF NOT EXISTS feedback (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── Personalization (occupation + learning field, for course recommendations) ──
+-- ── Personalization (occupation + learning fields, for course recommendations) ──
 ALTER TABLE users ADD COLUMN IF NOT EXISTS occupation VARCHAR(150) DEFAULT NULL;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS learning_field_id INT UNSIGNED DEFAULT NULL;
+
+CREATE TABLE IF NOT EXISTS user_learning_fields (
+    user_id INT UNSIGNED NOT NULL,
+    field_of_study_id INT UNSIGNED NOT NULL,
+    PRIMARY KEY (user_id, field_of_study_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (field_of_study_id) REFERENCES fields_of_study(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── Initial Admin Account ───────────────────────────────────────────────
 -- Default password: Admin@123

@@ -90,13 +90,19 @@ function redirect(string $url): void {
 }
 
 function flash(string $key, string $msg = ''): string {
+    static $cache = [];
     if ($msg !== '') {
         $_SESSION['flash'][$key] = $msg;
         return '';
     }
-    $val = $_SESSION['flash'][$key] ?? '';
-    unset($_SESSION['flash'][$key]);
-    return $val;
+    // Cache the read so calling flash($key) twice in the same request (once to
+    // check truthiness, once to print) doesn't return the value then blank it
+    // out before the second call — it's only cleared from the session itself.
+    if (!array_key_exists($key, $cache)) {
+        $cache[$key] = $_SESSION['flash'][$key] ?? '';
+        unset($_SESSION['flash'][$key]);
+    }
+    return $cache[$key];
 }
 
 function csrf(): string {

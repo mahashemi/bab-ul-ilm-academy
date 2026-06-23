@@ -4,22 +4,34 @@ requireAuth();
 $user = auth();
 if (($user['role'] ?? '') === 'admin') redirect('admin.php');
 
-$meStmt = $pdo->prepare('SELECT u.*, f.name AS field_name FROM users u LEFT JOIN fields_of_study f ON f.id = u.learning_field_id WHERE u.id = ?');
+$meStmt = $pdo->prepare('SELECT * FROM users WHERE id = ?');
 $meStmt->execute([$user['id']]);
 $me = $meStmt->fetch();
 
+$myFieldsStmt = $pdo->prepare(
+    "SELECT f.id, f.name FROM user_learning_fields ulf JOIN fields_of_study f ON f.id = ulf.field_of_study_id
+     WHERE ulf.user_id = ? ORDER BY f.name"
+);
+$myFieldsStmt->execute([$user['id']]);
+$myFields = $myFieldsStmt->fetchAll();
+$myFieldIds = array_column($myFields, 'id');
+$myFieldNames = array_column($myFields, 'name');
+
 $recommended = [];
-if (($user['role'] ?? '') !== 'teacher' && $me['learning_field_id']) {
+if (($user['role'] ?? '') !== 'teacher' && $myFieldIds) {
+    $placeholders = implode(',', array_fill(0, count($myFieldIds), '?'));
     $recStmt = $pdo->prepare(
         "SELECT c.*, u.name AS teacher_name, s.name AS subject_name, s.icon AS subject_icon
          FROM courses c JOIN users u ON u.id = c.teacher_id LEFT JOIN subjects s ON s.id = c.subject_id
-         WHERE c.is_published = 1 AND c.moderation_status = 'approved' AND s.field_of_study_id = ?
+         WHERE c.is_published = 1 AND c.moderation_status = 'approved' AND s.field_of_study_id IN ($placeholders)
            AND c.id NOT IN (SELECT course_id FROM enrollments WHERE student_id = ?)
          ORDER BY c.created_at DESC LIMIT 4"
     );
-    $recStmt->execute([$me['learning_field_id'], $user['id']]);
+    $recStmt->execute([...$myFieldIds, $user['id']]);
     $recommended = $recStmt->fetchAll();
 }
+
+$dashBg = siteSetting($pdo, 'dashboard_banner_bg');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -73,15 +85,15 @@ if (($user['role'] ?? '') !== 'teacher' && $me['learning_field_id']) {
 </nav>
 
 <div class="dashboard-wrap">
-    <div class="dashboard-header">
+    <div class="dashboard-header" <?php if ($dashBg): ?>style="background-image:linear-gradient(90deg, rgba(10,61,31,.95) 0%, rgba(10,61,31,.65) 60%, rgba(10,61,31,.35) 100%), url('<?= e($dashBg) ?>');background-size:cover;background-position:center"<?php endif; ?>>
         <h2>Welcome, <?= e($user['name']) ?></h2>
-        <?php if ($me['occupation'] || $me['field_name']): ?>
+        <?php if ($me['occupation'] || $myFieldNames): ?>
             <p style="margin-bottom:.3rem">
-                <?= e(trim(($me['occupation'] ? $me['occupation'] : '') . ($me['occupation'] && $me['field_name'] ? ', ' : '') . ($me['field_name'] ?: ''))) ?>
-                &nbsp;·&nbsp; <a href="personalize.php">Edit occupation and interests</a>
+                <?= e(trim(($me['occupation'] ? $me['occupation'] : '') . ($me['occupation'] && $myFieldNames ? ', ' : '') . implode(', ', $myFieldNames))) ?>
+                &nbsp;·&nbsp; <a href="personalize.php" class="dashboard-header-link">Edit occupation and interests</a>
             </p>
         <?php else: ?>
-            <p style="margin-bottom:.3rem"><a href="personalize.php"><i data-lucide="sparkles" class="lucide-icon"></i> Add occupation and interests</a></p>
+            <p style="margin-bottom:.3rem"><a href="personalize.php" class="dashboard-header-link"><i data-lucide="sparkles" class="lucide-icon"></i> Add occupation and interests</a></p>
         <?php endif; ?>
         <p><?= ($user['role'] ?? '') === 'teacher' ? 'Manage your courses and track your students.' : 'Continue your learning journey.' ?></p>
         <span class="dashboard-role"><?= e(ucfirst(($user['role'] ?? ''))) ?></span>
@@ -90,7 +102,7 @@ if (($user['role'] ?? '') !== 'teacher' && $me['learning_field_id']) {
     <?php if (flash('success')): ?><div class="alert alert-success"><?= e(flash('success')) ?></div><?php endif; ?>
 
     <?php if ($recommended): ?>
-    <h3 style="font-size:1.1rem;color:var(--green-deep);margin-bottom:1rem"><i data-lucide="sparkles" class="lucide-icon"></i> Recommended for <?= e($me['field_name']) ?></h3>
+    <h3 style="font-size:1.1rem;color:var(--green-deep);margin-bottom:1rem"><i data-lucide="sparkles" class="lucide-icon"></i> Recommended for <?= e(implode(', ', $myFieldNames)) ?></h3>
     <div class="grid-2" style="margin-bottom:2rem">
         <?php foreach ($recommended as $c): ?>
         <a href="course.php?id=<?= (int) $c['id'] ?>" class="card" style="text-decoration:none;color:inherit">

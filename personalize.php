@@ -9,6 +9,10 @@ $me = $stmt->fetch();
 
 $fields = $pdo->query('SELECT * FROM fields_of_study ORDER BY name')->fetchAll();
 
+$myFieldsStmt = $pdo->prepare('SELECT field_of_study_id FROM user_learning_fields WHERE user_id = ?');
+$myFieldsStmt->execute([$user['id']]);
+$myFieldIds = array_map('intval', $myFieldsStmt->fetchAll(PDO::FETCH_COLUMN));
+
 $myStmt = $pdo->prepare('SELECT s.name FROM skills s JOIN user_skills us ON us.skill_id = s.id WHERE us.user_id = ? ORDER BY s.name');
 $myStmt->execute([$user['id']]);
 $mySkills = $myStmt->fetchAll(PDO::FETCH_COLUMN);
@@ -19,11 +23,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
 
     $occupation = trim($_POST['occupation'] ?? '');
-    $fieldId    = (int) ($_POST['learning_field_id'] ?? 0) ?: null;
+    $fieldIds   = array_filter(array_map('intval', $_POST['learning_field_ids'] ?? []));
     $skillsCsv  = trim($_POST['skills_csv'] ?? '');
 
-    $pdo->prepare('UPDATE users SET occupation = ?, learning_field_id = ? WHERE id = ?')
-        ->execute([$occupation ?: null, $fieldId, $user['id']]);
+    $pdo->prepare('UPDATE users SET occupation = ? WHERE id = ?')->execute([$occupation ?: null, $user['id']]);
+
+    $pdo->prepare('DELETE FROM user_learning_fields WHERE user_id = ?')->execute([$user['id']]);
+    if ($fieldIds) {
+        $values = implode(',', array_fill(0, count($fieldIds), '(?, ?)'));
+        $params = [];
+        foreach ($fieldIds as $fid) { $params[] = $user['id']; $params[] = $fid; }
+        $pdo->prepare("INSERT INTO user_learning_fields (user_id, field_of_study_id) VALUES $values")->execute($params);
+    }
 
     // Sync interests using the same shared skills/user_skills mechanism as Edit Profile.
     $names = array_filter(array_unique(array_map('trim', explode(',', $skillsCsv))));
@@ -80,11 +91,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
 
             <div class="form-group">
-                <label class="form-label">What field are you learning for?</label>
+                <label class="form-label">What field(s) are you learning for?</label>
+                <div class="form-hint" style="margin-top:-.3rem;margin-bottom:.6rem">Select as many as apply.</div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.8rem">
                     <?php foreach ($fields as $f): ?>
                     <label class="card" style="cursor:pointer;text-align:center;padding:1.1rem .6rem;margin:0">
-                        <input type="radio" name="learning_field_id" value="<?= (int) $f['id'] ?>" style="width:auto;margin-bottom:.5rem" <?= (int) $me['learning_field_id'] === (int) $f['id'] ? 'checked' : '' ?>>
+                        <input type="checkbox" name="learning_field_ids[]" value="<?= (int) $f['id'] ?>" style="width:auto;margin-bottom:.5rem" <?= in_array((int) $f['id'], $myFieldIds, true) ? 'checked' : '' ?>>
                         <div style="font-size:1.5rem;color:var(--green-deep)"><?= catIcon($f['icon']) ?></div>
                         <div style="font-weight:600;font-size:.85rem;margin-top:.3rem"><?= e($f['name']) ?></div>
                     </label>

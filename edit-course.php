@@ -27,7 +27,7 @@ $fields = $pdo->query(
 )->fetchAll();
 $grouped = [];
 foreach ($fields as $row) {
-    $grouped[$row['field_id']]['label'] = $row['field_icon'] . ' ' . $row['field_name'];
+    $grouped[$row['field_id']]['label'] = $row['field_name'];
     if ($row['subject_id']) {
         $grouped[$row['field_id']]['subjects'][] = $row;
     }

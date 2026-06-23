@@ -216,13 +216,27 @@ function getUserPoints(PDO $pdo, int $userId): int {
 }
 
 function awardBadge(PDO $pdo, int $userId, string $code): bool {
-    $badge = $pdo->prepare('SELECT id FROM badges WHERE code = ?');
+    $badge = $pdo->prepare('SELECT id, name, description, icon FROM badges WHERE code = ?');
     $badge->execute([$code]);
-    $badgeId = $badge->fetchColumn();
-    if (!$badgeId) return false;
+    $badge = $badge->fetch();
+    if (!$badge) return false;
     $stmt = $pdo->prepare('INSERT IGNORE INTO user_badges (user_id, badge_id) VALUES (?, ?)');
-    $stmt->execute([$userId, $badgeId]);
-    return $stmt->rowCount() > 0;
+    $stmt->execute([$userId, $badge['id']]);
+    $isNew = $stmt->rowCount() > 0;
+
+    if ($isNew) {
+        notifyUser($pdo, $userId, 'badge_earned', (int) $badge['id'], 5, function ($u) use ($badge) {
+            $nameSafe = e($badge['name']);
+            $descSafe = e($badge['description']);
+            return [
+                'New badge earned: ' . $badge['name'],
+                '<p style="margin:0 0 16px">You just earned the <strong>' . $nameSafe . '</strong> badge — ' . $descSafe . '. Keep going!</p>',
+                'View Your Badges',
+                siteBaseUrl() . '/dashboard.php',
+            ];
+        });
+    }
+    return $isNew;
 }
 
 // Re-evaluates every badge condition for a user. Idempotent — awardBadge()
@@ -384,6 +398,81 @@ HTML;
     $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
 
     return @mail($toEmail, $subject, $html, $headers);
+}
+
+// ── Engagement notification emails ──────────────────────────────────────
+// Shared branded template for every "something happened" email (new
+// message, course approved, badge earned, etc.) so each call site only
+// supplies a subject + a short HTML fragment, not a whole template.
+// $bodyHtml may contain markup but any user-supplied text inside it must
+// already be passed through e() by the caller before interpolating.
+function sendNotificationEmail(string $toEmail, string $name, string $subject, string $bodyHtml, string $ctaText, string $ctaLink): bool {
+    $domain = preg_replace('/^www\./', '', $_SERVER['HTTP_HOST'] ?? 'localhost');
+    $nameSafe = e($name);
+    $siteSafe = e(SITE_NAME);
+    $year = date('Y');
+
+    $html = <<<HTML
+<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#faf8f4;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#faf8f4;padding:32px 16px;">
+<tr><td align="center">
+<table width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e0dbd2;max-width:480px;">
+<tr><td style="background:#083344;padding:24px 32px;text-align:center;">
+<span style="font-size:22px;color:#d4af5a;font-weight:bold;">🕌 {$siteSafe}</span>
+</td></tr>
+<tr><td style="padding:32px;">
+<p style="font-size:16px;color:#1a1a1a;margin:0 0 16px;">Assalamu Alaikum {$nameSafe},</p>
+<div style="font-size:15px;color:#444444;line-height:1.6;margin:0 0 28px;">{$bodyHtml}</div>
+<table cellpadding="0" cellspacing="0" style="margin:0 auto;">
+<tr><td style="border-radius:25px;background:#0e5272;">
+<a href="{$ctaLink}" style="display:inline-block;padding:14px 36px;color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold;border-radius:25px;">{$ctaText}</a>
+</td></tr>
+</table>
+</td></tr>
+<tr><td style="background:#faf8f4;padding:16px 32px;text-align:center;border-top:1px solid #e0dbd2;">
+<span style="font-size:12px;color:#aaaaaa;">© {$year} {$siteSafe} — You're receiving this because of activity on your account.</span>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>
+HTML;
+
+    $headers  = "From: {$siteSafe} <no-reply@{$domain}>\r\n";
+    $headers .= "Reply-To: no-reply@{$domain}\r\n";
+    $headers .= "MIME-Version: 1.0\r\n";
+    $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+
+    return @mail($toEmail, $subject, $html, $headers);
+}
+
+// Cooldown-gated notification dispatch — the actual anti-spam mechanism.
+// Skips silently (returns false) if the same (user, type, related_id) was
+// already emailed within $cooldownMinutes, so frequent events (chat
+// messages, enrollments) can't flood an inbox. $buildEmail receives the
+// recipient row and must return [subject, bodyHtml, ctaText, ctaLink].
+function notifyUser(PDO $pdo, int $userId, string $type, int $relatedId, int $cooldownMinutes, callable $buildEmail): bool {
+    $check = $pdo->prepare(
+        'SELECT 1 FROM notification_log WHERE user_id = ? AND type = ? AND related_id = ?
+         AND sent_at > DATE_SUB(NOW(), INTERVAL ? MINUTE) LIMIT 1'
+    );
+    $check->execute([$userId, $type, $relatedId, $cooldownMinutes]);
+    if ($check->fetch()) return false;
+
+    $userStmt = $pdo->prepare('SELECT name, email FROM users WHERE id = ?');
+    $userStmt->execute([$userId]);
+    $u = $userStmt->fetch();
+    if (!$u) return false;
+
+    [$subject, $bodyHtml, $ctaText, $ctaLink] = $buildEmail($u);
+    $sent = sendNotificationEmail($u['email'], $u['name'], $subject, $bodyHtml, $ctaText, $ctaLink);
+    if ($sent) {
+        $pdo->prepare('INSERT INTO notification_log (user_id, type, related_id) VALUES (?, ?, ?)')->execute([$userId, $type, $relatedId]);
+    }
+    return $sent;
 }
 
 // ── Image Upload ──────────────────────────────────────────────────────────

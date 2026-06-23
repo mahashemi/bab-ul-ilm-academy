@@ -12,6 +12,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['body'])) {
     if ($body !== '' && $withId > 0) {
         $pdo->prepare('INSERT INTO messages (sender_id, receiver_id, course_id, body) VALUES (?, ?, ?, ?)')
             ->execute([$user['id'], $withId, $courseId, $body]);
+
+        // Cooldown per (recipient, sender) so a back-and-forth conversation
+        // emails once per 30 minutes, not once per message.
+        notifyUser($pdo, $withId, 'new_message', $user['id'], 30, function ($u) use ($user) {
+            $senderSafe = e($user['name']);
+            return [
+                $senderSafe . ' sent you a message',
+                '<p style="margin:0 0 16px">' . $senderSafe . ' sent you a new message on ' . e(SITE_NAME) . '.</p>',
+                'View Message',
+                siteBaseUrl() . '/chat.php?with=' . (int) $user['id'],
+            ];
+        });
     }
     redirect('chat.php?with=' . $withId . ($courseId ? '&course=' . $courseId : ''));
 }

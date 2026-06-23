@@ -46,9 +46,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare("UPDATE courses SET moderation_status = 'approved', is_published = 1 WHERE id = ?")->execute([$cid]);
         if ($courseRow && $courseRow['moderation_status'] !== 'approved') {
             awardPoints($pdo, (int) $courseRow['teacher_id'], 25, 'Course "' . $courseRow['title'] . '" was approved');
+            notifyUser($pdo, (int) $courseRow['teacher_id'], 'course_approved', $cid, 1, function ($u) use ($courseRow, $cid) {
+                $titleSafe = e($courseRow['title']);
+                return [
+                    'Your course was approved!',
+                    '<p style="margin:0 0 16px">Great news — "' . $titleSafe . '" has been reviewed and approved. It\'s now live in the course catalog and students can enroll.</p>',
+                    'View Your Course',
+                    siteBaseUrl() . '/course.php?id=' . $cid,
+                ];
+            });
         }
     } elseif (isset($_POST['reject_course'])) {
-        $pdo->prepare("UPDATE courses SET moderation_status = 'rejected', is_published = 0 WHERE id = ?")->execute([(int) $_POST['reject_course']]);
+        $cid = (int) $_POST['reject_course'];
+        $courseRow = $pdo->prepare('SELECT teacher_id, title, moderation_status FROM courses WHERE id = ?');
+        $courseRow->execute([$cid]);
+        $courseRow = $courseRow->fetch();
+        $pdo->prepare("UPDATE courses SET moderation_status = 'rejected', is_published = 0 WHERE id = ?")->execute([$cid]);
+        if ($courseRow && $courseRow['moderation_status'] !== 'rejected') {
+            notifyUser($pdo, (int) $courseRow['teacher_id'], 'course_rejected', $cid, 1, function ($u) use ($courseRow, $cid) {
+                $titleSafe = e($courseRow['title']);
+                return [
+                    'Your course needs changes',
+                    '<p style="margin:0 0 16px">Your course "' . $titleSafe . '" was reviewed but isn\'t approved yet. Please check it for any guideline issues and update it for re-review.</p>',
+                    'Edit Your Course',
+                    siteBaseUrl() . '/edit-course.php?id=' . $cid,
+                ];
+            });
+        }
     } elseif (isset($_POST['set_role']) && $_POST['set_role'] !== '') {
         $targetId = (int) $_POST['user_id'];
         $newRole = $_POST['set_role'];

@@ -335,6 +335,22 @@ INSERT IGNORE INTO badges (code, name, description, icon) VALUES
 ('popular_teacher',   'Popular Teacher',    'Reached 50 total students across your courses', 'users'),
 ('top_rated',         'Top Rated',          'Maintained a 4.5+ rating with 5+ reviews', 'star');
 
+-- ── Notification log (anti-spam cooldown tracking for engagement emails) ──
+-- Every notifyUser() call checks this before sending — if the same
+-- (user, type, related_id) combination was already emailed within the
+-- type's cooldown window, the send is skipped. This is the actual mechanism
+-- that keeps inboxes from being overwhelmed by frequent events like chat
+-- messages or enrollments.
+CREATE TABLE IF NOT EXISTS notification_log (
+    id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id    INT UNSIGNED NOT NULL,
+    type       VARCHAR(50) NOT NULL,
+    related_id INT UNSIGNED NOT NULL DEFAULT 0,
+    sent_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_lookup (user_id, type, related_id, sent_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ── Initial Admin Account ───────────────────────────────────────────────
 -- Default password: Admin@123
 -- IMPORTANT: Log in immediately and change this password via your profile.

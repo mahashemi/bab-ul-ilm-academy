@@ -125,6 +125,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['enroll'])) {
     if (canEnroll($user['role'] ?? null) && !$isEnrolled) {
         $pdo->prepare('INSERT IGNORE INTO enrollments (student_id, course_id) VALUES (?, ?)')->execute([$user['id'], $id]);
         awardPoints($pdo, $user['id'], 10, 'Enrolled in "' . $course['title'] . '"');
+
+        // Only email the teacher at milestones, not for every single
+        // enrollment — a popular course could otherwise flood their inbox.
+        $countStmt = $pdo->prepare('SELECT COUNT(*) FROM enrollments WHERE course_id = ?');
+        $countStmt->execute([$id]);
+        $newCount = (int) $countStmt->fetchColumn();
+        if (in_array($newCount, [1, 10, 50, 100, 500], true)) {
+            notifyUser($pdo, (int) $course['teacher_id'], 'enrollment_milestone', $id, 60, function ($u) use ($course, $newCount) {
+                $titleSafe = e($course['title']);
+                $plural = $newCount === 1 ? 'student has' : 'students have';
+                return [
+                    $newCount . ' students now enrolled in "' . $course['title'] . '"',
+                    '<p style="margin:0 0 16px">' . $newCount . ' ' . $plural . ' now enrolled in "' . $titleSafe . '". Keep up the great teaching!</p>',
+                    'View Your Course',
+                    siteBaseUrl() . '/course.php?id=' . (int) $course['id'],
+                ];
+            });
+        }
+
         flash('success', 'Enrolled successfully! Start learning below.');
         redirect('course.php?id=' . $id);
     }

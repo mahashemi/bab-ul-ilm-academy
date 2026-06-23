@@ -39,6 +39,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ->execute([$courseId, $user['id'], $body, $isBroadcast]);
             $newMsgId = (int) $pdo->lastInsertId();
 
+            // Announcements are rare and deliberate (teacher opts in via a
+            // checkbox), so every enrolled student gets emailed — unlike
+            // regular chat messages, which never trigger email at all.
+            if ($isBroadcast) {
+                $students = $pdo->prepare('SELECT student_id FROM enrollments WHERE course_id = ?');
+                $students->execute([$courseId]);
+                foreach ($students->fetchAll(PDO::FETCH_COLUMN) as $studentId) {
+                    notifyUser($pdo, (int) $studentId, 'class_announcement', $courseId, 10, function ($u) use ($course, $body) {
+                        return [
+                            'New announcement in ' . $course['title'],
+                            '<p style="margin:0 0 16px"><strong>' . e($course['title']) . '</strong> has a new announcement:</p>'
+                                . '<p style="margin:0 0 16px;padding:12px 16px;background:#faf8f4;border-radius:8px;color:#1a1a1a">' . nl2br(e($body)) . '</p>',
+                            'View Discussion',
+                            siteBaseUrl() . '/class-chat.php?course_id=' . (int) $course['id'],
+                        ];
+                    });
+                }
+            }
+
             // Only scan/score messages from non-moderators — a teacher's own
             // posts aren't subject to their own moderation queue.
             if (!$canModerate) {

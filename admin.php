@@ -39,7 +39,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['toggle_published'])) {
         $pdo->prepare('UPDATE courses SET is_published = 1 - is_published WHERE id = ?')->execute([(int) $_POST['toggle_published']]);
     } elseif (isset($_POST['approve_course'])) {
-        $pdo->prepare("UPDATE courses SET moderation_status = 'approved', is_published = 1 WHERE id = ?")->execute([(int) $_POST['approve_course']]);
+        $cid = (int) $_POST['approve_course'];
+        $courseRow = $pdo->prepare('SELECT teacher_id, title, moderation_status FROM courses WHERE id = ?');
+        $courseRow->execute([$cid]);
+        $courseRow = $courseRow->fetch();
+        $pdo->prepare("UPDATE courses SET moderation_status = 'approved', is_published = 1 WHERE id = ?")->execute([$cid]);
+        if ($courseRow && $courseRow['moderation_status'] !== 'approved') {
+            awardPoints($pdo, (int) $courseRow['teacher_id'], 25, 'Course "' . $courseRow['title'] . '" was approved');
+        }
     } elseif (isset($_POST['reject_course'])) {
         $pdo->prepare("UPDATE courses SET moderation_status = 'rejected', is_published = 0 WHERE id = ?")->execute([(int) $_POST['reject_course']]);
     } elseif (isset($_POST['set_role']) && $_POST['set_role'] !== '') {

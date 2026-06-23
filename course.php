@@ -124,6 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['enroll'])) {
     verifyCsrf();
     if (canEnroll($user['role'] ?? null) && !$isEnrolled) {
         $pdo->prepare('INSERT IGNORE INTO enrollments (student_id, course_id) VALUES (?, ?)')->execute([$user['id'], $id]);
+        awardPoints($pdo, $user['id'], 10, 'Enrolled in "' . $course['title'] . '"');
         flash('success', 'Enrolled successfully! Start learning below.');
         redirect('course.php?id=' . $id);
     }
@@ -133,8 +134,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_lesson'])) {
     requireAuth();
     verifyCsrf();
     $lid = (int) $_POST['complete_lesson'];
-    if ($isEnrolled) {
-        $pdo->prepare('INSERT IGNORE INTO lesson_progress (student_id, lesson_id) VALUES (?, ?)')->execute([$user['id'], $lid]);
+    if ($isEnrolled && in_array($lid, array_column($lessons, 'id'), true)) {
+        $ins = $pdo->prepare('INSERT IGNORE INTO lesson_progress (student_id, lesson_id) VALUES (?, ?)');
+        $ins->execute([$user['id'], $lid]);
+        if ($ins->rowCount() > 0) {
+            awardPoints($pdo, $user['id'], 15, 'Completed a lesson in "' . $course['title'] . '"');
+            $totalLessons = count($lessons);
+            $doneCount = count($completedLessons) + 1;
+            if ($totalLessons > 0 && $doneCount >= $totalLessons) {
+                awardPoints($pdo, $user['id'], 50, 'Completed the course "' . $course['title'] . '"');
+            }
+        }
         redirect('course.php?id=' . $id);
     }
 }
@@ -145,10 +155,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_review'])) {
     $rating = max(1, min(5, (int) ($_POST['rating'] ?? 0)));
     $comment = trim($_POST['comment'] ?? '');
     if ($isEnrolled && $rating > 0) {
+        $isFirstReview = !$myReview;
         $pdo->prepare(
             'INSERT INTO course_reviews (course_id, student_id, rating, comment) VALUES (?, ?, ?, ?)
              ON DUPLICATE KEY UPDATE rating = ?, comment = ?'
         )->execute([$id, $user['id'], $rating, $comment, $rating, $comment]);
+        if ($isFirstReview) {
+            awardPoints($pdo, $user['id'], 10, 'Reviewed "' . $course['title'] . '"');
+            awardPoints($pdo, $course['teacher_id'], $rating === 5 ? 15 : 5, 'Received a review on "' . $course['title'] . '"');
+        }
         flash('success', 'Thanks for your review!');
         redirect('course.php?id=' . $id);
     }

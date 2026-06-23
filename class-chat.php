@@ -53,6 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($penalty !== 0) adjustBehaviorScore($pdo, $user['id'], $courseId, $penalty);
                 } else {
                     adjustBehaviorScore($pdo, $user['id'], $courseId, 1);
+                    awardPoints($pdo, $user['id'], 5, 'Participated in class discussion for "' . $course['title'] . '"');
                 }
             }
         }

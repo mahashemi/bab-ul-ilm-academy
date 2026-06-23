@@ -22,7 +22,7 @@ if ($lesson['moderation_status'] !== 'approved' && !$isOwnerOrAdmin) {
 }
 
 $isEnrolled = false;
-if ($user && ($user['role'] ?? '') === 'student') {
+if ($user && canEnroll($user['role'] ?? null)) {
     $e = $pdo->prepare('SELECT 1 FROM enrollments WHERE student_id = ? AND course_id = ?');
     $e->execute([$user['id'], $lesson['course_id']]);
     $isEnrolled = (bool) $e->fetch();
@@ -43,7 +43,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_lesson'])) {
     requireAuth();
     verifyCsrf();
     if ($isEnrolled) {
-        $pdo->prepare('INSERT IGNORE INTO lesson_progress (student_id, lesson_id) VALUES (?, ?)')->execute([$user['id'], $id]);
+        $ins = $pdo->prepare('INSERT IGNORE INTO lesson_progress (student_id, lesson_id) VALUES (?, ?)');
+        $ins->execute([$user['id'], $id]);
+        if ($ins->rowCount() > 0) {
+            awardPoints($pdo, $user['id'], 15, 'Completed a lesson in "' . $lesson['course_title'] . '"');
+            $totalStmt = $pdo->prepare('SELECT COUNT(*) FROM lessons WHERE course_id = ?');
+            $totalStmt->execute([$lesson['course_id']]);
+            $totalCount = (int) $totalStmt->fetchColumn();
+            $doneStmt = $pdo->prepare(
+                'SELECT COUNT(*) FROM lesson_progress lp JOIN lessons l ON l.id = lp.lesson_id
+                 WHERE lp.student_id = ? AND l.course_id = ?'
+            );
+            $doneStmt->execute([$user['id'], $lesson['course_id']]);
+            if ($totalCount > 0 && $totalCount === (int) $doneStmt->fetchColumn()) {
+                awardPoints($pdo, $user['id'], 50, 'Completed the course "' . $lesson['course_title'] . '"');
+            }
+        }
         redirect('lesson.php?id=' . $id);
     }
 }

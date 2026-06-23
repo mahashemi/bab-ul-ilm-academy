@@ -284,6 +284,57 @@ CREATE TABLE IF NOT EXISTS user_learning_fields (
     FOREIGN KEY (field_of_study_id) REFERENCES fields_of_study(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ── Gamification: points ──────────────────────────────────────────────────
+-- Points map only to real platform actions (enrolling, completing lessons,
+-- clean chat participation, reviews, course approval) — no fabricated
+-- quiz/assignment features that don't exist yet.
+CREATE TABLE IF NOT EXISTS user_points (
+    user_id INT UNSIGNED PRIMARY KEY,
+    points  INT NOT NULL DEFAULT 0,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS point_log (
+    id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id    INT UNSIGNED NOT NULL,
+    points     INT NOT NULL,
+    reason     VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── Gamification: badges ───────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS badges (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    code        VARCHAR(50) UNIQUE NOT NULL,
+    name        VARCHAR(100) NOT NULL,
+    description VARCHAR(255) NOT NULL,
+    icon        VARCHAR(30) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS user_badges (
+    user_id   INT UNSIGNED NOT NULL,
+    badge_id  INT UNSIGNED NOT NULL,
+    earned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, badge_id),
+    FOREIGN KEY (user_id)  REFERENCES users(id)  ON DELETE CASCADE,
+    FOREIGN KEY (badge_id) REFERENCES badges(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO badges (code, name, description, icon) VALUES
+('first_enrollment',  'First Step',         'Enrolled in your first course', 'footprints'),
+('first_completion',  'Course Graduate',    'Completed your first course', 'graduation-cap'),
+('five_completions',  'Dedicated Learner',  'Completed 5 courses', 'medal'),
+('skilled',           'Skilled',            'Listed 5 or more skills on your profile', 'sparkles'),
+('chatty',            'Active Participant', 'Posted 10+ clean messages in class discussions', 'message-circle'),
+('bronze_learner',    'Bronze Learner',     'Earned 100 points', 'award'),
+('silver_learner',    'Silver Learner',     'Earned 500 points', 'award'),
+('gold_learner',      'Gold Learner',       'Earned 1000 points', 'award'),
+('published_teacher', 'Published Teacher',  'Had your first course approved', 'book-open-check'),
+('popular_teacher',   'Popular Teacher',    'Reached 50 total students across your courses', 'users'),
+('top_rated',         'Top Rated',          'Maintained a 4.5+ rating with 5+ reviews', 'star');
+
 -- ── Initial Admin Account ───────────────────────────────────────────────
 -- Default password: Admin@123
 -- IMPORTANT: Log in immediately and change this password via your profile.

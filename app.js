@@ -3,6 +3,18 @@ function toggleNav() {
     document.querySelector('.nav-scrim').classList.toggle('show');
 }
 
+function toggleAccountMenu(e) {
+    if (e) e.stopPropagation();
+    var el = document.querySelector('.nav-account');
+    if (el) el.classList.toggle('open');
+}
+document.addEventListener('click', function (e) {
+    var el = document.querySelector('.nav-account');
+    if (el && el.classList.contains('open') && !el.contains(e.target)) {
+        el.classList.remove('open');
+    }
+});
+
 document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('table.table').forEach(function (table) {
         var headers = Array.prototype.map.call(table.querySelectorAll('thead th'), function (th) {

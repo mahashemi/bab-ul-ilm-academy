@@ -319,6 +319,14 @@ function renderCourseCard(array $c, array $bestsellerIds = []): string {
             <?php if ($c['cover_url']): ?><img src="<?= e($c['cover_url']) ?>" alt=""><?php else: ?><?= catIcon($c['subject_icon']) ?><?php endif; ?>
             <?php if ($isBestseller): ?><span class="course-bestseller">Bestseller</span><?php endif; ?>
             <span class="badge badge-<?= e($c['level']) ?> course-level"><?= e(ucfirst($c['level'])) ?></span>
+            <div class="course-hover-info">
+                <?php if (!empty($c['description'])): ?><p><?= e($c['description']) ?></p><?php endif; ?>
+                <div class="meta">
+                    <span><i data-lucide="clipboard-list" class="lucide-icon"></i> <?= (int) $c['lesson_count'] ?> lessons</span>
+                    <?php if ($hours > 0): ?><span><i data-lucide="clock" class="lucide-icon"></i> <?= $hours ?>h</span><?php endif; ?>
+                    <span><i data-lucide="signal" class="lucide-icon"></i> <?= e(ucfirst($c['level'])) ?></span>
+                </div>
+            </div>
         </div>
         <div class="course-body">
             <div class="course-subject"><?= e($c['subject_name'] ?? 'General') ?></div>

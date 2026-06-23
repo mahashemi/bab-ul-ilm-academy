@@ -62,6 +62,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('course.php?id=' . $id);
     }
 }
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_course'])) {
+    verifyCsrf();
+    $pdo->prepare('DELETE FROM courses WHERE id = ?')->execute([$id]);
+    flash('success', 'Course deleted.');
+    redirect('dashboard.php');
+}
+
+$lessons = $pdo->prepare('SELECT * FROM lessons WHERE course_id = ? ORDER BY sort_order ASC');
+$lessons->execute([$id]);
+$lessons = $lessons->fetchAll();
+
+$enrollmentCount = $pdo->prepare('SELECT COUNT(*) FROM enrollments WHERE course_id = ?');
+$enrollmentCount->execute([$id]);
+$enrollmentCount = (int) $enrollmentCount->fetchColumn();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -119,6 +134,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <h2><i data-lucide="pencil" class="lucide-icon"></i> Edit Course</h2>
         <p><?= $isAdmin && !$isOwner ? 'You are editing this course as an admin.' : 'Update your course details below.' ?></p>
     </div>
+
+    <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.6rem;margin-bottom:<?= $lessons ? '1rem' : '0' ?>">
+            <h3 style="font-size:1.05rem;color:var(--green-deep)"><i data-lucide="clipboard-list" class="lucide-icon"></i> Lessons (<?= count($lessons) ?>)</h3>
+            <a href="add-lesson.php?course_id=<?= $id ?>" class="btn btn-primary btn-sm"><i data-lucide="plus" class="lucide-icon"></i> Add / Manage Lessons</a>
+        </div>
+        <?php if ($lessons): ?>
+        <ul class="lesson-list" style="margin:0 -1.2rem">
+            <?php foreach ($lessons as $i => $l): ?>
+            <li class="lesson-item">
+                <div class="lesson-num"><?= $i + 1 ?></div>
+                <div class="lesson-title" style="flex:1"><a href="edit-lesson.php?id=<?= (int) $l['id'] ?>"><?= e($l['title']) ?></a></div>
+                <?php if ((int) $l['duration_minutes'] > 0): ?><span style="font-size:.78rem;color:var(--text-light)"><?= (int) $l['duration_minutes'] ?> min</span><?php endif; ?>
+                <a href="edit-lesson.php?id=<?= (int) $l['id'] ?>" class="icon-btn" data-tip="Edit lesson" aria-label="Edit lesson" style="margin-left:.6rem"><i data-lucide="pencil" class="lucide-icon"></i></a>
+            </li>
+            <?php endforeach; ?>
+        </ul>
+        <?php else: ?>
+            <p style="font-size:.88rem;color:var(--text-light)">No lessons yet — students can't take this course until you add at least one.</p>
+        <?php endif; ?>
+    </div></div>
 
     <?php if ($errors): ?>
         <div class="alert alert-error"><?php foreach ($errors as $err): ?><div><?= e($err) ?></div><?php endforeach; ?></div>
@@ -206,6 +242,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <button type="submit" class="btn btn-primary">Save Changes</button>
                 <a href="course.php?id=<?= $id ?>" class="btn btn-outline">Cancel</a>
             </div>
+        </form>
+    </div></div>
+
+    <div class="card" style="border-color:#c62828"><div class="card-body">
+        <h3 style="font-size:1rem;color:#c62828;margin-bottom:.5rem"><i data-lucide="triangle-alert" class="lucide-icon"></i> Danger Zone</h3>
+        <p style="font-size:.85rem;color:var(--text-mid);margin-bottom:.8rem">
+            Deleting this course permanently removes it along with all <?= count($lessons) ?> lesson(s)<?= $enrollmentCount > 0 ? ', and unenrolls ' . $enrollmentCount . ' student(s)' : '' ?>. This cannot be undone.
+        </p>
+        <form method="post" onsubmit="return confirm('Permanently delete this course<?= $enrollmentCount > 0 ? ' and unenroll ' . $enrollmentCount . ' student(s)' : '' ?>? This cannot be undone.')">
+            <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+            <button type="submit" name="delete_course" value="1" class="btn btn-outline" style="color:#c62828;border-color:#c62828"><i data-lucide="trash-2" class="lucide-icon"></i> Delete This Course</button>
         </form>
     </div></div>
 </div>

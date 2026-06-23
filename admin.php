@@ -79,6 +79,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ->execute([$key, $val, $val]);
         }
         flash('success', 'Settings updated.');
+    } elseif (isset($_POST['upload_site_image'])) {
+        $slot = $_POST['upload_site_image'];
+        if ($slot === 'home_hero_bg') {
+            $path = handleImageUpload('image', 'site');
+            if ($path) {
+                $pdo->prepare('INSERT INTO settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?')
+                    ->execute([$slot, $path, $path]);
+                flash('success', 'Image updated.');
+            } else {
+                flash('success', 'Upload failed — please use a JPG, PNG, or WEBP under 5MB.');
+            }
+        }
+    } elseif (isset($_POST['remove_site_image'])) {
+        $slot = $_POST['remove_site_image'];
+        if ($slot === 'home_hero_bg') {
+            $pdo->prepare('DELETE FROM settings WHERE setting_key = ?')->execute([$slot]);
+        }
     } elseif (isset($_POST['toggle_feedback_read'])) {
         $pdo->prepare('UPDATE feedback SET is_read = 1 - is_read WHERE id = ?')->execute([(int) $_POST['toggle_feedback_read']]);
     } elseif (isset($_POST['delete_feedback'])) {
@@ -145,6 +162,8 @@ $allConvos = $pdo->query(
     <div class="nav-links">
         <a href="index.php">Site</a>
         <a href="dashboard.php">Dashboard</a>
+        <a href="about.php">About</a>
+        <a href="feedback.php">Feedback</a>
         <div class="nav-account">
             <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="Account menu">
                 <span class="nav-avatar"><?= e(mb_substr($user['name'], 0, 1)) ?></span>
@@ -165,8 +184,6 @@ $allConvos = $pdo->query(
                 <a href="logout.php"><i data-lucide="log-out" class="lucide-icon"></i> Logout</a>
             </div>
         </div>
-        <a href="about.php">About</a>
-        <a href="feedback.php">Feedback</a>
     </div>
 </nav>
 
@@ -362,6 +379,28 @@ $allConvos = $pdo->query(
                 </div>
                 <button type="submit" name="save_settings" value="1" class="btn btn-primary">Save Settings</button>
             </form>
+        </div></div>
+
+        <?php $heroBg = siteSetting($pdo, 'home_hero_bg'); ?>
+        <div class="card" style="margin-top:1.5rem"><div class="card-body">
+            <h3 style="font-size:1rem;margin-bottom:.4rem">Homepage Hero Background</h3>
+            <p style="font-size:.8rem;color:var(--text-light);margin-bottom:1rem">Shown behind the headline on the main homepage. Recommended: wide image, at least 1600x500.</p>
+            <?php if ($heroBg): ?>
+                <img src="<?= e($heroBg) ?>" alt="" style="width:100%;height:140px;object-fit:cover;border-radius:var(--radius);margin-bottom:1rem">
+            <?php else: ?>
+                <div style="width:100%;height:140px;border-radius:var(--radius);margin-bottom:1rem;background:var(--cream);display:flex;align-items:center;justify-content:center;color:var(--text-light);font-size:.85rem">No image set — using default</div>
+            <?php endif; ?>
+            <form method="post" enctype="multipart/form-data" style="display:flex;gap:.6rem;align-items:center">
+                <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+                <input type="file" name="image" accept="image/jpeg,image/png,image/webp" required style="flex:1;font-size:.82rem">
+                <button type="submit" name="upload_site_image" value="home_hero_bg" class="btn btn-primary btn-sm">Upload</button>
+            </form>
+            <?php if ($heroBg): ?>
+            <form method="post" onsubmit="return confirm('Remove this image and revert to the default?')" style="margin-top:.5rem">
+                <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+                <button type="submit" name="remove_site_image" value="home_hero_bg" class="btn btn-outline btn-sm">Remove</button>
+            </form>
+            <?php endif; ?>
         </div></div>
     <?php elseif ($tab === 'feedback'): ?>
         <div style="display:flex;justify-content:flex-end;margin-bottom:1rem">

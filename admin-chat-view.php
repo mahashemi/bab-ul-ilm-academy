@@ -58,6 +58,8 @@ function chatTime(string $dt): string {
     <div class="nav-links">
         <a href="index.php">Site</a>
         <a href="dashboard.php">Dashboard</a>
+        <a href="about.php">About</a>
+        <a href="feedback.php">Feedback</a>
         <div class="nav-account">
             <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="Account menu">
                 <span class="nav-avatar"><?= e(mb_substr($user['name'], 0, 1)) ?></span>
@@ -78,8 +80,6 @@ function chatTime(string $dt): string {
                 <a href="logout.php"><i data-lucide="log-out" class="lucide-icon"></i> Logout</a>
             </div>
         </div>
-        <a href="about.php">About</a>
-        <a href="feedback.php">Feedback</a>
     </div>
 </nav>
 

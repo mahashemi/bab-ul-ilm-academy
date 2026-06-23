@@ -215,3 +215,10 @@ function handleImageUpload(string $fieldName, string $subDir): ?string {
 function catIcon(?string $iconName): string {
     return '<i data-lucide="' . e($iconName ?: 'book-open') . '" class="lucide-icon"></i>';
 }
+
+function siteSetting(PDO $pdo, string $key): ?string {
+    $stmt = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key = ?');
+    $stmt->execute([$key]);
+    $val = $stmt->fetchColumn();
+    return $val !== false && $val !== '' ? $val : null;
+}

@@ -77,6 +77,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <div class="nav-links">
         <a href="courses.php">Courses</a>
+        <a href="about.php">About</a>
+        <a href="feedback.php">Feedback</a>
         <?php if ($user): ?>
             <a href="chat.php">Messages</a>
             <?php if (($user['role'] ?? '') === 'teacher'): ?><a href="add-course.php">+ New Course</a><?php endif; ?>
@@ -107,8 +109,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php else: ?>
             <a href="login.php" class="nav-btn">Login</a>
         <?php endif; ?>
-        <a href="about.php">About</a>
-        <a href="feedback.php">Feedback</a>
     </div>
 </nav>
 

@@ -29,6 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $country       = trim($_POST['country'] ?? '');
     $bio           = trim($_POST['bio'] ?? '');
     $qualification = trim($_POST['qualification'] ?? '');
+    $headline      = trim($_POST['headline'] ?? '');
     $dialCodeIn    = trim($_POST['dial_code'] ?? '');
     $phoneDigits   = preg_replace('/\D/', '', $_POST['phone_number'] ?? '');
     $currentPass   = $_POST['current_password'] ?? '';
@@ -52,13 +53,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!$errors) {
         $qualToSave = $me['role'] === 'teacher' ? $qualification : $me['qualification'];
+        $headlineToSave = $me['role'] === 'teacher' ? ($headline ?: null) : $me['headline'];
         if ($newPass !== '') {
             $hash = password_hash($newPass, PASSWORD_DEFAULT);
-            $pdo->prepare('UPDATE users SET name=?, country=?, bio=?, phone=?, qualification=?, password=? WHERE id=?')
-                ->execute([$name, $country, $bio, $phone, $qualToSave, $hash, $user['id']]);
+            $pdo->prepare('UPDATE users SET name=?, country=?, bio=?, phone=?, qualification=?, headline=?, password=? WHERE id=?')
+                ->execute([$name, $country, $bio, $phone, $qualToSave, $headlineToSave, $hash, $user['id']]);
         } else {
-            $pdo->prepare('UPDATE users SET name=?, country=?, bio=?, phone=?, qualification=? WHERE id=?')
-                ->execute([$name, $country, $bio, $phone, $qualToSave, $user['id']]);
+            $pdo->prepare('UPDATE users SET name=?, country=?, bio=?, phone=?, qualification=?, headline=? WHERE id=?')
+                ->execute([$name, $country, $bio, $phone, $qualToSave, $headlineToSave, $user['id']]);
         }
 
         // Sync skills: reuse existing skill rows by name, create any new ones,
@@ -83,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $_SESSION['user']['name'] = $name;
         $success = true;
-        $me['name'] = $name; $me['country'] = $country; $me['bio'] = $bio; $me['qualification'] = $qualToSave;
+        $me['name'] = $name; $me['country'] = $country; $me['bio'] = $bio; $me['qualification'] = $qualToSave; $me['headline'] = $headlineToSave;
         $dialCode = $dialCodeIn; $phoneNumber = $phoneDigits;
     }
 }
@@ -245,6 +247,11 @@ document.addEventListener('DOMContentLoaded', function () {
             </div>
 
             <?php if ($me['role'] === 'teacher'): ?>
+            <div class="form-group">
+                <label class="form-label">Professional Headline</label>
+                <input type="text" name="headline" class="form-control" placeholder="e.g. Developer and Lead Instructor" maxlength="150" value="<?= e($me['headline'] ?? '') ?>">
+                <div class="form-hint">Shown under your name on your courses — like "Dr. Angela Yu, Developer and Lead Instructor."</div>
+            </div>
             <div class="form-group">
                 <label class="form-label">Teaching Qualification</label>
                 <textarea name="qualification" class="form-control"><?= e($me['qualification'] ?? '') ?></textarea>

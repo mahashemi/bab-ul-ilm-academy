@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS users (
     country      VARCHAR(100),
     bio          TEXT,
     qualification TEXT,              -- Teacher: credentials, degrees
+    headline     VARCHAR(150) NULL,  -- Teacher: short title shown under their name, e.g. "Developer and Lead Instructor"
     avatar       VARCHAR(300),
     is_approved  TINYINT(1) DEFAULT 1,  -- Admin can suspend
     is_verified  TINYINT(1) DEFAULT 0,
@@ -270,6 +271,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS education_level VARCHAR(50) NULL;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_language VARCHAR(50) NULL;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS organization_name VARCHAR(200) NULL;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_verified TINYINT(1) DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS headline VARCHAR(150) NULL;
 
 -- ── Personalization (occupation + learning fields, for course recommendations) ──
 ALTER TABLE users ADD COLUMN IF NOT EXISTS occupation VARCHAR(150) DEFAULT NULL;

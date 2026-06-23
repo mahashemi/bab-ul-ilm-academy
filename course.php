@@ -4,10 +4,12 @@ $user = auth();
 
 $id = (int) ($_GET['id'] ?? 0);
 $stmt = $pdo->prepare(
-    'SELECT c.*, u.name AS teacher_name, u.qualification, u.bio AS teacher_bio, u.avatar AS teacher_avatar,
-            s.name AS subject_name, s.icon AS subject_icon,
+    'SELECT c.*, u.name AS teacher_name, u.qualification, u.headline AS teacher_headline, u.bio AS teacher_bio, u.avatar AS teacher_avatar,
+            s.id AS subject_id_full, s.name AS subject_name, s.icon AS subject_icon,
+            f.id AS field_id, f.name AS field_name,
             e.name AS editor_name, e.role AS editor_role
      FROM courses c JOIN users u ON u.id = c.teacher_id LEFT JOIN subjects s ON s.id = c.subject_id
+     LEFT JOIN fields_of_study f ON f.id = s.field_of_study_id
      LEFT JOIN users e ON e.id = c.updated_by
      WHERE c.id = ?'
 );
@@ -30,6 +32,8 @@ $lessons->execute([$id]);
 $lessons = $lessons->fetchAll();
 
 $totalMinutes = array_sum(array_column($lessons, 'duration_minutes'));
+$firstPreviewLesson = null;
+foreach ($lessons as $l) { if ((int) $l['is_preview'] === 1) { $firstPreviewLesson = $l; break; } }
 
 // Group lessons into curriculum sections, in the order each section first appears.
 $curriculum = [];
@@ -69,6 +73,32 @@ $teacherStats = $pdo->prepare(
 );
 $teacherStats->execute([$course['teacher_id']]);
 $teacherStats = $teacherStats->fetch();
+
+$courseCardSelect = "c.*, u.name AS teacher_name, s.name AS subject_name, s.icon AS subject_icon,
+            (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) AS student_count,
+            (SELECT COUNT(*) FROM lessons l WHERE l.course_id = c.id) AS lesson_count,
+            (SELECT COALESCE(SUM(duration_minutes),0) FROM lessons l WHERE l.course_id = c.id) AS total_minutes,
+            (SELECT COUNT(*) FROM course_reviews r WHERE r.course_id = c.id) AS review_count,
+            (SELECT COALESCE(AVG(rating),0) FROM course_reviews r WHERE r.course_id = c.id) AS avg_rating";
+
+$moreByInstructor = $pdo->prepare(
+    "SELECT $courseCardSelect FROM courses c JOIN users u ON u.id = c.teacher_id LEFT JOIN subjects s ON s.id = c.subject_id
+     WHERE c.teacher_id = ? AND c.id != ? AND c.is_published = 1 AND c.moderation_status = 'approved'
+     ORDER BY c.created_at DESC LIMIT 4"
+);
+$moreByInstructor->execute([$course['teacher_id'], $id]);
+$moreByInstructor = $moreByInstructor->fetchAll();
+
+$relatedCourses = [];
+if ($course['subject_id_full']) {
+    $relatedStmt = $pdo->prepare(
+        "SELECT $courseCardSelect FROM courses c JOIN users u ON u.id = c.teacher_id LEFT JOIN subjects s ON s.id = c.subject_id
+         WHERE c.subject_id = ? AND c.id != ? AND c.is_published = 1 AND c.moderation_status = 'approved'
+         ORDER BY (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) DESC LIMIT 4"
+    );
+    $relatedStmt->execute([$course['subject_id_full'], $id]);
+    $relatedCourses = $relatedStmt->fetchAll();
+}
 
 $isEnrolled = false;
 $completedLessons = [];
@@ -188,6 +218,14 @@ function starString(float $rating): string {
 <div class="dashboard-wrap" style="max-width:1180px">
     <?php if (flash('success')): ?><div class="alert alert-success"><?= e(flash('success')) ?></div><?php endif; ?>
 
+    <?php if ($course['field_name'] || $course['subject_name']): ?>
+    <p style="font-size:.82rem;color:var(--text-light);margin-bottom:.6rem">
+        <?php if ($course['field_name']): ?><a href="courses.php?field=<?= (int) $course['field_id'] ?>"><?= e($course['field_name']) ?></a><?php endif; ?>
+        <?php if ($course['field_name'] && $course['subject_name']): ?> <i data-lucide="chevron-right" class="lucide-icon" style="width:.8em;height:.8em"></i> <?php endif; ?>
+        <?php if ($course['subject_name']): ?><a href="courses.php?subject=<?= (int) $course['subject_id_full'] ?>"><?= e($course['subject_name']) ?></a><?php endif; ?>
+    </p>
+    <?php endif; ?>
+
     <div style="display:flex;gap:.6rem;margin-bottom:.6rem;flex-wrap:wrap">
         <span class="badge badge-<?= e($course['level']) ?>"><?= e(ucfirst($course['level'])) ?></span>
         <span class="badge" style="background:#f5f5f5;color:#555"><?= e($course['language']) ?></span>
@@ -235,13 +273,28 @@ function starString(float $rating): string {
             </div></div>
             <?php endif; ?>
 
+            <?php if ($course['field_name'] || $course['subject_name']): ?>
+            <div style="margin-bottom:1.5rem">
+                <h3 style="font-size:.95rem;margin-bottom:.6rem;color:var(--green-deep)">Explore related topics</h3>
+                <div class="chip-row" style="margin-bottom:0">
+                    <?php if ($course['subject_name']): ?><a href="courses.php?subject=<?= (int) $course['subject_id_full'] ?>" class="cat-chip"><?= catIcon($course['subject_icon']) ?> <?= e($course['subject_name']) ?></a><?php endif; ?>
+                    <?php if ($course['field_name']): ?><a href="courses.php?field=<?= (int) $course['field_id'] ?>" class="cat-chip"><?= e($course['field_name']) ?></a><?php endif; ?>
+                    <a href="courses.php?q=<?= urlencode($course['level']) ?>" class="cat-chip"><?= e(ucfirst($course['level'])) ?> Level</a>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
-                <h3 style="font-size:1.1rem;margin-bottom:1rem;color:var(--green-deep)"><i data-lucide="clipboard-list" class="lucide-icon"></i> Curriculum (<?= count($lessons) ?> lessons<?= $totalMinutes > 0 ? ', ' . round($totalMinutes / 60, 1) . ' hours' : '' ?>)</h3>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem">
+                    <h3 style="font-size:1.1rem;color:var(--green-deep)"><i data-lucide="clipboard-list" class="lucide-icon"></i> Curriculum (<?= count($lessons) ?> lessons<?= $totalMinutes > 0 ? ', ' . round($totalMinutes / 60, 1) . ' hours' : '' ?>)</h3>
+                    <button type="button" onclick="toggleAllSections()" id="expandAllBtn" class="btn btn-sm btn-outline">Collapse all sections</button>
+                </div>
                 <?php foreach ($curriculum as $sectionTitle => $sectionLessons): ?>
+                <?php $sectionMinutes = array_sum(array_column($sectionLessons, 'duration_minutes')); ?>
                 <details class="curriculum-section" open>
                     <summary>
                         <span><?= e($sectionTitle) ?></span>
-                        <span class="count"><?= count($sectionLessons) ?> lesson<?= count($sectionLessons) == 1 ? '' : 's' ?></span>
+                        <span class="count"><?= count($sectionLessons) ?> lesson<?= count($sectionLessons) == 1 ? '' : 's' ?><?= $sectionMinutes > 0 ? ' · ' . $sectionMinutes . ' min' : '' ?></span>
                     </summary>
                     <?php foreach ($sectionLessons as $i => $l): ?>
                         <?php
@@ -291,6 +344,9 @@ function starString(float $rating): string {
                     <div class="profile-avatar"><?= e(mb_substr($course['teacher_name'], 0, 1)) ?></div>
                     <div>
                         <a href="profile.php?id=<?= (int) $course['teacher_id'] ?>" style="font-weight:700;font-size:1.05rem"><?= e($course['teacher_name']) ?></a>
+                        <?php if ($course['teacher_headline']): ?>
+                            <div style="font-size:.88rem;color:var(--text-mid);margin-top:.1rem"><?= e($course['teacher_headline']) ?></div>
+                        <?php endif; ?>
                         <div style="font-size:.85rem;color:var(--text-light);margin-top:.2rem"><?= e($course['qualification'] ?: 'Qualified Teacher') ?></div>
                         <div class="instructor-stats">
                             <span><i data-lucide="book-open" class="lucide-icon"></i> <?= (int) $teacherStats['course_count'] ?> course<?= $teacherStats['course_count'] == 1 ? '' : 's' ?></span>
@@ -365,20 +421,47 @@ function starString(float $rating): string {
                     <?php endforeach; ?>
                 <?php endif; ?>
             </div></div>
+
+            <?php if ($moreByInstructor): ?>
+            <div style="margin-bottom:1.5rem">
+                <h3 style="font-size:1.05rem;margin-bottom:1rem;color:var(--green-deep)">More courses by <?= e($course['teacher_name']) ?></h3>
+                <div class="carousel-row">
+                    <?php foreach ($moreByInstructor as $c): ?><?= renderCourseCard($c) ?><?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <?php if ($relatedCourses): ?>
+            <div style="margin-bottom:1.5rem">
+                <h3 style="font-size:1.05rem;margin-bottom:1rem;color:var(--green-deep)">More <?= e($course['subject_name']) ?> Courses</h3>
+                <div class="carousel-row">
+                    <?php foreach ($relatedCourses as $c): ?><?= renderCourseCard($c) ?><?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
         </div>
 
         <div class="enroll-card">
             <div class="card">
-                <div class="course-cover">
+                <div class="course-cover" style="position:relative">
                     <?php if ($course['cover_url']): ?><img src="<?= e($course['cover_url']) ?>" alt=""><?php else: ?><?= catIcon($course['subject_icon']) ?><?php endif; ?>
+                    <?php if ($firstPreviewLesson): ?>
+                    <a href="lesson.php?id=<?= (int) $firstPreviewLesson['id'] ?>" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4rem;background:rgba(10,61,31,.35);color:var(--white);text-decoration:none">
+                        <span style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center"><i data-lucide="play" class="lucide-icon" style="color:var(--green-deep);width:1.3em;height:1.3em"></i></span>
+                        <span style="font-size:.8rem;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.5)">Preview this course</span>
+                    </a>
+                    <?php endif; ?>
                 </div>
                 <div class="card-body">
                     <div style="font-size:1.6rem;font-weight:800;color:var(--green-deep);margin-bottom:.8rem"><?= $course['price'] > 0 ? '$' . number_format((float) $course['price']) : 'Free' ?></div>
-                    <div style="font-size:.85rem;color:var(--text-mid);display:flex;flex-direction:column;gap:.4rem">
+                    <div style="font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:.5rem">This course includes:</div>
+                    <div style="font-size:.85rem;color:var(--text-mid);display:flex;flex-direction:column;gap:.45rem">
                         <span><i data-lucide="clipboard-list" class="lucide-icon"></i> <?= count($lessons) ?> lessons</span>
                         <?php if ($totalMinutes > 0): ?><span><i data-lucide="clock" class="lucide-icon"></i> <?= round($totalMinutes / 60, 1) ?> hours of content</span><?php endif; ?>
                         <span><i data-lucide="signal" class="lucide-icon"></i> <?= e(ucfirst($course['level'])) ?> level</span>
                         <span><i data-lucide="languages" class="lucide-icon"></i> <?= e($course['language']) ?></span>
+                        <span><i data-lucide="infinity" class="lucide-icon"></i> Lifetime access</span>
+                        <span><i data-lucide="message-circle" class="lucide-icon"></i> Class discussion access</span>
                     </div>
                 </div>
                 <div class="card-footer">
@@ -402,6 +485,13 @@ function starString(float $rating): string {
     </div>
 </div>
 <script>
+function toggleAllSections() {
+    const sections = document.querySelectorAll('.curriculum-section');
+    const btn = document.getElementById('expandAllBtn');
+    const shouldOpen = btn.textContent.trim() === 'Expand all sections';
+    sections.forEach(function (s) { s.open = shouldOpen; });
+    btn.textContent = shouldOpen ? 'Collapse all sections' : 'Expand all sections';
+}
 document.querySelectorAll('#starPicker label').forEach(function (label) {
     label.addEventListener('click', function () {
         var star = parseInt(label.getAttribute('data-star'), 10);

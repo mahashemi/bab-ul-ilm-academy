@@ -14,6 +14,29 @@ if (!$course) {
 }
 
 $errors = [];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['move_lesson'])) {
+    verifyCsrf();
+    $lid = (int) $_POST['move_lesson'];
+    $dir = $_POST['direction'] ?? '';
+    $current = $pdo->prepare('SELECT id, sort_order FROM lessons WHERE id = ? AND course_id = ?');
+    $current->execute([$lid, $courseId]);
+    $current = $current->fetch();
+    if ($current) {
+        $neighbor = $pdo->prepare(
+            $dir === 'up'
+                ? 'SELECT id, sort_order FROM lessons WHERE course_id = ? AND sort_order < ? ORDER BY sort_order DESC LIMIT 1'
+                : 'SELECT id, sort_order FROM lessons WHERE course_id = ? AND sort_order > ? ORDER BY sort_order ASC LIMIT 1'
+        );
+        $neighbor->execute([$courseId, $current['sort_order']]);
+        $neighbor = $neighbor->fetch();
+        if ($neighbor) {
+            $pdo->prepare('UPDATE lessons SET sort_order = ? WHERE id = ?')->execute([$neighbor['sort_order'], $current['id']]);
+            $pdo->prepare('UPDATE lessons SET sort_order = ? WHERE id = ?')->execute([$current['sort_order'], $neighbor['id']]);
+        }
+    }
+    redirect('add-lesson.php?course_id=' . $courseId);
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['title'])) {
     verifyCsrf();
     $sectionTitle = trim($_POST['section_title'] ?? '');
@@ -155,9 +178,18 @@ $existingSections = $existingSections->fetchAll(PDO::FETCH_COLUMN);
                 <?php endif; ?>
             <li class="lesson-item">
                 <div class="lesson-num"><?= $i + 1 ?></div>
-                <div class="lesson-title"><?= e($l['title']) ?></div>
+                <div class="lesson-title" style="flex:1"><a href="edit-lesson.php?id=<?= (int) $l['id'] ?>"><?= e($l['title']) ?></a></div>
                 <?php if ((int) $l['duration_minutes'] > 0): ?><span style="font-size:.78rem;color:var(--text-light)"><?= (int) $l['duration_minutes'] ?> min</span><?php endif; ?>
                 <?php if ($l['is_preview']): ?><span class="badge badge-free" style="margin-left:.5rem">Preview</span><?php endif; ?>
+                <div class="action-row" style="margin-left:.6rem">
+                    <?php if ($i > 0): ?>
+                    <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><input type="hidden" name="direction" value="up"><button type="submit" name="move_lesson" value="<?= (int) $l['id'] ?>" class="icon-btn" data-tip="Move up" aria-label="Move up"><i data-lucide="chevron-up" class="lucide-icon"></i></button></form>
+                    <?php endif; ?>
+                    <?php if ($i < count($lessons) - 1): ?>
+                    <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><input type="hidden" name="direction" value="down"><button type="submit" name="move_lesson" value="<?= (int) $l['id'] ?>" class="icon-btn" data-tip="Move down" aria-label="Move down"><i data-lucide="chevron-down" class="lucide-icon"></i></button></form>
+                    <?php endif; ?>
+                    <a href="edit-lesson.php?id=<?= (int) $l['id'] ?>" class="icon-btn" data-tip="Edit lesson" aria-label="Edit lesson"><i data-lucide="pencil" class="lucide-icon"></i></a>
+                </div>
             </li>
             <?php endforeach; ?>
         </ul>

@@ -21,14 +21,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Feedback — <?= e(SITE_NAME) ?></title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%95%8C%3C/text%3E%3C/svg%3E">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/icon-green-180.png">
+<link rel="manifest" href="assets/site.webmanifest">
+<meta name="theme-color" content="#0a3d1f">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <nav class="navbar">
-    <a class="nav-brand" href="index.php"><i data-lucide="landmark" class="lucide-icon"></i> <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></a>
+    <a class="nav-brand" href="index.php"><img src="assets/lockup-gold.svg" alt="<?= e(SITE_NAME) ?>" class="nav-logo"></a>
     <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu"><i data-lucide="menu" class="lucide-icon"></i></button>
     <div class="nav-scrim" onclick="toggleNav()"></div>
+    <form class="nav-search" action="courses.php" method="get">
+        <i data-lucide="search" class="lucide-icon"></i>
+        <input type="text" name="q" placeholder="Search for courses, teachers, subjects...">
+    </form>
     <div class="nav-links">
         <a href="courses.php">Courses</a>
         <a href="about.php">About</a>

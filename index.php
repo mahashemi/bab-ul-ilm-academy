@@ -84,15 +84,27 @@ $stats = $pdo->query(
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?= e(SITE_NAME) ?> — <?= e(SITE_TAGLINE) ?></title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%95%8C%3C/text%3E%3C/svg%3E">
+<meta property="og:title" content="<?= e(SITE_NAME) ?>">
+<meta property="og:description" content="<?= e(SITE_TAGLINE) ?>">
+<meta property="og:image" content="<?= e(siteBaseUrl()) ?>/assets/og-image.png">
+<meta property="og:type" content="website">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/icon-green-180.png">
+<link rel="manifest" href="assets/site.webmanifest">
+<meta name="theme-color" content="#0a3d1f">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <nav class="navbar">
-    <a class="nav-brand" href="index.php"><i data-lucide="landmark" class="lucide-icon"></i> <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></a>
+    <a class="nav-brand" href="index.php"><img src="assets/lockup-gold.svg" alt="<?= e(SITE_NAME) ?>" class="nav-logo"></a>
     <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu"><i data-lucide="menu" class="lucide-icon"></i></button>
     <div class="nav-scrim" onclick="toggleNav()"></div>
+    <form class="nav-search" action="courses.php" method="get">
+        <i data-lucide="search" class="lucide-icon"></i>
+        <input type="text" name="q" placeholder="Search for courses, teachers, subjects...">
+    </form>
     <div class="nav-links">
         <a href="courses.php">Courses</a>
         <a href="about.php">About</a>
@@ -128,6 +140,13 @@ $stats = $pdo->query(
             <a href="login.php" class="nav-btn">Login</a>
         <?php endif; ?>
     </div>
+</nav>
+
+<nav class="category-nav">
+    <a href="courses.php" class="active"><i data-lucide="library" class="lucide-icon"></i> All Fields</a>
+    <?php foreach ($fieldsOfStudy as $f): ?>
+        <a href="courses.php?field=<?= (int) $f['id'] ?>"><?= catIcon($f['icon']) ?> <?= e($f['name']) ?></a>
+    <?php endforeach; ?>
 </nav>
 
 <header class="hero">
@@ -232,7 +251,8 @@ $stats = $pdo->query(
 <footer>
     <div class="footer-grid">
         <div>
-            <div class="footer-brand"><i data-lucide="landmark" class="lucide-icon"></i> <?= e(SITE_NAME) ?></div>
+            <img src="assets/seal-curved-gold.svg" alt="<?= e(SITE_NAME) ?>" class="footer-seal">
+            <div class="footer-brand"><?= e(SITE_NAME) ?></div>
             <p>Seek Knowledge — From the Cradle to the Grave.</p>
         </div>
         <div>

@@ -206,7 +206,27 @@ function awardPoints(PDO $pdo, int $userId, int $points, string $reason): void {
         ->execute([$userId, $points, $points]);
     $pdo->prepare('INSERT INTO point_log (user_id, points, reason) VALUES (?, ?, ?)')
         ->execute([$userId, $points, $reason]);
-    checkAndAwardBadges($pdo, $userId);
+    $newBadges = checkAndAwardBadges($pdo, $userId);
+
+    // Build an on-screen celebration only for the user's own browser session —
+    // e.g. a teacher passively earning points from a student's review isn't
+    // in this request at all, so there's no session to pop a celebration in.
+    // Multiple awardPoints() calls in one request (lesson + course-completion
+    // bonus) accumulate into a single combined celebration instead of
+    // overwriting each other.
+    if (isset($_SESSION['user']) && (int) $_SESSION['user']['id'] === $userId) {
+        $existing = $_SESSION['points_celebration'] ?? ['earned' => 0, 'badges' => []];
+        $existing['earned'] += $points;
+        $existing['total'] = getUserPoints($pdo, $userId);
+        $existing['badges'] = array_merge($existing['badges'], $newBadges);
+        $_SESSION['points_celebration'] = $existing;
+    }
+}
+
+function popPointsCelebration(): ?array {
+    $data = $_SESSION['points_celebration'] ?? null;
+    unset($_SESSION['points_celebration']);
+    return $data;
 }
 
 function getUserPoints(PDO $pdo, int $userId): int {
@@ -215,45 +235,52 @@ function getUserPoints(PDO $pdo, int $userId): int {
     return (int) ($stmt->fetchColumn() ?: 0);
 }
 
-function awardBadge(PDO $pdo, int $userId, string $code): bool {
+// Returns the badge's [name, icon] when newly awarded this call, or null if
+// already owned / the code doesn't exist. Used both to drive the in-app
+// celebration popup and the badge-earned email.
+function awardBadge(PDO $pdo, int $userId, string $code): ?array {
     $badge = $pdo->prepare('SELECT id, name, description, icon FROM badges WHERE code = ?');
     $badge->execute([$code]);
     $badge = $badge->fetch();
-    if (!$badge) return false;
+    if (!$badge) return null;
     $stmt = $pdo->prepare('INSERT IGNORE INTO user_badges (user_id, badge_id) VALUES (?, ?)');
     $stmt->execute([$userId, $badge['id']]);
-    $isNew = $stmt->rowCount() > 0;
+    if ($stmt->rowCount() === 0) return null;
 
-    if ($isNew) {
-        notifyUser($pdo, $userId, 'badge_earned', (int) $badge['id'], 5, function ($u) use ($badge) {
-            $nameSafe = e($badge['name']);
-            $descSafe = e($badge['description']);
-            return [
-                'New badge earned: ' . $badge['name'],
-                '<p style="margin:0 0 16px">You just earned the <strong>' . $nameSafe . '</strong> badge — ' . $descSafe . '. Keep going!</p>',
-                'View Your Badges',
-                siteBaseUrl() . '/dashboard.php',
-            ];
-        });
-    }
-    return $isNew;
+    notifyUser($pdo, $userId, 'badge_earned', (int) $badge['id'], 5, function ($u) use ($badge) {
+        $nameSafe = e($badge['name']);
+        $descSafe = e($badge['description']);
+        return [
+            'New badge earned: ' . $badge['name'],
+            '<p style="margin:0 0 16px">You just earned the <strong>' . $nameSafe . '</strong> badge — ' . $descSafe . '. Keep going!</p>',
+            'View Your Badges',
+            siteBaseUrl() . '/dashboard.php',
+        ];
+    });
+    return ['name' => $badge['name'], 'icon' => $badge['icon']];
 }
 
-// Re-evaluates every badge condition for a user. Idempotent — awardBadge()
-// uses INSERT IGNORE — so it's safe to call after any point-earning action.
-function checkAndAwardBadges(PDO $pdo, int $userId): void {
+// Re-evaluates every badge condition for a user and returns any newly earned
+// this call (for the celebration popup). Idempotent — awardBadge() uses
+// INSERT IGNORE — so it's safe to call after any point-earning action.
+function checkAndAwardBadges(PDO $pdo, int $userId): array {
+    $newBadges = [];
+    $check = function (string $code) use ($pdo, $userId, &$newBadges) {
+        if ($b = awardBadge($pdo, $userId, $code)) $newBadges[] = $b;
+    };
+
     $userStmt = $pdo->prepare('SELECT role FROM users WHERE id = ?');
     $userStmt->execute([$userId]);
     $role = $userStmt->fetchColumn();
 
     $points = getUserPoints($pdo, $userId);
-    if ($points >= 100) awardBadge($pdo, $userId, 'bronze_learner');
-    if ($points >= 500) awardBadge($pdo, $userId, 'silver_learner');
-    if ($points >= 1000) awardBadge($pdo, $userId, 'gold_learner');
+    if ($points >= 100) $check('bronze_learner');
+    if ($points >= 500) $check('silver_learner');
+    if ($points >= 1000) $check('gold_learner');
 
     $enrollStmt = $pdo->prepare('SELECT COUNT(*) FROM enrollments WHERE student_id = ?');
     $enrollStmt->execute([$userId]);
-    if ((int) $enrollStmt->fetchColumn() >= 1) awardBadge($pdo, $userId, 'first_enrollment');
+    if ((int) $enrollStmt->fetchColumn() >= 1) $check('first_enrollment');
 
     $completedStmt = $pdo->prepare(
         "SELECT COUNT(*) FROM (
@@ -268,12 +295,12 @@ function checkAndAwardBadges(PDO $pdo, int $userId): void {
     );
     $completedStmt->execute([$userId]);
     $completedCount = (int) $completedStmt->fetchColumn();
-    if ($completedCount >= 1) awardBadge($pdo, $userId, 'first_completion');
-    if ($completedCount >= 5) awardBadge($pdo, $userId, 'five_completions');
+    if ($completedCount >= 1) $check('first_completion');
+    if ($completedCount >= 5) $check('five_completions');
 
     $skillStmt = $pdo->prepare('SELECT COUNT(*) FROM user_skills WHERE user_id = ?');
     $skillStmt->execute([$userId]);
-    if ((int) $skillStmt->fetchColumn() >= 5) awardBadge($pdo, $userId, 'skilled');
+    if ((int) $skillStmt->fetchColumn() >= 5) $check('skilled');
 
     $chatStmt = $pdo->prepare(
         'SELECT COUNT(*) FROM class_messages cm
@@ -281,16 +308,16 @@ function checkAndAwardBadges(PDO $pdo, int $userId): void {
          AND NOT EXISTS (SELECT 1 FROM message_flags mf WHERE mf.message_id = cm.id)'
     );
     $chatStmt->execute([$userId]);
-    if ((int) $chatStmt->fetchColumn() >= 10) awardBadge($pdo, $userId, 'chatty');
+    if ((int) $chatStmt->fetchColumn() >= 10) $check('chatty');
 
     if ($role === 'teacher') {
         $publishedStmt = $pdo->prepare("SELECT COUNT(*) FROM courses WHERE teacher_id = ? AND moderation_status = 'approved'");
         $publishedStmt->execute([$userId]);
-        if ((int) $publishedStmt->fetchColumn() >= 1) awardBadge($pdo, $userId, 'published_teacher');
+        if ((int) $publishedStmt->fetchColumn() >= 1) $check('published_teacher');
 
         $studentStmt = $pdo->prepare('SELECT COUNT(*) FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.teacher_id = ?');
         $studentStmt->execute([$userId]);
-        if ((int) $studentStmt->fetchColumn() >= 50) awardBadge($pdo, $userId, 'popular_teacher');
+        if ((int) $studentStmt->fetchColumn() >= 50) $check('popular_teacher');
 
         $ratingStmt = $pdo->prepare(
             'SELECT AVG(r.rating) avg_rating, COUNT(*) review_count
@@ -299,9 +326,11 @@ function checkAndAwardBadges(PDO $pdo, int $userId): void {
         $ratingStmt->execute([$userId]);
         $ratingRow = $ratingStmt->fetch();
         if ($ratingRow && (float) $ratingRow['avg_rating'] >= 4.5 && (int) $ratingRow['review_count'] >= 5) {
-            awardBadge($pdo, $userId, 'top_rated');
+            $check('top_rated');
         }
     }
+
+    return $newBadges;
 }
 
 function redirect(string $url): void {
@@ -515,6 +544,39 @@ function handleImageUpload(string $fieldName, string $subDir): ?string {
 
 function catIcon(?string $iconName): string {
     return '<i data-lucide="' . e($iconName ?: 'book-open') . '" class="lucide-icon"></i>';
+}
+
+// Pops and renders the points-celebration popup (see awardPoints() /
+// popPointsCelebration()) — call once near the top of <body> on any page
+// reached right after a point-earning action. Returns '' when there's
+// nothing to celebrate, so it's safe to echo unconditionally.
+function renderPointsCelebration(): string {
+    $c = popPointsCelebration();
+    if (!$c || $c['earned'] <= 0) return '';
+
+    ob_start();
+    ?>
+    <div class="points-celebration-overlay" id="pointsCelebration">
+        <div class="points-celebration-modal">
+            <button type="button" class="points-celebration-close" onclick="document.getElementById('pointsCelebration').remove()" aria-label="Close">&times;</button>
+            <div class="points-celebration-burst"><i data-lucide="sparkles" class="lucide-icon"></i></div>
+            <div class="points-celebration-amount">+<?= (int) $c['earned'] ?> Points</div>
+            <div class="points-celebration-total"><i data-lucide="zap" class="lucide-icon"></i> Total Points: <strong><?= number_format((int) $c['total']) ?></strong></div>
+            <?php if ($c['badges']): ?>
+            <div class="points-celebration-badges">
+                <?php foreach ($c['badges'] as $b): ?>
+                    <div class="points-celebration-badge"><?= catIcon($b['icon']) ?> <span>New Badge: <?= e($b['name']) ?></span></div>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
+            <div class="points-celebration-actions">
+                <a href="dashboard.php" class="btn btn-outline">See Your Achievements</a>
+                <button type="button" class="btn btn-primary" onclick="document.getElementById('pointsCelebration').remove()">Keep Learning</button>
+            </div>
+        </div>
+    </div>
+    <?php
+    return ob_get_clean();
 }
 
 // Shared rich course card markup — used on the homepage carousels and the

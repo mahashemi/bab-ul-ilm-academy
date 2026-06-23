@@ -45,14 +45,22 @@ $bestsellerIds = array_column(array_filter(array_slice($rankedByStudents, 0, 3),
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>All Courses — <?= e(SITE_NAME) ?></title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%95%8C%3C/text%3E%3C/svg%3E">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/icon-green-180.png">
+<link rel="manifest" href="assets/site.webmanifest">
+<meta name="theme-color" content="#0a3d1f">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <nav class="navbar">
-    <a class="nav-brand" href="index.php"><i data-lucide="landmark" class="lucide-icon"></i> <?= e(SITE_NAME) ?><small><?= e(SITE_AFFILIATION) ?></small></a>
+    <a class="nav-brand" href="index.php"><img src="assets/lockup-gold.svg" alt="<?= e(SITE_NAME) ?>" class="nav-logo"></a>
     <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu"><i data-lucide="menu" class="lucide-icon"></i></button>
     <div class="nav-scrim" onclick="toggleNav()"></div>
+    <form class="nav-search" action="courses.php" method="get">
+        <i data-lucide="search" class="lucide-icon"></i>
+        <input type="text" name="q" placeholder="Search for courses, teachers, subjects..." value="<?= e($q) ?>">
+    </form>
     <div class="nav-links">
         <a href="courses.php">Courses</a>
         <a href="about.php">About</a>
@@ -90,6 +98,20 @@ $bestsellerIds = array_column(array_filter(array_slice($rankedByStudents, 0, 3),
     </div>
 </nav>
 
+<nav class="category-nav">
+    <a href="courses.php" class="<?= ($fieldId === 0 && $subjectId === 0) ? 'active' : '' ?>"><i data-lucide="library" class="lucide-icon"></i> All Fields</a>
+    <?php foreach ($fieldsOfStudy as $f): ?>
+        <a href="?field=<?= (int) $f['id'] ?>" class="<?= $fieldId === (int) $f['id'] ? 'active' : '' ?>"><?= catIcon($f['icon']) ?> <?= e($f['name']) ?></a>
+    <?php endforeach; ?>
+</nav>
+<?php if ($subjects): ?>
+<nav class="subcategory-nav">
+    <?php foreach ($subjects as $s): ?>
+        <a href="?<?= $fieldId ? 'field=' . (int) $fieldId . '&' : '' ?>subject=<?= (int) $s['id'] ?>" class="<?= $subjectId === (int) $s['id'] ? 'active' : '' ?>"><?= catIcon($s['icon']) ?> <?= e($s['name']) ?></a>
+    <?php endforeach; ?>
+</nav>
+<?php endif; ?>
+
 <div class="container section">
     <h2 class="section-title">All <span>Courses</span></h2>
 
@@ -97,20 +119,6 @@ $bestsellerIds = array_column(array_filter(array_slice($rankedByStudents, 0, 3),
         <input type="text" name="q" class="form-control" placeholder="Search by course, teacher, or subject..." value="<?= e($q) ?>">
         <button type="submit" class="btn btn-primary">Search</button>
     </form>
-
-    <div class="chip-row">
-        <a href="courses.php" class="cat-chip <?= ($fieldId === 0 && $subjectId === 0) ? 'active' : '' ?>"><i data-lucide="library" class="lucide-icon"></i> All Fields</a>
-        <?php foreach ($fieldsOfStudy as $f): ?>
-            <a href="?field=<?= (int) $f['id'] ?>" class="cat-chip <?= $fieldId === (int) $f['id'] ? 'active' : '' ?>"><?= catIcon($f['icon']) ?> <?= e($f['name']) ?></a>
-        <?php endforeach; ?>
-    </div>
-    <?php if ($subjects): ?>
-    <div class="chip-row" style="margin-top:-.6rem">
-        <?php foreach ($subjects as $s): ?>
-            <a href="?<?= $fieldId ? 'field=' . (int) $fieldId . '&' : '' ?>subject=<?= (int) $s['id'] ?>" class="cat-chip <?= $subjectId === (int) $s['id'] ? 'active' : '' ?>" style="font-size:.78rem;padding:.35rem .8rem"><?= catIcon($s['icon']) ?> <?= e($s['name']) ?></a>
-        <?php endforeach; ?>
-    </div>
-    <?php endif; ?>
 
     <p class="section-sub"><?= count($courses) ?> course(s) found</p>
 

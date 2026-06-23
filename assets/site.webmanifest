@@ -1,0 +1,19 @@
+{
+  "name": "Bab ul Ilm Academy",
+  "short_name": "Bab ul Ilm",
+  "icons": [
+    {
+      "src": "icon-green-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-green-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#0a3d1f",
+  "background_color": "#0a3d1f",
+  "display": "standalone"
+}

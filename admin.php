@@ -179,7 +179,7 @@ $allConvos = $pdo->query(
 
     <div class="tabs">
         <a href="?tab=users" class="tab-btn <?= $tab === 'users' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="users" class="lucide-icon"></i> Users (<?= count($users) ?>)</a>
-        <a href="?tab=pending" class="tab-btn <?= $tab === 'pending' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center">⏳ Pending Review (<?= count($pendingCourses) ?>)</a>
+        <a href="?tab=pending" class="tab-btn <?= $tab === 'pending' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="clock" class="lucide-icon"></i> Pending Review (<?= count($pendingCourses) ?>)</a>
         <a href="?tab=courses" class="tab-btn <?= $tab === 'courses' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="library" class="lucide-icon"></i> Courses (<?= count($courses) ?>)</a>
         <a href="?tab=subjects" class="tab-btn <?= $tab === 'subjects' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="tag" class="lucide-icon"></i> Subjects (<?= count($subjects) ?>)</a>
         <a href="?tab=settings" class="tab-btn <?= $tab === 'settings' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="settings" class="lucide-icon"></i> Settings</a>
@@ -412,7 +412,7 @@ $allConvos = $pdo->query(
                     <td><?= date('M j, Y', strtotime($u['created_at'])) ?></td>
                     <td class="action-row">
                         <a href="chat.php?with=<?= (int) $u['id'] ?>" class="icon-btn" data-tip="Message" aria-label="Message"><i data-lucide="message-circle" class="lucide-icon"></i></a>
-                        <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_approved" value="<?= (int) $u['id'] ?>" class="icon-btn <?= $u['is_approved'] ? 'icon-btn-danger' : '' ?>" data-tip="<?= $u['is_approved'] ? 'Suspend' : 'Reactivate' ?>" aria-label="<?= $u['is_approved'] ? 'Suspend' : 'Reactivate' ?>"><?= $u['is_approved'] ? '⏸️' : '▶️' ?></button></form>
+                        <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_approved" value="<?= (int) $u['id'] ?>" class="icon-btn <?= $u['is_approved'] ? 'icon-btn-danger' : '' ?>" data-tip="<?= $u['is_approved'] ? 'Suspend' : 'Reactivate' ?>" aria-label="<?= $u['is_approved'] ? 'Suspend' : 'Reactivate' ?>"><?= $u['is_approved'] ? '<i data-lucide="pause" class="lucide-icon"></i>' : '<i data-lucide="play" class="lucide-icon"></i>' ?></button></form>
                         <?php if (!$u['is_verified']): ?>
                         <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_verified" value="<?= (int) $u['id'] ?>" class="icon-btn" data-tip="Verify email" aria-label="Verify email"><i data-lucide="badge-check" class="lucide-icon"></i></button></form>
                         <?php endif; ?>

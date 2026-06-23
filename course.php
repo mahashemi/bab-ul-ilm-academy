@@ -112,7 +112,7 @@ $progressPct = $lessons ? (int) round(count($completedLessons) / count($lessons)
             </div>
             <?php if ($isOwnerOrAdmin && $course['moderation_status'] !== 'approved'): ?>
                 <div class="alert <?= $course['moderation_status'] === 'rejected' ? 'alert-error' : 'alert-info' ?>" style="margin-bottom:1rem">
-                    <?= $course['moderation_status'] === 'rejected' ? '<i data-lucide="ban" class="lucide-icon"></i> This course was rejected by an admin and is not visible to students.' : '⏳ This course is awaiting admin review and is not yet visible to students.' ?>
+                    <?= $course['moderation_status'] === 'rejected' ? '<i data-lucide="ban" class="lucide-icon"></i> This course was rejected by an admin and is not visible to students.' : '<i data-lucide="clock" class="lucide-icon"></i> This course is awaiting admin review and is not yet visible to students.' ?>
                 </div>
             <?php endif; ?>
             <p style="color:var(--text-mid);margin-bottom:1rem"><?= e($course['description']) ?></p>

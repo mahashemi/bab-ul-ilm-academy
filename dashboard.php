@@ -69,7 +69,7 @@ if (($user['role'] ?? '') === 'admin') redirect('admin.php');
                     <td data-label="Students"><?= (int) $c['student_count'] ?></td>
                     <td data-label="Status">
                         <?php if ($c['moderation_status'] === 'pending'): ?>
-                            <span class="badge badge-pending">⏳ Pending Review</span>
+                            <span class="badge badge-pending"><i data-lucide="clock" class="lucide-icon"></i> Pending Review</span>
                         <?php elseif ($c['moderation_status'] === 'rejected'): ?>
                             <span class="badge badge-paid"><i data-lucide="ban" class="lucide-icon"></i> Rejected</span>
                         <?php else: ?>

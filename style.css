@@ -324,6 +324,45 @@ img { max-width: 100%; height: auto; display: block; }
 .lesson-title { font-size: .9rem; font-weight: 500; color: var(--text); }
 .lesson-check { margin-left: auto; color: #4caf50; font-size: 1.1rem; }
 
+/* ── Course Detail Page ── */
+.profile-avatar {
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 50%; background: var(--green-deep); color: var(--white);
+    font-weight: 700; flex-shrink: 0;
+}
+.course-layout { display: grid; grid-template-columns: 1fr 340px; gap: 2rem; align-items: start; }
+@media (max-width: 900px) { .course-layout { grid-template-columns: 1fr; } }
+.course-main-col { min-width: 0; }
+.enroll-card { position: sticky; top: 84px; }
+.enroll-card .course-cover { height: 180px; }
+.course-rating-row { display: flex; align-items: center; gap: .5rem; font-size: .9rem; color: var(--text-mid); margin-bottom: .6rem; }
+.course-rating-row .stars { color: var(--gold-dark); letter-spacing: 1px; }
+.course-rating-row .score { font-weight: 700; color: var(--text); }
+.objectives-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: .6rem 1.5rem; margin: 1rem 0; }
+.objective-item { display: flex; align-items: flex-start; gap: .6rem; font-size: .88rem; color: var(--text-mid); }
+.objective-item .lucide-icon { color: #2e7d32; margin-top: .15rem; flex-shrink: 0; }
+.requirements-list { list-style: disc; padding-left: 1.3rem; font-size: .88rem; color: var(--text-mid); display: flex; flex-direction: column; gap: .3rem; }
+.curriculum-section { border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: .6rem; overflow: hidden; }
+.curriculum-section summary { padding: .8rem 1rem; font-weight: 700; font-size: .92rem; color: var(--green-deep); cursor: pointer; background: var(--cream); display: flex; justify-content: space-between; align-items: center; list-style: none; }
+.curriculum-section summary::-webkit-details-marker { display: none; }
+.curriculum-section summary .count { font-weight: 500; font-size: .78rem; color: var(--text-light); }
+.curriculum-lesson-row { display: flex; align-items: center; gap: .6rem; padding: .65rem 1rem; border-top: 1px solid var(--border); font-size: .86rem; color: var(--text-mid); }
+.curriculum-lesson-row .lucide-icon { flex-shrink: 0; color: var(--text-light); }
+.curriculum-lesson-row .dur { margin-left: auto; font-size: .78rem; color: var(--text-light); white-space: nowrap; }
+.instructor-card { display: flex; gap: 1.2rem; align-items: flex-start; }
+.instructor-card .profile-avatar { width: 64px; height: 64px; font-size: 1.4rem; margin: 0; flex-shrink: 0; background: var(--gold); }
+.instructor-stats { display: flex; gap: 1.2rem; flex-wrap: wrap; margin: .6rem 0; font-size: .82rem; color: var(--text-mid); }
+.instructor-stats span { display: flex; align-items: center; gap: .35rem; }
+.rating-summary { display: flex; gap: 2rem; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.rating-summary .big-score { font-size: 2.6rem; font-weight: 800; color: var(--green-deep); }
+.rating-bar-row { display: flex; align-items: center; gap: .6rem; font-size: .8rem; color: var(--text-light); margin-bottom: .25rem; }
+.rating-bar-track { flex: 1; height: 8px; background: var(--cream); border-radius: 4px; overflow: hidden; max-width: 220px; }
+.rating-bar-fill { height: 100%; background: var(--gold); }
+.review-item { padding: 1rem 0; border-bottom: 1px solid var(--border); }
+.review-item:last-child { border-bottom: none; }
+.review-item-head { display: flex; align-items: center; gap: .7rem; margin-bottom: .4rem; }
+.review-item .profile-avatar { width: 36px; height: 36px; font-size: .9rem; margin: 0; }
+
 /* ── Role Switch ── */
 .role-switch { display: flex; border-radius: var(--radius-sm); overflow: hidden; border: 2px solid var(--green-deep); margin-bottom: 1.5rem; }
 .role-option { flex: 1; text-align: center; padding: .7rem; cursor: pointer; font-weight: 600; font-size: .9rem; color: var(--green-deep); background: var(--white); transition: var(--transition); }

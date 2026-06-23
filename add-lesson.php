@@ -16,9 +16,12 @@ if (!$course) {
 $errors = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['title'])) {
     verifyCsrf();
+    $sectionTitle = trim($_POST['section_title'] ?? '');
     $title   = trim($_POST['title'] ?? '');
     $content = trim($_POST['content'] ?? '');
     $videoUrl = trim($_POST['video_url'] ?? '');
+    $duration = (int) ($_POST['duration_minutes'] ?? 0);
+    $isPreview = isset($_POST['is_preview']) ? 1 : 0;
 
     if (mb_strlen($title) < 3) $errors[] = 'Lesson title must be at least 3 characters.';
 
@@ -27,8 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['title'])) {
         $maxOrder->execute([$courseId]);
         $next = (int) $maxOrder->fetch()['m'] + 1;
 
-        $stmt = $pdo->prepare('INSERT INTO lessons (course_id, title, content, video_url, sort_order) VALUES (?, ?, ?, ?, ?)');
-        $stmt->execute([$courseId, $title, $content, $videoUrl, $next]);
+        $stmt = $pdo->prepare('INSERT INTO lessons (course_id, section_title, title, content, video_url, duration_minutes, is_preview, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+        $stmt->execute([$courseId, $sectionTitle ?: null, $title, $content, $videoUrl, $duration, $isPreview, $next]);
         flash('success', 'Lesson added!');
         redirect('add-lesson.php?course_id=' . $courseId);
     }
@@ -37,6 +40,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['title'])) {
 $lessons = $pdo->prepare('SELECT * FROM lessons WHERE course_id = ? ORDER BY sort_order ASC');
 $lessons->execute([$courseId]);
 $lessons = $lessons->fetchAll();
+
+$existingSections = $pdo->prepare('SELECT DISTINCT section_title FROM lessons WHERE course_id = ? AND section_title IS NOT NULL AND section_title != \'\' ORDER BY sort_order ASC');
+$existingSections->execute([$courseId]);
+$existingSections = $existingSections->fetchAll(PDO::FETCH_COLUMN);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -101,6 +108,13 @@ $lessons = $lessons->fetchAll();
             <input type="hidden" name="course_id" value="<?= (int) $courseId ?>">
 
             <div class="form-group">
+                <label class="form-label">Section (optional — groups lessons into a curriculum section)</label>
+                <input type="text" name="section_title" class="form-control" list="sectionSuggestions" placeholder="e.g. Getting Started">
+                <datalist id="sectionSuggestions">
+                    <?php foreach ($existingSections as $s): ?><option value="<?= e($s) ?>"><?php endforeach; ?>
+                </datalist>
+            </div>
+            <div class="form-group">
                 <label class="form-label">Lesson Title</label>
                 <input type="text" name="title" class="form-control" placeholder="e.g. Introduction to Makharij" required>
             </div>
@@ -108,9 +122,21 @@ $lessons = $lessons->fetchAll();
                 <label class="form-label">Lesson Content</label>
                 <textarea name="content" class="form-control" placeholder="Write the lesson text/notes here..."></textarea>
             </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Video URL (optional, YouTube/Vimeo embed link)</label>
+                    <input type="text" name="video_url" class="form-control" placeholder="https://www.youtube.com/embed/...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Duration (minutes)</label>
+                    <input type="number" name="duration_minutes" class="form-control" min="0" placeholder="e.g. 12">
+                </div>
+            </div>
             <div class="form-group">
-                <label class="form-label">Video URL (optional, YouTube/Vimeo embed link)</label>
-                <input type="text" name="video_url" class="form-control" placeholder="https://www.youtube.com/embed/...">
+                <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
+                    <input type="checkbox" name="is_preview" value="1" style="width:auto">
+                    Free preview — visible to everyone, even without enrolling
+                </label>
             </div>
             <button type="submit" class="btn btn-primary">+ Add Lesson</button>
         </form>
@@ -122,10 +148,16 @@ $lessons = $lessons->fetchAll();
             <div class="empty-state"><div class="icon"><i data-lucide="notebook-pen" class="lucide-icon"></i></div><h3>No lessons yet</h3></div>
         <?php else: ?>
         <ul class="lesson-list">
+            <?php $lastSection = null; ?>
             <?php foreach ($lessons as $i => $l): ?>
+                <?php if ($l['section_title'] && $l['section_title'] !== $lastSection): $lastSection = $l['section_title']; ?>
+                    <li style="padding:.6rem 1rem;font-weight:700;font-size:.85rem;color:var(--green-deep);background:var(--cream)"><?= e($l['section_title']) ?></li>
+                <?php endif; ?>
             <li class="lesson-item">
                 <div class="lesson-num"><?= $i + 1 ?></div>
                 <div class="lesson-title"><?= e($l['title']) ?></div>
+                <?php if ((int) $l['duration_minutes'] > 0): ?><span style="font-size:.78rem;color:var(--text-light)"><?= (int) $l['duration_minutes'] ?> min</span><?php endif; ?>
+                <?php if ($l['is_preview']): ?><span class="badge badge-free" style="margin-left:.5rem">Preview</span><?php endif; ?>
             </li>
             <?php endforeach; ?>
         </ul>

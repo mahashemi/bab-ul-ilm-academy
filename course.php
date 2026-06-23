@@ -4,7 +4,8 @@ $user = auth();
 
 $id = (int) ($_GET['id'] ?? 0);
 $stmt = $pdo->prepare(
-    'SELECT c.*, u.name AS teacher_name, u.qualification, s.name AS subject_name, s.icon AS subject_icon,
+    'SELECT c.*, u.name AS teacher_name, u.qualification, u.bio AS teacher_bio, u.avatar AS teacher_avatar,
+            s.name AS subject_name, s.icon AS subject_icon,
             e.name AS editor_name, e.role AS editor_role
      FROM courses c JOIN users u ON u.id = c.teacher_id LEFT JOIN subjects s ON s.id = c.subject_id
      LEFT JOIN users e ON e.id = c.updated_by
@@ -28,12 +29,50 @@ $lessons = $pdo->prepare('SELECT * FROM lessons WHERE course_id = ? ORDER BY sor
 $lessons->execute([$id]);
 $lessons = $lessons->fetchAll();
 
+$totalMinutes = array_sum(array_column($lessons, 'duration_minutes'));
+
+// Group lessons into curriculum sections, in the order each section first appears.
+$curriculum = [];
+foreach ($lessons as $l) {
+    $sec = $l['section_title'] ?: 'Course Content';
+    $curriculum[$sec][] = $l;
+}
+
 $studentCount = $pdo->prepare('SELECT COUNT(*) c FROM enrollments WHERE course_id = ?');
 $studentCount->execute([$id]);
 $studentCount = $studentCount->fetch()['c'];
 
+$ratingStmt = $pdo->prepare('SELECT COUNT(*) c, COALESCE(AVG(rating),0) avg_rating FROM course_reviews WHERE course_id = ?');
+$ratingStmt->execute([$id]);
+$ratingRow = $ratingStmt->fetch();
+$reviewCount = (int) $ratingRow['c'];
+$avgRating = round((float) $ratingRow['avg_rating'], 1);
+
+$ratingBreakdown = [5 => 0, 4 => 0, 3 => 0, 2 => 0, 1 => 0];
+if ($reviewCount > 0) {
+    $bd = $pdo->prepare('SELECT rating, COUNT(*) c FROM course_reviews WHERE course_id = ? GROUP BY rating');
+    $bd->execute([$id]);
+    foreach ($bd->fetchAll() as $row) { $ratingBreakdown[(int) $row['rating']] = (int) $row['c']; }
+}
+
+$reviews = $pdo->prepare(
+    "SELECT r.*, u.name AS student_name FROM course_reviews r JOIN users u ON u.id = r.student_id
+     WHERE r.course_id = ? ORDER BY r.created_at DESC LIMIT 10"
+);
+$reviews->execute([$id]);
+$reviews = $reviews->fetchAll();
+
+$teacherStats = $pdo->prepare(
+    "SELECT COUNT(DISTINCT c.id) AS course_count, COUNT(DISTINCT e.student_id) AS student_count
+     FROM courses c LEFT JOIN enrollments e ON e.course_id = c.id
+     WHERE c.teacher_id = ? AND c.is_published = 1 AND c.moderation_status = 'approved'"
+);
+$teacherStats->execute([$course['teacher_id']]);
+$teacherStats = $teacherStats->fetch();
+
 $isEnrolled = false;
 $completedLessons = [];
+$myReview = null;
 if ($user && ($user['role'] ?? '') === 'student') {
     $e = $pdo->prepare('SELECT 1 FROM enrollments WHERE student_id = ? AND course_id = ?');
     $e->execute([$user['id'], $id]);
@@ -43,6 +82,10 @@ if ($user && ($user['role'] ?? '') === 'student') {
         $cp = $pdo->prepare('SELECT lesson_id FROM lesson_progress WHERE student_id = ?');
         $cp->execute([$user['id']]);
         $completedLessons = array_column($cp->fetchAll(), 'lesson_id');
+
+        $mr = $pdo->prepare('SELECT * FROM course_reviews WHERE course_id = ? AND student_id = ?');
+        $mr->execute([$id, $user['id']]);
+        $myReview = $mr->fetch() ?: null;
     }
 }
 
@@ -66,7 +109,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_lesson'])) {
     }
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_review'])) {
+    requireAuth();
+    verifyCsrf();
+    $rating = max(1, min(5, (int) ($_POST['rating'] ?? 0)));
+    $comment = trim($_POST['comment'] ?? '');
+    if ($isEnrolled && $rating > 0) {
+        $pdo->prepare(
+            'INSERT INTO course_reviews (course_id, student_id, rating, comment) VALUES (?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE rating = ?, comment = ?'
+        )->execute([$id, $user['id'], $rating, $comment, $rating, $comment]);
+        flash('success', 'Thanks for your review!');
+        redirect('course.php?id=' . $id);
+    }
+}
+
 $progressPct = $lessons ? (int) round(count($completedLessons) / count($lessons) * 100) : 0;
+$objectives = $course['learning_objectives'] ? array_filter(array_map('trim', explode("\n", $course['learning_objectives']))) : [];
+$requirements = $course['requirements'] ? array_filter(array_map('trim', explode("\n", $course['requirements']))) : [];
+
+function starString(float $rating): string {
+    $full = (int) floor($rating);
+    $half = ($rating - $full) >= 0.5;
+    return str_repeat('★', $full) . ($half ? '½' : '') . str_repeat('☆', 5 - $full - ($half ? 1 : 0));
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -119,94 +185,230 @@ $progressPct = $lessons ? (int) round(count($completedLessons) / count($lessons)
     </div>
 </nav>
 
-<div class="dashboard-wrap" style="max-width:900px">
+<div class="dashboard-wrap" style="max-width:1180px">
     <?php if (flash('success')): ?><div class="alert alert-success"><?= e(flash('success')) ?></div><?php endif; ?>
 
-    <div class="card">
-        <div class="course-cover" style="height:200px;font-size:5rem">
-            <?php if ($course['cover_url']): ?><img src="<?= e($course['cover_url']) ?>" alt=""><?php else: ?><?= catIcon($course['subject_icon']) ?><?php endif; ?>
-        </div>
-        <div class="card-body">
-            <div style="display:flex;gap:.6rem;margin-bottom:.6rem;flex-wrap:wrap">
-                <span class="badge badge-<?= e($course['level']) ?>"><?= e(ucfirst($course['level'])) ?></span>
-                <span class="badge <?= $course['price'] == 0 ? 'badge-free' : 'badge-paid' ?>"><?= $course['price'] > 0 ? '$' . number_format((float) $course['price']) : 'Free' ?></span>
-                <span class="badge" style="background:#f5f5f5;color:#555"><?= e($course['language']) ?></span>
-            </div>
-            <div style="display:flex;align-items:center;gap:.7rem;flex-wrap:wrap">
-                <h1 style="font-size:1.5rem;margin-bottom:.6rem"><?= e($course['title']) ?></h1>
-                <?php if ($isOwnerOrAdmin): ?>
-                    <a href="edit-course.php?id=<?= $id ?>" class="btn btn-sm btn-outline"><i data-lucide="pencil" class="lucide-icon"></i> Edit</a>
-                <?php endif; ?>
-            </div>
-            <?php if ($isOwnerOrAdmin && $course['moderation_status'] !== 'approved'): ?>
-                <div class="alert <?= $course['moderation_status'] === 'rejected' ? 'alert-error' : 'alert-info' ?>" style="margin-bottom:1rem">
-                    <?= $course['moderation_status'] === 'rejected' ? '<i data-lucide="ban" class="lucide-icon"></i> This course was rejected by an admin and is not visible to students.' : '<i data-lucide="clock" class="lucide-icon"></i> This course is awaiting admin review and is not yet visible to students.' ?>
-                </div>
-            <?php endif; ?>
-            <p style="color:var(--text-mid);margin-bottom:1rem"><?= e($course['description']) ?></p>
-            <?php if ($course['editor_name']): ?>
-                <div style="font-size:.78rem;color:var(--text-light);margin-bottom:1rem">
-                    Last edited by <?= e($course['editor_name']) ?><?= $course['editor_role'] === 'admin' ? ' (Admin)' : '' ?>
-                    on <?= date('M j, Y', strtotime($course['updated_at'])) ?>
-                </div>
-            <?php endif; ?>
-
-            <div style="display:flex;align-items:center;gap:1rem;padding:1rem;background:var(--cream);border-radius:var(--radius-sm)">
-                <div class="profile-avatar" style="width:48px;height:48px;font-size:1.1rem;margin:0;background:var(--gold)"><?= e(mb_substr($course['teacher_name'], 0, 1)) ?></div>
-                <div>
-                    <div style="font-weight:600"><?= e($course['teacher_name']) ?></div>
-                    <div style="font-size:.82rem;color:var(--text-light)"><?= e($course['qualification'] ?: 'Qualified Teacher') ?></div>
-                </div>
-                <div style="margin-left:auto;display:flex;align-items:center;gap:1rem">
-                    <span style="font-size:.85rem;color:var(--text-light)"><i data-lucide="graduation-cap" class="lucide-icon"></i> <?= (int) $studentCount ?> students enrolled</span>
-                    <?php if ($isEnrolled): ?>
-                        <a href="chat.php?with=<?= (int) $course['teacher_id'] ?>&course=<?= (int) $course['id'] ?>" class="btn btn-sm btn-outline"><i data-lucide="message-circle" class="lucide-icon"></i> Message Teacher</a>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
-
-        <div class="card-footer">
-            <?php if (!$user): ?>
-                <a href="login.php" class="btn btn-primary btn-full">Login to Enroll</a>
-            <?php elseif (($user['role'] ?? '') !== 'student'): ?>
-                <div class="alert alert-info">Only students can enroll in courses.</div>
-            <?php elseif ($isEnrolled): ?>
-                <div class="alert alert-success"><i data-lucide="check" class="lucide-icon"></i> You are enrolled in this course</div>
-                <div class="progress-bar"><div class="progress-fill" style="width:<?= $progressPct ?>%"></div></div>
-                <p style="font-size:.85rem;color:var(--text-light);margin-top:.4rem"><?= $progressPct ?>% complete (<?= count($completedLessons) ?>/<?= count($lessons) ?> lessons)</p>
-            <?php else: ?>
-                <form method="post">
-                    <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
-                    <button type="submit" name="enroll" value="1" class="btn btn-primary btn-full">Enroll Now <?= $course['price'] > 0 ? '— $' . number_format((float) $course['price']) : '— Free' ?></button>
-                </form>
-            <?php endif; ?>
-        </div>
+    <div style="display:flex;gap:.6rem;margin-bottom:.6rem;flex-wrap:wrap">
+        <span class="badge badge-<?= e($course['level']) ?>"><?= e(ucfirst($course['level'])) ?></span>
+        <span class="badge" style="background:#f5f5f5;color:#555"><?= e($course['language']) ?></span>
+        <?php if ($course['subject_name']): ?><span class="badge" style="background:#f5f5f5;color:#555"><?= e($course['subject_name']) ?></span><?php endif; ?>
     </div>
+    <div style="display:flex;align-items:center;gap:.7rem;flex-wrap:wrap">
+        <h1 style="font-size:1.7rem;margin-bottom:.4rem"><?= e($course['title']) ?></h1>
+        <?php if ($isOwnerOrAdmin): ?>
+            <a href="edit-course.php?id=<?= $id ?>" class="btn btn-sm btn-outline"><i data-lucide="pencil" class="lucide-icon"></i> Edit</a>
+        <?php endif; ?>
+    </div>
+    <?php if ($isOwnerOrAdmin && $course['moderation_status'] !== 'approved'): ?>
+        <div class="alert <?= $course['moderation_status'] === 'rejected' ? 'alert-error' : 'alert-info' ?>" style="margin-bottom:1rem">
+            <?= $course['moderation_status'] === 'rejected' ? '<i data-lucide="ban" class="lucide-icon"></i> This course was rejected by an admin and is not visible to students.' : '<i data-lucide="clock" class="lucide-icon"></i> This course is awaiting admin review and is not yet visible to students.' ?>
+        </div>
+    <?php endif; ?>
 
-    <h3 style="margin:1.8rem 0 1rem;font-size:1.2rem;color:var(--green-deep)"><i data-lucide="clipboard-list" class="lucide-icon"></i> Lessons (<?= count($lessons) ?>)</h3>
-    <div class="card">
-        <ul class="lesson-list">
-            <?php foreach ($lessons as $i => $l): ?>
-                <?php $done = in_array($l['id'], $completedLessons); ?>
-                <li class="lesson-item <?= $done ? 'done' : '' ?>">
-                    <div class="lesson-num"><?= $done ? '<i data-lucide="check" class="lucide-icon"></i>' : $i + 1 ?></div>
-                    <div style="flex:1">
-                        <div class="lesson-title"><?= e($l['title']) ?></div>
+    <div class="course-rating-row">
+        <?php if ($reviewCount > 0): ?>
+            <span class="score"><?= number_format($avgRating, 1) ?></span>
+            <span class="stars"><?= starString($avgRating) ?></span>
+            <span>(<?= $reviewCount ?> rating<?= $reviewCount === 1 ? '' : 's' ?>)</span>
+        <?php else: ?>
+            <span>No ratings yet</span>
+        <?php endif; ?>
+        <span>·</span>
+        <span><i data-lucide="users" class="lucide-icon"></i> <?= (int) $studentCount ?> student<?= $studentCount == 1 ? '' : 's' ?></span>
+        <?php if ($totalMinutes > 0): ?><span>·</span><span><i data-lucide="clock" class="lucide-icon"></i> <?= round($totalMinutes / 60, 1) ?> hours total</span><?php endif; ?>
+        <span>·</span>
+        <span><?= count($lessons) ?> lesson<?= count($lessons) == 1 ? '' : 's' ?></span>
+    </div>
+    <p style="font-size:.85rem;color:var(--text-light);margin-bottom:1.5rem">Created by <?= e($course['teacher_name']) ?> · Last updated <?= date('M Y', strtotime($course['updated_at'] ?: $course['created_at'])) ?></p>
+
+    <div class="course-layout">
+        <div class="course-main-col">
+
+            <?php if ($objectives): ?>
+            <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
+                <h3 style="font-size:1.1rem;margin-bottom:.8rem;color:var(--green-deep)">What you'll learn</h3>
+                <div class="objectives-grid">
+                    <?php foreach ($objectives as $obj): ?>
+                        <div class="objective-item"><i data-lucide="check" class="lucide-icon"></i><span><?= e($obj) ?></span></div>
+                    <?php endforeach; ?>
+                </div>
+            </div></div>
+            <?php endif; ?>
+
+            <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
+                <h3 style="font-size:1.1rem;margin-bottom:1rem;color:var(--green-deep)"><i data-lucide="clipboard-list" class="lucide-icon"></i> Curriculum (<?= count($lessons) ?> lessons<?= $totalMinutes > 0 ? ', ' . round($totalMinutes / 60, 1) . ' hours' : '' ?>)</h3>
+                <?php foreach ($curriculum as $sectionTitle => $sectionLessons): ?>
+                <details class="curriculum-section" open>
+                    <summary>
+                        <span><?= e($sectionTitle) ?></span>
+                        <span class="count"><?= count($sectionLessons) ?> lesson<?= count($sectionLessons) == 1 ? '' : 's' ?></span>
+                    </summary>
+                    <?php foreach ($sectionLessons as $i => $l): ?>
+                        <?php
+                        $done = in_array($l['id'], $completedLessons);
+                        $canAccess = $isEnrolled || $l['is_preview'] || $isOwnerOrAdmin;
+                        ?>
+                        <div class="curriculum-lesson-row">
+                            <?php if ($done): ?><i data-lucide="check-circle-2" class="lucide-icon" style="color:#2e7d32"></i>
+                            <?php elseif ($canAccess): ?><i data-lucide="play-circle" class="lucide-icon"></i>
+                            <?php else: ?><i data-lucide="lock" class="lucide-icon"></i><?php endif; ?>
+                            <span><?= e($l['title']) ?></span>
+                            <?php if ($l['is_preview'] && !$isEnrolled): ?><span class="badge badge-free">Preview</span><?php endif; ?>
+                            <?php if ($isEnrolled && !$done): ?>
+                                <form method="post" style="margin-left:auto">
+                                    <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+                                    <button type="submit" name="complete_lesson" value="<?= (int) $l['id'] ?>" class="btn btn-sm btn-outline">Mark Done</button>
+                                </form>
+                            <?php elseif ((int) $l['duration_minutes'] > 0): ?>
+                                <span class="dur"><?= (int) $l['duration_minutes'] ?> min</span>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                </details>
+                <?php endforeach; ?>
+            </div></div>
+
+            <?php if ($requirements): ?>
+            <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
+                <h3 style="font-size:1.1rem;margin-bottom:.8rem;color:var(--green-deep)">Requirements</h3>
+                <ul class="requirements-list">
+                    <?php foreach ($requirements as $req): ?><li><?= e($req) ?></li><?php endforeach; ?>
+                </ul>
+            </div></div>
+            <?php endif; ?>
+
+            <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
+                <h3 style="font-size:1.1rem;margin-bottom:.8rem;color:var(--green-deep)">Description</h3>
+                <p style="color:var(--text-mid);white-space:pre-line"><?= e($course['description']) ?></p>
+                <?php if ($course['editor_name']): ?>
+                    <div style="font-size:.78rem;color:var(--text-light);margin-top:1rem">
+                        Last edited by <?= e($course['editor_name']) ?><?= $course['editor_role'] === 'admin' ? ' (Admin)' : '' ?>
+                        on <?= date('M j, Y', strtotime($course['updated_at'])) ?>
                     </div>
-                    <?php if ($isEnrolled && !$done): ?>
+                <?php endif; ?>
+            </div></div>
+
+            <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
+                <h3 style="font-size:1.1rem;margin-bottom:1rem;color:var(--green-deep)">Instructor</h3>
+                <div class="instructor-card">
+                    <div class="profile-avatar"><?= e(mb_substr($course['teacher_name'], 0, 1)) ?></div>
+                    <div>
+                        <a href="profile.php?id=<?= (int) $course['teacher_id'] ?>" style="font-weight:700;font-size:1.05rem"><?= e($course['teacher_name']) ?></a>
+                        <div style="font-size:.85rem;color:var(--text-light);margin-top:.2rem"><?= e($course['qualification'] ?: 'Qualified Teacher') ?></div>
+                        <div class="instructor-stats">
+                            <span><i data-lucide="book-open" class="lucide-icon"></i> <?= (int) $teacherStats['course_count'] ?> course<?= $teacherStats['course_count'] == 1 ? '' : 's' ?></span>
+                            <span><i data-lucide="users" class="lucide-icon"></i> <?= (int) $teacherStats['student_count'] ?> student<?= $teacherStats['student_count'] == 1 ? '' : 's' ?></span>
+                        </div>
+                        <?php if ($course['teacher_bio']): ?><p style="font-size:.86rem;color:var(--text-mid);margin-top:.4rem"><?= e($course['teacher_bio']) ?></p><?php endif; ?>
+                        <?php if ($isEnrolled): ?>
+                            <a href="chat.php?with=<?= (int) $course['teacher_id'] ?>&course=<?= (int) $course['id'] ?>" class="btn btn-sm btn-outline" style="margin-top:.6rem"><i data-lucide="message-circle" class="lucide-icon"></i> Message Teacher</a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div></div>
+
+            <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
+                <h3 style="font-size:1.1rem;margin-bottom:1rem;color:var(--green-deep)">Student Reviews</h3>
+
+                <?php if ($reviewCount > 0): ?>
+                <div class="rating-summary">
+                    <div style="text-align:center">
+                        <div class="big-score"><?= number_format($avgRating, 1) ?></div>
+                        <div class="course-rating-row" style="justify-content:center"><span class="stars"><?= starString($avgRating) ?></span></div>
+                        <div style="font-size:.78rem;color:var(--text-light)">Course Rating</div>
+                    </div>
+                    <div style="flex:1;min-width:200px">
+                        <?php for ($star = 5; $star >= 1; $star--): ?>
+                            <?php $pct = $reviewCount > 0 ? round($ratingBreakdown[$star] / $reviewCount * 100) : 0; ?>
+                            <div class="rating-bar-row">
+                                <span><?= $star ?> ★</span>
+                                <div class="rating-bar-track"><div class="rating-bar-fill" style="width:<?= $pct ?>%"></div></div>
+                                <span><?= $pct ?>%</span>
+                            </div>
+                        <?php endfor; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <?php if ($isEnrolled): ?>
+                <form method="post" style="margin-bottom:1.5rem;padding:1rem;background:var(--cream);border-radius:var(--radius-sm)">
+                    <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+                    <label class="form-label"><?= $myReview ? 'Update your review' : 'Leave a review' ?></label>
+                    <div style="display:flex;gap:.3rem;margin-bottom:.6rem" id="starPicker">
+                        <?php for ($s = 1; $s <= 5; $s++): ?>
+                            <label style="cursor:pointer;font-size:1.4rem;color:<?= ($myReview['rating'] ?? 0) >= $s ? 'var(--gold-dark)' : '#ccc' ?>" data-star="<?= $s ?>">
+                                <input type="radio" name="rating" value="<?= $s ?>" style="display:none" <?= ($myReview['rating'] ?? 0) == $s ? 'checked' : '' ?>>★
+                            </label>
+                        <?php endfor; ?>
+                    </div>
+                    <textarea name="comment" class="form-control" placeholder="Share your experience with this course (optional)" style="margin-bottom:.6rem"><?= e($myReview['comment'] ?? '') ?></textarea>
+                    <button type="submit" name="submit_review" value="1" class="btn btn-primary btn-sm"><?= $myReview ? 'Update Review' : 'Submit Review' ?></button>
+                </form>
+                <?php endif; ?>
+
+                <?php if (!$reviews): ?>
+                    <p style="color:var(--text-light);font-size:.9rem">No reviews yet.</p>
+                <?php else: ?>
+                    <?php foreach ($reviews as $r): ?>
+                    <div class="review-item">
+                        <div class="review-item-head">
+                            <div class="profile-avatar"><?= e(mb_substr($r['student_name'], 0, 1)) ?></div>
+                            <div>
+                                <div style="font-weight:600;font-size:.88rem"><?= e($r['student_name']) ?></div>
+                                <div class="course-rating-row" style="margin-bottom:0"><span class="stars"><?= starString((float) $r['rating']) ?></span><span style="font-size:.78rem"><?= date('M j, Y', strtotime($r['created_at'])) ?></span></div>
+                            </div>
+                        </div>
+                        <?php if ($r['comment']): ?><p style="font-size:.88rem;color:var(--text-mid)"><?= e($r['comment']) ?></p><?php endif; ?>
+                    </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div></div>
+        </div>
+
+        <div class="enroll-card">
+            <div class="card">
+                <div class="course-cover">
+                    <?php if ($course['cover_url']): ?><img src="<?= e($course['cover_url']) ?>" alt=""><?php else: ?><?= catIcon($course['subject_icon']) ?><?php endif; ?>
+                </div>
+                <div class="card-body">
+                    <div style="font-size:1.6rem;font-weight:800;color:var(--green-deep);margin-bottom:.8rem"><?= $course['price'] > 0 ? '$' . number_format((float) $course['price']) : 'Free' ?></div>
+                    <div style="font-size:.85rem;color:var(--text-mid);display:flex;flex-direction:column;gap:.4rem">
+                        <span><i data-lucide="clipboard-list" class="lucide-icon"></i> <?= count($lessons) ?> lessons</span>
+                        <?php if ($totalMinutes > 0): ?><span><i data-lucide="clock" class="lucide-icon"></i> <?= round($totalMinutes / 60, 1) ?> hours of content</span><?php endif; ?>
+                        <span><i data-lucide="signal" class="lucide-icon"></i> <?= e(ucfirst($course['level'])) ?> level</span>
+                        <span><i data-lucide="languages" class="lucide-icon"></i> <?= e($course['language']) ?></span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <?php if (!$user): ?>
+                        <a href="login.php" class="btn btn-primary btn-full">Login to Enroll</a>
+                    <?php elseif (($user['role'] ?? '') !== 'student'): ?>
+                        <div class="alert alert-info">Only students can enroll in courses.</div>
+                    <?php elseif ($isEnrolled): ?>
+                        <div class="alert alert-success"><i data-lucide="check" class="lucide-icon"></i> You are enrolled</div>
+                        <div class="progress-bar"><div class="progress-fill" style="width:<?= $progressPct ?>%"></div></div>
+                        <p style="font-size:.85rem;color:var(--text-light);margin-top:.4rem"><?= $progressPct ?>% complete (<?= count($completedLessons) ?>/<?= count($lessons) ?> lessons)</p>
+                    <?php else: ?>
                         <form method="post">
                             <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
-                            <button type="submit" name="complete_lesson" value="<?= (int) $l['id'] ?>" class="btn btn-sm btn-outline">Mark Done</button>
+                            <button type="submit" name="enroll" value="1" class="btn btn-primary btn-full">Enroll Now <?= $course['price'] > 0 ? '— $' . number_format((float) $course['price']) : '— Free' ?></button>
                         </form>
-                    <?php elseif ($done): ?>
-                        <span class="lesson-check"><i data-lucide="check" class="lucide-icon"></i></span>
                     <?php endif; ?>
-                </li>
-            <?php endforeach; ?>
-        </ul>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+<script>
+document.querySelectorAll('#starPicker label').forEach(function (label) {
+    label.addEventListener('click', function () {
+        var star = parseInt(label.getAttribute('data-star'), 10);
+        document.querySelectorAll('#starPicker label').forEach(function (l, i) {
+            l.style.color = (i + 1) <= star ? 'var(--gold-dark)' : '#ccc';
+        });
+    });
+});
+</script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <script src="app.js" defer></script>
 <script>if (window.lucide) lucide.createIcons();</script>

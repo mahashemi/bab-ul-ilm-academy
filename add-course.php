@@ -22,6 +22,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $title       = trim($_POST['title'] ?? '');
     $description = trim($_POST['description'] ?? '');
+    $objectives  = trim($_POST['learning_objectives'] ?? '');
+    $requirements = trim($_POST['requirements'] ?? '');
     $subjectId   = (int) ($_POST['subject_id'] ?? 0);
     $level       = $_POST['level'] ?? 'beginner';
     $language    = trim($_POST['language'] ?? 'English');
@@ -36,10 +38,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // New courses always start as 'pending' — they're not visible to students until
         // an admin reviews and approves them, regardless of the teacher's publish intent.
         $stmt = $pdo->prepare(
-            "INSERT INTO courses (teacher_id, subject_id, title, description, level, language, price, cover_url, is_published, moderation_status)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 'pending')"
+            "INSERT INTO courses (teacher_id, subject_id, title, description, learning_objectives, requirements, level, language, price, cover_url, is_published, moderation_status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'pending')"
         );
-        $stmt->execute([$user['id'], $subjectId ?: null, $title, $description, $level, $language, $price, $imagePath]);
+        $stmt->execute([$user['id'], $subjectId ?: null, $title, $description, $objectives ?: null, $requirements ?: null, $level, $language, $price, $imagePath]);
         $newId = (int) $pdo->lastInsertId();
         flash('success', 'Course created! It will be reviewed by an admin before it appears publicly. Now add some lessons.');
         redirect('add-lesson.php?course_id=' . $newId);
@@ -122,6 +124,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="form-group">
                 <label class="form-label">Description</label>
                 <textarea name="description" class="form-control" placeholder="What will students learn in this course?" required><?= e($_POST['description'] ?? '') ?></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">What You'll Learn (one per line)</label>
+                <textarea name="learning_objectives" class="form-control" placeholder="e.g.&#10;Read Quran with correct Tajweed rules&#10;Identify the 28 Arabic letters and their articulation points"><?= e($_POST['learning_objectives'] ?? '') ?></textarea>
+                <div class="form-hint">Shown as a checklist on the course page. One bullet per line.</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Requirements (one per line)</label>
+                <textarea name="requirements" class="form-control" placeholder="e.g.&#10;No prior knowledge needed&#10;A Quran copy (any edition)"><?= e($_POST['requirements'] ?? '') ?></textarea>
             </div>
 
             <div class="form-row">

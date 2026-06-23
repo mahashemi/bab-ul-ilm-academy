@@ -39,6 +39,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $title       = trim($_POST['title'] ?? '');
     $description = trim($_POST['description'] ?? '');
+    $objectives  = trim($_POST['learning_objectives'] ?? '');
+    $requirements = trim($_POST['requirements'] ?? '');
     $subjectId   = (int) ($_POST['subject_id'] ?? 0);
     $level       = $_POST['level'] ?? 'beginner';
     $language    = trim($_POST['language'] ?? 'English');
@@ -52,10 +54,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$errors) {
         $imagePath = handleImageUpload('cover', 'courses') ?? $course['cover_url'];
         $stmt = $pdo->prepare(
-            'UPDATE courses SET title=?, description=?, subject_id=?, level=?, language=?, price=?, cover_url=?, is_published=?, updated_by=?, updated_at=NOW()
+            'UPDATE courses SET title=?, description=?, learning_objectives=?, requirements=?, subject_id=?, level=?, language=?, price=?, cover_url=?, is_published=?, updated_by=?, updated_at=NOW()
              WHERE id=?'
         );
-        $stmt->execute([$title, $description, $subjectId ?: null, $level, $language, $price, $imagePath, $isPublished, $user['id'], $id]);
+        $stmt->execute([$title, $description, $objectives ?: null, $requirements ?: null, $subjectId ?: null, $level, $language, $price, $imagePath, $isPublished, $user['id'], $id]);
         flash('success', 'Course updated.');
         redirect('course.php?id=' . $id);
     }
@@ -143,6 +145,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="form-group">
                 <label class="form-label">Description</label>
                 <textarea name="description" class="form-control" required><?= e($_POST['description'] ?? $course['description']) ?></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">What You'll Learn (one per line)</label>
+                <textarea name="learning_objectives" class="form-control"><?= e($_POST['learning_objectives'] ?? $course['learning_objectives'] ?? '') ?></textarea>
+                <div class="form-hint">Shown as a checklist on the course page. One bullet per line.</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Requirements (one per line)</label>
+                <textarea name="requirements" class="form-control"><?= e($_POST['requirements'] ?? $course['requirements'] ?? '') ?></textarea>
             </div>
 
             <div class="form-row">

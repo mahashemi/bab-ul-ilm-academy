@@ -98,6 +98,8 @@ CREATE TABLE IF NOT EXISTS courses (
     subject_id   INT UNSIGNED,
     title        VARCHAR(200) NOT NULL,
     description  TEXT,
+    learning_objectives TEXT,  -- "What you'll learn" — one bullet per line
+    requirements TEXT,         -- one bullet per line
     level        ENUM('beginner','intermediate','advanced') DEFAULT 'beginner',
     language     VARCHAR(50) DEFAULT 'English',
     price        DECIMAL(10,2) DEFAULT 0.00,   -- 0 = free
@@ -117,13 +119,16 @@ CREATE TABLE IF NOT EXISTS courses (
 
 -- ── Lessons ───────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS lessons (
-    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    course_id   INT UNSIGNED NOT NULL,
-    title       VARCHAR(200) NOT NULL,
-    content     LONGTEXT,            -- Text/HTML content
-    video_url   VARCHAR(500),        -- YouTube / Vimeo embed URL
-    sort_order  SMALLINT UNSIGNED DEFAULT 0,
-    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    course_id       INT UNSIGNED NOT NULL,
+    section_title   VARCHAR(150) DEFAULT NULL,  -- groups lessons into curriculum sections (Udemy-style)
+    title           VARCHAR(200) NOT NULL,
+    content         LONGTEXT,            -- Text/HTML content
+    video_url       VARCHAR(500),        -- YouTube / Vimeo embed URL
+    duration_minutes SMALLINT UNSIGNED DEFAULT 0,
+    is_preview      TINYINT(1) DEFAULT 0, -- viewable without enrolling
+    sort_order      SMALLINT UNSIGNED DEFAULT 0,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
     INDEX idx_course (course_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -203,6 +208,13 @@ CREATE TABLE IF NOT EXISTS feedback (
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── Curriculum sections, lesson duration/preview, course learning objectives ──
+ALTER TABLE lessons ADD COLUMN IF NOT EXISTS section_title VARCHAR(150) DEFAULT NULL AFTER course_id;
+ALTER TABLE lessons ADD COLUMN IF NOT EXISTS duration_minutes SMALLINT UNSIGNED DEFAULT 0;
+ALTER TABLE lessons ADD COLUMN IF NOT EXISTS is_preview TINYINT(1) DEFAULT 0;
+ALTER TABLE courses ADD COLUMN IF NOT EXISTS learning_objectives TEXT AFTER description;
+ALTER TABLE courses ADD COLUMN IF NOT EXISTS requirements TEXT AFTER learning_objectives;
 
 -- ── Personalization (occupation + learning fields, for course recommendations) ──
 ALTER TABLE users ADD COLUMN IF NOT EXISTS occupation VARCHAR(150) DEFAULT NULL;

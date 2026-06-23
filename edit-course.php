@@ -20,6 +20,21 @@ if (!$isOwner && !$isAdmin) {
     die('<p style="font-family:sans-serif;padding:3rem;text-align:center">You do not have permission to edit this course. <a href="course.php?id=' . $id . '">Go back</a></p>');
 }
 
+function fetchPreviewCard(PDO $pdo, int $courseId): ?array {
+    $stmt = $pdo->prepare(
+        "SELECT c.*, u.name AS teacher_name, s.name AS subject_name, s.icon AS subject_icon,
+                (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) AS student_count,
+                (SELECT COUNT(*) FROM lessons l WHERE l.course_id = c.id) AS lesson_count,
+                (SELECT COALESCE(SUM(duration_minutes),0) FROM lessons l WHERE l.course_id = c.id) AS total_minutes,
+                (SELECT COUNT(*) FROM course_reviews r WHERE r.course_id = c.id) AS review_count,
+                (SELECT COALESCE(AVG(rating),0) FROM course_reviews r WHERE r.course_id = c.id) AS avg_rating
+         FROM courses c JOIN users u ON u.id = c.teacher_id LEFT JOIN subjects s ON s.id = c.subject_id
+         WHERE c.id = ?"
+    );
+    $stmt->execute([$courseId]);
+    return $stmt->fetch() ?: null;
+}
+
 $fields = $pdo->query(
     "SELECT f.id AS field_id, f.name AS field_name, f.icon AS field_icon, s.id AS subject_id, s.name AS subject_name, s.icon AS subject_icon
      FROM fields_of_study f LEFT JOIN subjects s ON s.field_of_study_id = f.id
@@ -77,6 +92,8 @@ $lessons = $lessons->fetchAll();
 $enrollmentCount = $pdo->prepare('SELECT COUNT(*) FROM enrollments WHERE course_id = ?');
 $enrollmentCount->execute([$id]);
 $enrollmentCount = (int) $enrollmentCount->fetchColumn();
+
+$previewCard = fetchPreviewCard($pdo, $id);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -156,6 +173,16 @@ $enrollmentCount = (int) $enrollmentCount->fetchColumn();
         <?php endif; ?>
     </div></div>
 
+    <?php if ($previewCard): ?>
+    <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
+        <h3 style="font-size:1.05rem;margin-bottom:.4rem;color:var(--green-deep)"><i data-lucide="eye" class="lucide-icon"></i> Tile Preview</h3>
+        <p style="font-size:.85rem;color:var(--text-light);margin-bottom:1rem">This is exactly how your course looks in the catalog — hover it to see the quick-look card students see. Cover images are cropped to fill the tile, so check that the important part of your photo isn't cut off.</p>
+        <div style="max-width:300px">
+            <?= renderCourseCard($previewCard) ?>
+        </div>
+    </div></div>
+    <?php endif; ?>
+
     <?php if ($errors): ?>
         <div class="alert alert-error"><?php foreach ($errors as $err): ?><div><?= e($err) ?></div><?php endforeach; ?></div>
     <?php endif; ?>
@@ -170,7 +197,7 @@ $enrollmentCount = (int) $enrollmentCount->fetchColumn();
                     <img src="<?= e($course['cover_url']) ?>" style="max-width:200px;border-radius:8px;margin-bottom:.6rem;display:block">
                 <?php endif; ?>
                 <input type="file" name="cover" class="form-control" accept="image/jpeg,image/png,image/webp">
-                <div class="form-hint">Upload a new cover to replace the current one, or leave blank to keep it.</div>
+                <div class="form-hint">Upload a new cover to replace the current one, or leave blank to keep it.<br>Recommended size: 1280×720 (16:9) — the image is cropped to fill the tile, so keep the important part centered. See the Tile Preview below.</div>
             </div>
 
             <div class="form-group">

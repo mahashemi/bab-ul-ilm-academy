@@ -113,7 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="form-group">
                 <label class="form-label">Cover Image (optional)</label>
                 <input type="file" name="cover" class="form-control" accept="image/jpeg,image/png,image/webp">
-                <div class="form-hint">JPG, PNG, or WEBP. Max 5MB. Leave blank to use a subject icon instead.</div>
+                <div class="form-hint">JPG, PNG, or WEBP. Max 5MB. Leave blank to use a subject icon instead.<br>Recommended size: 1280×720 (16:9) — the image is cropped to fill the tile, so keep the important part centered. You'll be able to preview the tile after saving.</div>
             </div>
 
             <div class="form-group">

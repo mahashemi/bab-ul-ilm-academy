@@ -319,14 +319,6 @@ function renderCourseCard(array $c, array $bestsellerIds = []): string {
             <?php if ($c['cover_url']): ?><img src="<?= e($c['cover_url']) ?>" alt=""><?php else: ?><?= catIcon($c['subject_icon']) ?><?php endif; ?>
             <?php if ($isBestseller): ?><span class="course-bestseller">Bestseller</span><?php endif; ?>
             <span class="badge badge-<?= e($c['level']) ?> course-level"><?= e(ucfirst($c['level'])) ?></span>
-            <div class="course-hover-info">
-                <?php if (!empty($c['description'])): ?><p><?= e($c['description']) ?></p><?php endif; ?>
-                <div class="meta">
-                    <span><i data-lucide="clipboard-list" class="lucide-icon"></i> <?= (int) $c['lesson_count'] ?> lessons</span>
-                    <?php if ($hours > 0): ?><span><i data-lucide="clock" class="lucide-icon"></i> <?= $hours ?>h</span><?php endif; ?>
-                    <span><i data-lucide="signal" class="lucide-icon"></i> <?= e(ucfirst($c['level'])) ?></span>
-                </div>
-            </div>
         </div>
         <div class="course-body">
             <div class="course-subject"><?= e($c['subject_name'] ?? 'General') ?></div>
@@ -346,6 +338,24 @@ function renderCourseCard(array $c, array $bestsellerIds = []): string {
         <div class="course-footer">
             <span class="course-price <?= $c['price'] == 0 ? 'free' : '' ?>"><?= $c['price'] > 0 ? '$' . number_format((float) $c['price']) : 'Free' ?></span>
             <span class="btn btn-outline btn-sm">View <i data-lucide="arrow-right" class="lucide-icon"></i></span>
+        </div>
+
+        <div class="course-hover-info">
+            <div class="course-subject"><?= e($c['subject_name'] ?? 'General') ?></div>
+            <h4><?= e($c['title']) ?></h4>
+            <?php if ($reviewCount > 0): ?>
+                <div class="course-rating-mini"><span class="num"><?= number_format($rating, 1) ?></span><span class="stars"><?= $stars ?></span><span class="count">(<?= $reviewCount ?>)</span></div>
+            <?php endif; ?>
+            <?php if (!empty($c['description'])): ?><p><?= e($c['description']) ?></p><?php endif; ?>
+            <div class="meta">
+                <span><i data-lucide="signal" class="lucide-icon"></i> <?= e(ucfirst($c['level'])) ?></span>
+                <span><i data-lucide="clipboard-list" class="lucide-icon"></i> <?= (int) $c['lesson_count'] ?> lessons</span>
+                <?php if ($hours > 0): ?><span><i data-lucide="clock" class="lucide-icon"></i> <?= $hours ?>h</span><?php endif; ?>
+            </div>
+            <div class="cta">
+                <span class="course-price <?= $c['price'] == 0 ? 'free' : '' ?>"><?= $c['price'] > 0 ? '$' . number_format((float) $c['price']) : 'Free' ?></span>
+                <span class="btn btn-primary btn-sm">View Course <i data-lucide="arrow-right" class="lucide-icon"></i></span>
+            </div>
         </div>
     </a>
     <?php

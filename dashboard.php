@@ -3,6 +3,23 @@ require_once __DIR__ . '/db.php';
 requireAuth();
 $user = auth();
 if (($user['role'] ?? '') === 'admin') redirect('admin.php');
+
+$meStmt = $pdo->prepare('SELECT u.*, f.name AS field_name FROM users u LEFT JOIN fields_of_study f ON f.id = u.learning_field_id WHERE u.id = ?');
+$meStmt->execute([$user['id']]);
+$me = $meStmt->fetch();
+
+$recommended = [];
+if (($user['role'] ?? '') !== 'teacher' && $me['learning_field_id']) {
+    $recStmt = $pdo->prepare(
+        "SELECT c.*, u.name AS teacher_name, s.name AS subject_name, s.icon AS subject_icon
+         FROM courses c JOIN users u ON u.id = c.teacher_id LEFT JOIN subjects s ON s.id = c.subject_id
+         WHERE c.is_published = 1 AND c.moderation_status = 'approved' AND s.field_of_study_id = ?
+           AND c.id NOT IN (SELECT course_id FROM enrollments WHERE student_id = ?)
+         ORDER BY c.created_at DESC LIMIT 4"
+    );
+    $recStmt->execute([$me['learning_field_id'], $user['id']]);
+    $recommended = $recStmt->fetchAll();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -58,11 +75,34 @@ if (($user['role'] ?? '') === 'admin') redirect('admin.php');
 <div class="dashboard-wrap">
     <div class="dashboard-header">
         <h2>Welcome, <?= e($user['name']) ?></h2>
+        <?php if ($me['occupation'] || $me['field_name']): ?>
+            <p style="margin-bottom:.3rem">
+                <?= e(trim(($me['occupation'] ? $me['occupation'] : '') . ($me['occupation'] && $me['field_name'] ? ', ' : '') . ($me['field_name'] ?: ''))) ?>
+                &nbsp;·&nbsp; <a href="personalize.php">Edit occupation and interests</a>
+            </p>
+        <?php else: ?>
+            <p style="margin-bottom:.3rem"><a href="personalize.php"><i data-lucide="sparkles" class="lucide-icon"></i> Add occupation and interests</a></p>
+        <?php endif; ?>
         <p><?= ($user['role'] ?? '') === 'teacher' ? 'Manage your courses and track your students.' : 'Continue your learning journey.' ?></p>
         <span class="dashboard-role"><?= e(ucfirst(($user['role'] ?? ''))) ?></span>
     </div>
 
     <?php if (flash('success')): ?><div class="alert alert-success"><?= e(flash('success')) ?></div><?php endif; ?>
+
+    <?php if ($recommended): ?>
+    <h3 style="font-size:1.1rem;color:var(--green-deep);margin-bottom:1rem"><i data-lucide="sparkles" class="lucide-icon"></i> Recommended for <?= e($me['field_name']) ?></h3>
+    <div class="grid-2" style="margin-bottom:2rem">
+        <?php foreach ($recommended as $c): ?>
+        <a href="course.php?id=<?= (int) $c['id'] ?>" class="card" style="text-decoration:none;color:inherit">
+            <div class="card-body">
+                <div class="course-subject"><?= e($c['subject_name'] ?? 'General') ?></div>
+                <div class="card-title"><?= e($c['title']) ?></div>
+                <div style="font-size:.85rem;color:var(--text-light)"><i data-lucide="user" class="lucide-icon"></i> <?= e($c['teacher_name']) ?></div>
+            </div>
+        </a>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
 
     <?php if (($user['role'] ?? '') === 'teacher'): ?>
         <?php

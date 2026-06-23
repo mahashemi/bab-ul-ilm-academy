@@ -208,6 +208,29 @@ img { max-width: 100%; height: auto; display: block; }
 .course-footer { padding: .9rem 1.2rem; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
 .course-price { font-size: 1.1rem; font-weight: 700; color: var(--green-deep); }
 .course-price.free { color: #2e7d32; }
+.course-bestseller { position: absolute; top: .8rem; left: .8rem; background: var(--gold); color: var(--green-deep); font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; padding: .2rem .55rem; border-radius: 4px; }
+.course-rating-mini { display: flex; align-items: center; gap: .3rem; font-size: .8rem; margin-bottom: .5rem; }
+.course-rating-mini .num { font-weight: 700; color: var(--gold-dark); }
+.course-rating-mini .stars { color: var(--gold-dark); letter-spacing: 1px; font-size: .75rem; }
+.course-rating-mini .count { color: var(--text-light); }
+
+/* ── Horizontal scroll carousel (Udemy-style course rows) ── */
+.carousel-row { display: flex; gap: 1.2rem; overflow-x: auto; padding-bottom: .6rem; scroll-behavior: smooth; scrollbar-width: thin; }
+.carousel-row::-webkit-scrollbar { height: 6px; }
+.carousel-row::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.carousel-row .course-card { flex: 0 0 280px; }
+.carousel-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: .5rem; }
+
+/* ── Teach CTA banner ── */
+.teach-cta-band { background: var(--green-deep); color: var(--white); border-radius: var(--radius-lg); padding: 2.2rem 2.5rem; margin: 3rem 0; display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
+.teach-cta-band h3 { font-size: 1.3rem; margin-bottom: .4rem; }
+.teach-cta-band p { opacity: .8; font-size: .92rem; }
+
+/* ── Trust stats strip ── */
+.trust-strip { background: var(--white); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 2rem 1.5rem; display: flex; justify-content: center; gap: 3rem; flex-wrap: wrap; text-align: center; }
+.trust-strip .num { font-size: 1.7rem; font-weight: 800; color: var(--green-deep); }
+.trust-strip .lbl { font-size: .8rem; color: var(--text-light); }
+
 
 /* ── Student Roster Cards (teacher's per-course student list) ── */
 .student-card {

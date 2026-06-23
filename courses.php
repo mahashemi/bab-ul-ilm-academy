@@ -3,22 +3,41 @@ require_once __DIR__ . '/db.php';
 $user = auth();
 
 $subjectId = (int) ($_GET['subject'] ?? 0);
+$fieldId   = (int) ($_GET['field'] ?? 0);
 $q = trim($_GET['q'] ?? '');
-$subjects = $pdo->query('SELECT * FROM subjects ORDER BY name')->fetchAll();
+$fieldsOfStudy = $pdo->query('SELECT * FROM fields_of_study ORDER BY name')->fetchAll();
+$subjects = $pdo->query(
+    $fieldId > 0
+        ? 'SELECT * FROM subjects WHERE field_of_study_id = ' . (int) $fieldId . ' ORDER BY name'
+        : 'SELECT * FROM subjects ORDER BY name'
+)->fetchAll();
 
-$sql = "SELECT c.*, u.name AS teacher_name, s.name AS subject_name, s.icon AS subject_icon,
-               (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) AS student_count
+$courseSelect = "c.*, u.name AS teacher_name, s.name AS subject_name, s.icon AS subject_icon,
+            (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) AS student_count,
+            (SELECT COUNT(*) FROM lessons l WHERE l.course_id = c.id) AS lesson_count,
+            (SELECT COALESCE(SUM(duration_minutes),0) FROM lessons l WHERE l.course_id = c.id) AS total_minutes,
+            (SELECT COUNT(*) FROM course_reviews r WHERE r.course_id = c.id) AS review_count,
+            (SELECT COALESCE(AVG(rating),0) FROM course_reviews r WHERE r.course_id = c.id) AS avg_rating";
+
+$sql = "SELECT $courseSelect
         FROM courses c
         JOIN users u ON u.id = c.teacher_id
         LEFT JOIN subjects s ON s.id = c.subject_id
         WHERE c.is_published = 1 AND c.moderation_status = 'approved'";
 $params = [];
 if ($subjectId > 0) { $sql .= ' AND c.subject_id = ?'; $params[] = $subjectId; }
+elseif ($fieldId > 0) { $sql .= ' AND s.field_of_study_id = ?'; $params[] = $fieldId; }
 if ($q !== '') { $sql .= ' AND (c.title LIKE ? OR c.description LIKE ? OR u.name LIKE ? OR s.name LIKE ?)'; array_push($params, "%$q%", "%$q%", "%$q%", "%$q%"); }
 $sql .= ' ORDER BY c.created_at DESC';
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $courses = $stmt->fetchAll();
+
+// "Bestseller" reflects real enrollment counts — top 3 most-enrolled
+// courses in this filtered list (only if they actually have students).
+$rankedByStudents = $courses;
+usort($rankedByStudents, fn($a, $b) => (int) $b['student_count'] - (int) $a['student_count']);
+$bestsellerIds = array_column(array_filter(array_slice($rankedByStudents, 0, 3), fn($c) => (int) $c['student_count'] > 0), 'id');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -80,11 +99,18 @@ $courses = $stmt->fetchAll();
     </form>
 
     <div class="chip-row">
-        <a href="courses.php" class="cat-chip <?= $subjectId === 0 ? 'active' : '' ?>"><i data-lucide="library" class="lucide-icon"></i> All Subjects</a>
-        <?php foreach ($subjects as $s): ?>
-            <a href="?subject=<?= (int) $s['id'] ?>" class="cat-chip <?= $subjectId === (int) $s['id'] ? 'active' : '' ?>"><?= catIcon($s['icon']) ?> <?= e($s['name']) ?></a>
+        <a href="courses.php" class="cat-chip <?= ($fieldId === 0 && $subjectId === 0) ? 'active' : '' ?>"><i data-lucide="library" class="lucide-icon"></i> All Fields</a>
+        <?php foreach ($fieldsOfStudy as $f): ?>
+            <a href="?field=<?= (int) $f['id'] ?>" class="cat-chip <?= $fieldId === (int) $f['id'] ? 'active' : '' ?>"><?= catIcon($f['icon']) ?> <?= e($f['name']) ?></a>
         <?php endforeach; ?>
     </div>
+    <?php if ($subjects): ?>
+    <div class="chip-row" style="margin-top:-.6rem">
+        <?php foreach ($subjects as $s): ?>
+            <a href="?<?= $fieldId ? 'field=' . (int) $fieldId . '&' : '' ?>subject=<?= (int) $s['id'] ?>" class="cat-chip <?= $subjectId === (int) $s['id'] ? 'active' : '' ?>" style="font-size:.78rem;padding:.35rem .8rem"><?= catIcon($s['icon']) ?> <?= e($s['name']) ?></a>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
 
     <p class="section-sub"><?= count($courses) ?> course(s) found</p>
 
@@ -92,27 +118,7 @@ $courses = $stmt->fetchAll();
         <div class="empty-state"><div class="icon"><i data-lucide="library" class="lucide-icon"></i></div><h3>No courses found</h3></div>
     <?php else: ?>
     <div class="grid-3">
-        <?php foreach ($courses as $c): ?>
-        <a href="course.php?id=<?= (int) $c['id'] ?>" class="course-card" style="text-decoration:none;color:inherit">
-            <div class="course-cover">
-                <?php if ($c['cover_url']): ?><img src="<?= e($c['cover_url']) ?>" alt=""><?php else: ?><?= catIcon($c['subject_icon']) ?><?php endif; ?>
-                <span class="badge badge-<?= e($c['level']) ?> course-level"><?= e(ucfirst($c['level'])) ?></span>
-            </div>
-            <div class="course-body">
-                <div class="course-subject"><?= e($c['subject_name'] ?? 'General') ?></div>
-                <div class="course-title"><?= e($c['title']) ?></div>
-                <div class="course-desc"><?= e($c['description']) ?></div>
-                <div class="course-meta">
-                    <span><i data-lucide="user" class="lucide-icon"></i> <?= e($c['teacher_name']) ?></span>
-                    <span><i data-lucide="graduation-cap" class="lucide-icon"></i> <?= (int) $c['student_count'] ?> enrolled</span>
-                </div>
-            </div>
-            <div class="course-footer">
-                <span class="course-price <?= $c['price'] == 0 ? 'free' : '' ?>"><?= $c['price'] > 0 ? '$' . number_format((float) $c['price']) : 'Free' ?></span>
-                <span class="btn btn-outline btn-sm">View <i data-lucide="arrow-right" class="lucide-icon"></i></span>
-            </div>
-        </a>
-        <?php endforeach; ?>
+        <?php foreach ($courses as $c): ?><?= renderCourseCard($c, $bestsellerIds) ?><?php endforeach; ?>
     </div>
     <?php endif; ?>
 </div>

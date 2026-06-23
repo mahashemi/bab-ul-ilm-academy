@@ -16,15 +16,60 @@ $subjects = $pdo->query(
      LIMIT 8"
 )->fetchAll();
 
-$courses = $pdo->query(
-    "SELECT c.*, u.name AS teacher_name, s.name AS subject_name, s.icon AS subject_icon,
-            (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) AS student_count
-     FROM courses c
-     JOIN users u ON u.id = c.teacher_id
-     LEFT JOIN subjects s ON s.id = c.subject_id
+// Shared course fields (rating, review count, lesson count, hours, students) reused
+// across every row on this page so cards look consistent everywhere.
+$courseSelect = "c.*, u.name AS teacher_name, s.name AS subject_name, s.icon AS subject_icon,
+            (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) AS student_count,
+            (SELECT COUNT(*) FROM lessons l WHERE l.course_id = c.id) AS lesson_count,
+            (SELECT COALESCE(SUM(duration_minutes),0) FROM lessons l WHERE l.course_id = c.id) AS total_minutes,
+            (SELECT COUNT(*) FROM course_reviews r WHERE r.course_id = c.id) AS review_count,
+            (SELECT COALESCE(AVG(rating),0) FROM course_reviews r WHERE r.course_id = c.id) AS avg_rating";
+
+$newCourses = $pdo->query(
+    "SELECT $courseSelect FROM courses c JOIN users u ON u.id = c.teacher_id LEFT JOIN subjects s ON s.id = c.subject_id
      WHERE c.is_published = 1 AND c.moderation_status = 'approved'
      ORDER BY c.created_at DESC LIMIT 12"
 )->fetchAll();
+
+$trendingCourses = $pdo->query(
+    "SELECT $courseSelect FROM courses c JOIN users u ON u.id = c.teacher_id LEFT JOIN subjects s ON s.id = c.subject_id
+     WHERE c.is_published = 1 AND c.moderation_status = 'approved'
+     ORDER BY student_count DESC, avg_rating DESC LIMIT 12"
+)->fetchAll();
+
+// "Bestseller" reflects real enrollment counts — the top 3 most-enrolled
+// courses platform-wide (and only if they actually have students), not a
+// fabricated label.
+$bestsellerIds = array_column(
+    array_filter(array_slice($trendingCourses, 0, 3), fn($c) => (int) $c['student_count'] > 0),
+    'id'
+);
+
+$recommendedCourses = [];
+$myFieldNames = [];
+if ($user && ($user['role'] ?? '') !== 'teacher') {
+    $myFieldsStmt = $pdo->prepare(
+        "SELECT f.id, f.name FROM user_learning_fields ulf JOIN fields_of_study f ON f.id = ulf.field_of_study_id
+         WHERE ulf.user_id = ? ORDER BY f.name"
+    );
+    $myFieldsStmt->execute([$user['id']]);
+    $myFields = $myFieldsStmt->fetchAll();
+    $myFieldNames = array_column($myFields, 'name');
+    $myFieldIds = array_column($myFields, 'id');
+    if ($myFieldIds) {
+        $placeholders = implode(',', array_fill(0, count($myFieldIds), '?'));
+        $recStmt = $pdo->prepare(
+            "SELECT $courseSelect FROM courses c JOIN users u ON u.id = c.teacher_id LEFT JOIN subjects s ON s.id = c.subject_id
+             WHERE c.is_published = 1 AND c.moderation_status = 'approved' AND s.field_of_study_id IN ($placeholders)
+               AND c.id NOT IN (SELECT course_id FROM enrollments WHERE student_id = ?)
+             ORDER BY c.created_at DESC LIMIT 12"
+        );
+        $recStmt->execute([...$myFieldIds, $user['id']]);
+        $recommendedCourses = $recStmt->fetchAll();
+    }
+}
+
+$fieldsOfStudy = $pdo->query('SELECT * FROM fields_of_study ORDER BY name')->fetchAll();
 
 $stats = $pdo->query(
     "SELECT
@@ -138,32 +183,50 @@ $stats = $pdo->query(
         <a href="courses.php" class="chip-view-all">View All Subjects <i data-lucide="arrow-right" class="lucide-icon"></i></a>
     </div>
 
-    <h2 class="section-title">Featured <span>Courses</span></h2>
-    <p class="section-sub">Taught by qualified Islamic scholars and educators</p>
-
-    <div class="grid-3">
-        <?php foreach ($courses as $c): ?>
-        <a href="course.php?id=<?= (int) $c['id'] ?>" class="course-card" style="text-decoration:none;color:inherit">
-            <div class="course-cover">
-                <?php if ($c['cover_url']): ?><img src="<?= e($c['cover_url']) ?>" alt=""><?php else: ?><?= catIcon($c['subject_icon']) ?><?php endif; ?>
-                <span class="badge badge-<?= e($c['level']) ?> course-level"><?= e(ucfirst($c['level'])) ?></span>
-            </div>
-            <div class="course-body">
-                <div class="course-subject"><?= e($c['subject_name'] ?? 'General') ?></div>
-                <div class="course-title"><?= e($c['title']) ?></div>
-                <div class="course-desc"><?= e($c['description']) ?></div>
-                <div class="course-meta">
-                    <span><i data-lucide="user" class="lucide-icon"></i> <?= e($c['teacher_name']) ?></span>
-                    <span><i data-lucide="graduation-cap" class="lucide-icon"></i> <?= (int) $c['student_count'] ?> enrolled</span>
-                </div>
-            </div>
-            <div class="course-footer">
-                <span class="course-price <?= $c['price'] == 0 ? 'free' : '' ?>"><?= $c['price'] > 0 ? '$' . number_format((float) $c['price']) : 'Free' ?></span>
-                <span class="btn btn-outline btn-sm">View Course <i data-lucide="arrow-right" class="lucide-icon"></i></span>
-            </div>
-        </a>
-        <?php endforeach; ?>
+    <?php if ($recommendedCourses): ?>
+    <div class="carousel-head">
+        <h2 class="section-title">Recommended for <span><?= e(implode(', ', $myFieldNames)) ?></span></h2>
     </div>
+    <p class="section-sub">Based on the fields you told us you're learning for</p>
+    <div class="carousel-row" style="margin-bottom:2.5rem">
+        <?php foreach ($recommendedCourses as $c): ?><?= renderCourseCard($c, $bestsellerIds) ?><?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+
+    <?php if ($trendingCourses): ?>
+    <h2 class="section-title">Trending <span>Courses</span></h2>
+    <p class="section-sub">Most enrolled across the whole platform</p>
+    <div class="carousel-row" style="margin-bottom:2.5rem">
+        <?php foreach ($trendingCourses as $c): ?><?= renderCourseCard($c, $bestsellerIds) ?><?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+
+    <h2 class="section-title">Newest <span>Courses</span></h2>
+    <p class="section-sub">Taught by qualified Islamic scholars and educators</p>
+    <?php if (!$newCourses): ?>
+        <div class="empty-state"><div class="icon"><i data-lucide="book-open" class="lucide-icon"></i></div><h3>No courses published yet</h3></div>
+    <?php else: ?>
+    <div class="grid-3">
+        <?php foreach ($newCourses as $c): ?><?= renderCourseCard($c, $bestsellerIds) ?><?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+
+    <?php if (($user['role'] ?? '') !== 'teacher'): ?>
+    <div class="teach-cta-band">
+        <div>
+            <h3><i data-lucide="presentation" class="lucide-icon"></i> Teach on <?= e(SITE_NAME) ?></h3>
+            <p>Share your knowledge, reach students anywhere in the world, and earn teaching what you know.</p>
+        </div>
+        <a href="<?= $user ? 'edit-profile.php' : 'register.php' ?>" class="btn btn-primary">Become a Teacher</a>
+    </div>
+    <?php endif; ?>
+</div>
+
+<div class="trust-strip">
+    <div><div class="num"><?= (int) $stats['teachers'] ?></div><div class="lbl">Qualified Teachers</div></div>
+    <div><div class="num"><?= (int) $stats['students'] ?></div><div class="lbl">Students Learning</div></div>
+    <div><div class="num"><?= (int) $stats['courses'] ?></div><div class="lbl">Published Courses</div></div>
+    <div><div class="num"><?= e(SITE_AFFILIATION) ?></div><div class="lbl">Academic Affiliation</div></div>
 </div>
 
 <footer>
@@ -173,10 +236,19 @@ $stats = $pdo->query(
             <p>Seek Knowledge — From the Cradle to the Grave.</p>
         </div>
         <div>
+            <div class="footer-heading">Subjects</div>
+            <ul class="footer-links">
+                <?php foreach (array_slice($fieldsOfStudy, 0, 5) as $f): ?>
+                    <li><a href="courses.php?field=<?= (int) $f['id'] ?>"><?= e($f['name']) ?></a></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+        <div>
             <div class="footer-heading">Learn</div>
             <ul class="footer-links">
                 <li><a href="courses.php">All Courses</a></li>
                 <li><a href="register.php">Join Free</a></li>
+                <li><a href="about.php">About Us</a></li>
             </ul>
         </div>
         <div>
@@ -184,6 +256,14 @@ $stats = $pdo->query(
             <ul class="footer-links">
                 <li><a href="login.php">Login</a></li>
                 <li><a href="dashboard.php">Dashboard</a></li>
+                <li><a href="edit-profile.php">Become a Teacher</a></li>
+            </ul>
+        </div>
+        <div>
+            <div class="footer-heading">Support</div>
+            <ul class="footer-links">
+                <li><a href="feedback.php">Send Feedback</a></li>
+                <li><a href="about.php">Contact</a></li>
             </ul>
         </div>
     </div>

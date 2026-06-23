@@ -222,6 +222,47 @@ function catIcon(?string $iconName): string {
     return '<i data-lucide="' . e($iconName ?: 'book-open') . '" class="lucide-icon"></i>';
 }
 
+// Shared rich course card markup — used on the homepage carousels and the
+// courses browse page so cards stay visually identical everywhere.
+function renderCourseCard(array $c, array $bestsellerIds = []): string {
+    $rating = round((float) $c['avg_rating'], 1);
+    $reviewCount = (int) $c['review_count'];
+    $hours = round((int) $c['total_minutes'] / 60, 1);
+    $isBestseller = in_array((int) $c['id'], $bestsellerIds, true);
+    $stars = str_repeat('★', (int) floor($rating)) . str_repeat('☆', 5 - (int) floor($rating));
+
+    ob_start();
+    ?>
+    <a href="course.php?id=<?= (int) $c['id'] ?>" class="course-card" style="text-decoration:none;color:inherit">
+        <div class="course-cover">
+            <?php if ($c['cover_url']): ?><img src="<?= e($c['cover_url']) ?>" alt=""><?php else: ?><?= catIcon($c['subject_icon']) ?><?php endif; ?>
+            <?php if ($isBestseller): ?><span class="course-bestseller">Bestseller</span><?php endif; ?>
+            <span class="badge badge-<?= e($c['level']) ?> course-level"><?= e(ucfirst($c['level'])) ?></span>
+        </div>
+        <div class="course-body">
+            <div class="course-subject"><?= e($c['subject_name'] ?? 'General') ?></div>
+            <div class="course-title"><?= e($c['title']) ?></div>
+            <?php if ($reviewCount > 0): ?>
+                <div class="course-rating-mini"><span class="num"><?= number_format($rating, 1) ?></span><span class="stars"><?= $stars ?></span><span class="count">(<?= $reviewCount ?>)</span></div>
+            <?php endif; ?>
+            <div class="course-meta">
+                <span><i data-lucide="user" class="lucide-icon"></i> <?= e($c['teacher_name']) ?></span>
+            </div>
+            <div class="course-meta" style="margin-top:.3rem">
+                <?php if ($hours > 0): ?><span><i data-lucide="clock" class="lucide-icon"></i> <?= $hours ?>h</span><?php endif; ?>
+                <span><i data-lucide="clipboard-list" class="lucide-icon"></i> <?= (int) $c['lesson_count'] ?> lessons</span>
+                <span><i data-lucide="graduation-cap" class="lucide-icon"></i> <?= (int) $c['student_count'] ?></span>
+            </div>
+        </div>
+        <div class="course-footer">
+            <span class="course-price <?= $c['price'] == 0 ? 'free' : '' ?>"><?= $c['price'] > 0 ? '$' . number_format((float) $c['price']) : 'Free' ?></span>
+            <span class="btn btn-outline btn-sm">View <i data-lucide="arrow-right" class="lucide-icon"></i></span>
+        </div>
+    </a>
+    <?php
+    return ob_get_clean();
+}
+
 function siteSetting(PDO $pdo, string $key): ?string {
     $stmt = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key = ?');
     $stmt->execute([$key]);

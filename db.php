@@ -84,6 +84,12 @@ function requireRole(string $role): void {
     }
 }
 
+// Students, parents, and institution accounts can all enroll in courses —
+// only teachers (who create them) and admins are excluded.
+function canEnroll(?string $role): bool {
+    return in_array($role, ['student', 'parent', 'institution'], true);
+}
+
 function redirect(string $url): void {
     header('Location: ' . $url);
     exit;

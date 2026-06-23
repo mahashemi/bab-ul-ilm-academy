@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['set_role']) && $_POST['set_role'] !== '') {
         $targetId = (int) $_POST['user_id'];
         $newRole = $_POST['set_role'];
-        if ($targetId !== (int) $user['id'] && in_array($newRole, ['student','teacher','admin'], true)) {
+        if ($targetId !== (int) $user['id'] && in_array($newRole, ['student','teacher','parent','institution','admin'], true)) {
             $pdo->prepare('UPDATE users SET role = ? WHERE id = ?')->execute([$newRole, $targetId]);
         }
     } elseif (isset($_POST['add_field'])) {
@@ -503,6 +503,8 @@ $allConvos = $pdo->query(
                                 <option value="">Change role…</option>
                                 <option value="student" <?= $u['role']==='student'?'selected':'' ?>>Student</option>
                                 <option value="teacher" <?= $u['role']==='teacher'?'selected':'' ?>>Teacher</option>
+                                <option value="parent" <?= $u['role']==='parent'?'selected':'' ?>>Parent</option>
+                                <option value="institution" <?= $u['role']==='institution'?'selected':'' ?>>Institution</option>
                                 <option value="admin" <?= $u['role']==='admin'?'selected':'' ?>>Admin</option>
                             </select>
                         </form>

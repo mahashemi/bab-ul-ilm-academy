@@ -386,6 +386,25 @@ img { max-width: 100%; height: auto; display: block; }
 .review-item-head { display: flex; align-items: center; gap: .7rem; margin-bottom: .4rem; }
 .review-item .profile-avatar { width: 36px; height: 36px; font-size: .9rem; margin: 0; }
 
+/* ── Registration Form ── */
+.reg-section-title { font-size: .95rem; font-weight: 700; color: var(--green-deep); margin: 1.6rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--border); }
+.reg-section-title:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
+.role-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: .8rem; }
+.role-card { border: 2px solid var(--border); border-radius: var(--radius-sm); padding: 1rem .6rem; text-align: center; cursor: pointer; transition: var(--transition); }
+.role-card .lucide-icon { width: 1.4em; height: 1.4em; color: var(--green-deep); margin-bottom: .4rem; }
+.role-card-label { font-weight: 700; font-size: .85rem; color: var(--text); }
+.role-card-desc { font-size: .72rem; color: var(--text-light); margin-top: .15rem; }
+.role-card:hover { border-color: var(--gold); }
+.role-card.active { border-color: var(--green-deep); background: var(--cream); }
+.role-card.active .lucide-icon { color: var(--green-deep); }
+.gender-pill-row { display: flex; gap: .6rem; flex-wrap: wrap; }
+.gender-pill { border: 2px solid var(--border); border-radius: var(--radius-full); padding: .45rem 1.1rem; font-size: .85rem; cursor: pointer; transition: var(--transition); }
+.gender-pill input { display: none; }
+.gender-pill:has(input:checked) { border-color: var(--green-deep); background: var(--cream); color: var(--green-deep); font-weight: 600; }
+.pw-toggle { position: absolute; right: .6rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-light); display: flex; }
+.pw-strength-track { height: 5px; background: var(--border); border-radius: 3px; margin-top: .5rem; overflow: hidden; }
+.pw-strength-fill { height: 100%; width: 0; transition: var(--transition); }
+
 /* ── Role Switch ── */
 .role-switch { display: flex; border-radius: var(--radius-sm); overflow: hidden; border: 2px solid var(--green-deep); margin-bottom: 1.5rem; }
 .role-option { flex: 1; text-align: center; padding: .7rem; cursor: pointer; font-weight: 600; font-size: .9rem; color: var(--green-deep); background: var(--white); transition: var(--transition); }

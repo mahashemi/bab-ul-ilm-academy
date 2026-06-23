@@ -73,7 +73,7 @@ $teacherStats = $teacherStats->fetch();
 $isEnrolled = false;
 $completedLessons = [];
 $myReview = null;
-if ($user && ($user['role'] ?? '') === 'student') {
+if ($user && canEnroll($user['role'] ?? null)) {
     $e = $pdo->prepare('SELECT 1 FROM enrollments WHERE student_id = ? AND course_id = ?');
     $e->execute([$user['id'], $id]);
     $isEnrolled = (bool) $e->fetch();
@@ -92,7 +92,7 @@ if ($user && ($user['role'] ?? '') === 'student') {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['enroll'])) {
     requireAuth();
     verifyCsrf();
-    if (($user['role'] ?? '') === 'student' && !$isEnrolled) {
+    if (canEnroll($user['role'] ?? null) && !$isEnrolled) {
         $pdo->prepare('INSERT IGNORE INTO enrollments (student_id, course_id) VALUES (?, ?)')->execute([$user['id'], $id]);
         flash('success', 'Enrolled successfully! Start learning below.');
         redirect('course.php?id=' . $id);
@@ -379,8 +379,8 @@ function starString(float $rating): string {
                 <div class="card-footer">
                     <?php if (!$user): ?>
                         <a href="login.php" class="btn btn-primary btn-full">Login to Enroll</a>
-                    <?php elseif (($user['role'] ?? '') !== 'student'): ?>
-                        <div class="alert alert-info">Only students can enroll in courses.</div>
+                    <?php elseif (!canEnroll($user['role'] ?? null)): ?>
+                        <div class="alert alert-info">Teacher and admin accounts can't enroll in courses.</div>
                     <?php elseif ($isEnrolled): ?>
                         <div class="alert alert-success"><i data-lucide="check" class="lucide-icon"></i> You are enrolled</div>
                         <div class="progress-bar"><div class="progress-fill" style="width:<?= $progressPct ?>%"></div></div>

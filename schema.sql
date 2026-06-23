@@ -27,8 +27,14 @@ CREATE TABLE IF NOT EXISTS users (
     name         VARCHAR(100) NOT NULL,
     email        VARCHAR(150) NOT NULL UNIQUE,
     password     VARCHAR(255) NOT NULL,
-    role         ENUM('student','teacher','admin') DEFAULT 'student',
+    role         ENUM('student','teacher','parent','institution','admin') DEFAULT 'student',
+    gender       ENUM('male','female','unspecified') DEFAULT 'unspecified',
+    date_of_birth DATE NULL,
+    education_level VARCHAR(50) NULL,       -- Student/Parent: highest level completed or in progress
+    preferred_language VARCHAR(50) NULL,
+    organization_name VARCHAR(200) NULL,    -- Institution accounts
     phone        VARCHAR(30),
+    phone_verified TINYINT(1) DEFAULT 0,
     country      VARCHAR(100),
     bio          TEXT,
     qualification TEXT,              -- Teacher: credentials, degrees
@@ -215,6 +221,15 @@ ALTER TABLE lessons ADD COLUMN IF NOT EXISTS duration_minutes SMALLINT UNSIGNED 
 ALTER TABLE lessons ADD COLUMN IF NOT EXISTS is_preview TINYINT(1) DEFAULT 0;
 ALTER TABLE courses ADD COLUMN IF NOT EXISTS learning_objectives TEXT AFTER description;
 ALTER TABLE courses ADD COLUMN IF NOT EXISTS requirements TEXT AFTER learning_objectives;
+
+-- ── Richer registration: account types, gender, profile details ──
+ALTER TABLE users MODIFY role ENUM('student','teacher','parent','institution','admin') DEFAULT 'student';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS gender ENUM('male','female','unspecified') DEFAULT 'unspecified';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS date_of_birth DATE NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS education_level VARCHAR(50) NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_language VARCHAR(50) NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS organization_name VARCHAR(200) NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_verified TINYINT(1) DEFAULT 0;
 
 -- ── Personalization (occupation + learning fields, for course recommendations) ──
 ALTER TABLE users ADD COLUMN IF NOT EXISTS occupation VARCHAR(150) DEFAULT NULL;

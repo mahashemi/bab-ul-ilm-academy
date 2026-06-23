@@ -60,11 +60,6 @@ foreach ($activeMessages as $m) {
     }
 }
 
-function chatTime(string $dt): string {
-    $ts = strtotime($dt);
-    $today = date('Y-m-d', $ts) === date('Y-m-d');
-    return $today ? date('g:i A', $ts) : date('M j, g:i A', $ts);
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">

@@ -203,6 +203,46 @@ CREATE TABLE IF NOT EXISTS user_skills (
     FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ── Class Chat (group discussion per course — teacher + enrolled students) ──
+CREATE TABLE IF NOT EXISTS class_messages (
+    id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    course_id  INT UNSIGNED NOT NULL,
+    sender_id  INT UNSIGNED NOT NULL,
+    body       TEXT NOT NULL,
+    is_broadcast TINYINT(1) DEFAULT 0,   -- sent via "Message Class" rather than typed in the thread
+    is_deleted TINYINT(1) DEFAULT 0,     -- soft-deleted by teacher/admin after a flag review
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_course (course_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── Moderation flags (heuristic — rule-based, not a live ML/LLM call) ──────
+CREATE TABLE IF NOT EXISTS message_flags (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    message_id  INT UNSIGNED NOT NULL,
+    flag_type   ENUM('spam','disrespect','suspicious_link') NOT NULL,
+    reason      VARCHAR(255),
+    status      ENUM('pending','warned','deleted','dismissed') DEFAULT 'pending',
+    reviewed_by INT UNSIGNED NULL,
+    reviewed_at TIMESTAMP NULL,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (message_id)  REFERENCES class_messages(id) ON DELETE CASCADE,
+    FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── Internal behavior score (teacher-only, never shown to students) ───────
+CREATE TABLE IF NOT EXISTS student_behavior_scores (
+    student_id INT UNSIGNED NOT NULL,
+    course_id  INT UNSIGNED NOT NULL,
+    score      INT NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (student_id, course_id),
+    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (course_id)  REFERENCES courses(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ── Feedback / Advice ────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS feedback (
     id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

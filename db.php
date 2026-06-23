@@ -90,6 +90,81 @@ function canEnroll(?string $role): bool {
     return in_array($role, ['student', 'parent', 'institution'], true);
 }
 
+// ── Class Chat Moderation ───────────────────────────────────────────────
+// Rule-based heuristics (keyword/pattern matching + recent-message lookback)
+// — NOT a live AI/LLM call. Deliberately simple, fast, and explainable: every
+// flag has a concrete, inspectable reason a teacher can verify at a glance.
+// Never deletes or hides anything by itself — it only records a flag for a
+// human (teacher/admin) to act on.
+function scanMessageForFlags(PDO $pdo, int $courseId, int $senderId, string $body): array {
+    $flags = [];
+    $normalized = mb_strtolower(trim($body));
+
+    static $flaggedPhrases = [
+        'idiot', 'stupid', 'shut up', 'shut the', 'dumb', 'i hate you', 'loser',
+        'moron', 'kill you', 'ugly', 'retard', 'worthless',
+    ];
+    foreach ($flaggedPhrases as $phrase) {
+        if ($normalized !== '' && mb_strpos($normalized, $phrase) !== false) {
+            $flags[] = ['flag_type' => 'disrespect', 'reason' => 'Contains a flagged word or phrase'];
+            break;
+        }
+    }
+
+    if (preg_match('/https?:\/\/[^\s]+/i', $body)) {
+        $flags[] = ['flag_type' => 'suspicious_link', 'reason' => 'Message contains a link'];
+    }
+
+    $recent = $pdo->prepare(
+        'SELECT body FROM class_messages WHERE course_id = ? AND sender_id = ? AND is_deleted = 0
+         ORDER BY created_at DESC LIMIT 5'
+    );
+    $recent->execute([$courseId, $senderId]);
+    $repeatCount = count(array_filter(
+        $recent->fetchAll(PDO::FETCH_COLUMN),
+        fn($b) => mb_strtolower(trim($b)) === $normalized && $normalized !== ''
+    ));
+    if ($repeatCount >= 2) {
+        $flags[] = ['flag_type' => 'spam', 'reason' => 'Same message repeated ' . ($repeatCount + 1) . ' times in a row'];
+    }
+
+    $letters = preg_replace('/[^A-Za-z]/', '', $body);
+    if (mb_strlen($letters) >= 10) {
+        $upper = preg_replace('/[^A-Z]/', '', $letters);
+        if (mb_strlen($upper) / mb_strlen($letters) > 0.7) {
+            $flags[] = ['flag_type' => 'spam', 'reason' => 'Excessive capital letters'];
+        }
+    }
+    if (preg_match('/[!?]{4,}/', $body)) {
+        $flags[] = ['flag_type' => 'spam', 'reason' => 'Excessive punctuation'];
+    }
+
+    return $flags;
+}
+
+function recordMessageFlags(PDO $pdo, int $messageId, array $flags): void {
+    foreach ($flags as $f) {
+        $pdo->prepare('INSERT INTO message_flags (message_id, flag_type, reason) VALUES (?, ?, ?)')
+            ->execute([$messageId, $f['flag_type'], $f['reason']]);
+    }
+}
+
+// Internal participation/conduct score — teacher-only, never shown to the
+// student or any other user. Computed from real signals (flags, message
+// volume), not a fabricated "AI judgment."
+function adjustBehaviorScore(PDO $pdo, int $studentId, int $courseId, int $delta): void {
+    $pdo->prepare(
+        'INSERT INTO student_behavior_scores (student_id, course_id, score) VALUES (?, ?, ?)
+         ON DUPLICATE KEY UPDATE score = score + ?'
+    )->execute([$studentId, $courseId, $delta, $delta]);
+}
+
+function chatTime(string $dt): string {
+    $ts = strtotime($dt);
+    $today = date('Y-m-d', $ts) === date('Y-m-d');
+    return $today ? date('g:i A', $ts) : date('M j, g:i A', $ts);
+}
+
 function redirect(string $url): void {
     header('Location: ' . $url);
     exit;

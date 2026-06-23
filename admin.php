@@ -100,6 +100,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare('UPDATE feedback SET is_read = 1 - is_read WHERE id = ?')->execute([(int) $_POST['toggle_feedback_read']]);
     } elseif (isset($_POST['delete_feedback'])) {
         $pdo->prepare('DELETE FROM feedback WHERE id = ?')->execute([(int) $_POST['delete_feedback']]);
+    } elseif (isset($_POST['admin_dismiss_flag'])) {
+        $pdo->prepare("UPDATE message_flags SET status='dismissed', reviewed_by=?, reviewed_at=NOW() WHERE id=?")
+            ->execute([$user['id'], (int) $_POST['admin_dismiss_flag']]);
+    } elseif (isset($_POST['admin_delete_flagged'])) {
+        $fid = (int) $_POST['admin_delete_flagged'];
+        $msgId = (int) $_POST['admin_delete_flagged_message_id'];
+        $pdo->prepare('UPDATE class_messages SET is_deleted=1 WHERE id=?')->execute([$msgId]);
+        $pdo->prepare("UPDATE message_flags SET status='deleted', reviewed_by=?, reviewed_at=NOW() WHERE id=?")
+            ->execute([$user['id'], $fid]);
     }
     redirect('admin.php?tab=' . ($_GET['tab'] ?? 'users'));
 }
@@ -143,6 +152,16 @@ $allConvos = $pdo->query(
      JOIN users usr1 ON usr1.id = pair.u1
      JOIN users usr2 ON usr2.id = pair.u2
      ORDER BY pair.last_at DESC"
+)->fetchAll();
+
+$flaggedMessages = $pdo->query(
+    "SELECT mf.*, cm.body, cm.course_id, cm.is_deleted, u.name AS sender_name, c.title AS course_title
+     FROM message_flags mf
+     JOIN class_messages cm ON cm.id = mf.message_id
+     JOIN users u ON u.id = cm.sender_id
+     JOIN courses c ON c.id = cm.course_id
+     WHERE mf.status = 'pending'
+     ORDER BY mf.created_at DESC"
 )->fetchAll();
 ?>
 <!DOCTYPE html>
@@ -220,6 +239,7 @@ $allConvos = $pdo->query(
         <a href="?tab=settings" class="tab-btn <?= $tab === 'settings' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="settings" class="lucide-icon"></i> Settings</a>
         <a href="?tab=feedback" class="tab-btn <?= $tab === 'feedback' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="message-circle" class="lucide-icon"></i> Feedback (<?= count($feedback) ?>)</a>
         <a href="?tab=messages" class="tab-btn <?= $tab === 'messages' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="eye" class="lucide-icon"></i> All Chats (<?= count($allConvos) ?>)</a>
+        <a href="?tab=flags" class="tab-btn <?= $tab === 'flags' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="triangle-alert" class="lucide-icon"></i> Flagged Messages (<?= count($flaggedMessages) ?>)</a>
     </div>
 
     <?php if ($tab === 'pending'): ?>
@@ -466,6 +486,39 @@ $allConvos = $pdo->query(
                     <td><?= date('M j, Y g:i A', strtotime($c['last_at'])) ?></td>
                     <td class="action-row">
                         <a href="admin-chat-view.php?u1=<?= (int) $c['u1'] ?>&u2=<?= (int) $c['u2'] ?>" class="icon-btn" data-tip="View conversation" aria-label="View conversation"><i data-lucide="eye" class="lucide-icon"></i></a>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php endif; ?>
+    <?php elseif ($tab === 'flags'): ?>
+        <p class="section-sub">Rule-based heuristics flag possible spam, disrespect, or links in class discussions for your review — nothing is removed automatically.</p>
+        <?php if (!$flaggedMessages): ?>
+            <div class="empty-state"><div class="icon"><i data-lucide="shield-check" class="lucide-icon"></i></div><h3>No pending flags</h3></div>
+        <?php else: ?>
+        <table class="table">
+            <thead><tr><th>Course</th><th>Sender</th><th>Message</th><th>Flag Reason</th><th>When</th><th>Actions</th></tr></thead>
+            <tbody>
+                <?php foreach ($flaggedMessages as $f): ?>
+                <tr>
+                    <td><a href="class-chat.php?course_id=<?= (int) $f['course_id'] ?>" target="_blank"><?= e($f['course_title']) ?></a></td>
+                    <td><?= e($f['sender_name']) ?></td>
+                    <td style="max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><?= e($f['body']) ?></td>
+                    <td><span class="badge badge-paid" style="font-size:.68rem"><?= e(ucfirst($f['flag_type'])) ?></span> <?= e($f['reason']) ?></td>
+                    <td><?= date('M j, g:i A', strtotime($f['created_at'])) ?></td>
+                    <td class="action-row">
+                        <?php if (!$f['is_deleted']): ?>
+                        <form method="post" style="display:inline" onsubmit="return confirm('Delete this message?')">
+                            <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+                            <input type="hidden" name="admin_delete_flagged_message_id" value="<?= (int) $f['message_id'] ?>">
+                            <button type="submit" name="admin_delete_flagged" value="<?= (int) $f['id'] ?>" class="icon-btn icon-btn-danger" data-tip="Delete message" aria-label="Delete message"><i data-lucide="trash-2" class="lucide-icon"></i></button>
+                        </form>
+                        <?php endif; ?>
+                        <form method="post" style="display:inline">
+                            <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+                            <button type="submit" name="admin_dismiss_flag" value="<?= (int) $f['id'] ?>" class="icon-btn" data-tip="Dismiss flag" aria-label="Dismiss flag"><i data-lucide="check" class="lucide-icon"></i></button>
+                        </form>
                     </td>
                 </tr>
                 <?php endforeach; ?>

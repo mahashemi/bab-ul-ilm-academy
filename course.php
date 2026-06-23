@@ -298,7 +298,12 @@ function starString(float $rating): string {
                         </div>
                         <?php if ($course['teacher_bio']): ?><p style="font-size:.86rem;color:var(--text-mid);margin-top:.4rem"><?= e($course['teacher_bio']) ?></p><?php endif; ?>
                         <?php if ($isEnrolled): ?>
-                            <a href="chat.php?with=<?= (int) $course['teacher_id'] ?>&course=<?= (int) $course['id'] ?>" class="btn btn-sm btn-outline" style="margin-top:.6rem"><i data-lucide="message-circle" class="lucide-icon"></i> Message Teacher</a>
+                            <div style="display:flex;gap:.5rem;margin-top:.6rem;flex-wrap:wrap">
+                                <a href="chat.php?with=<?= (int) $course['teacher_id'] ?>&course=<?= (int) $course['id'] ?>" class="btn btn-sm btn-outline"><i data-lucide="message-circle" class="lucide-icon"></i> Message Teacher</a>
+                                <a href="class-chat.php?course_id=<?= (int) $course['id'] ?>" class="btn btn-sm btn-outline"><i data-lucide="users" class="lucide-icon"></i> Class Discussion</a>
+                            </div>
+                        <?php elseif ($isOwnerOrAdmin): ?>
+                            <a href="class-chat.php?course_id=<?= (int) $course['id'] ?>" class="btn btn-sm btn-outline" style="margin-top:.6rem"><i data-lucide="users" class="lucide-icon"></i> Class Discussion</a>
                         <?php endif; ?>
                     </div>
                 </div>

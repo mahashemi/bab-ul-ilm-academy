@@ -418,6 +418,10 @@ img { max-width: 100%; height: auto; display: block; }
 .dashboard-header p  { opacity: .8; font-size: .9rem; margin-top: .3rem; }
 .dashboard-header-link { opacity: 1; color: var(--gold); font-weight: 600; text-decoration: underline; }
 .dashboard-header-link:hover { color: var(--gold-light, #f0d78a); }
+.stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; }
+.stat-card { background: var(--white); border-radius: var(--radius-sm); padding: 1.2rem; box-shadow: var(--shadow); border: 1.5px solid var(--border); text-align: center; }
+.stat-card .num { font-size: 1.8rem; font-weight: 800; color: var(--green-deep); }
+.stat-card .lbl { font-size: .8rem; color: var(--text-mid); margin-top: .2rem; }
 /* Self-contained, high-contrast pill for the dark dashboard-header gradient —
    must not rely on .badge-* tints (those assume a light page background and
    become nearly invisible here; combining classes also let .badge-* win the

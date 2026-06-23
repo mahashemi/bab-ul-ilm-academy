@@ -252,16 +252,13 @@ function starString(float $rating): string {
                             <?php if ($done): ?><i data-lucide="check-circle-2" class="lucide-icon" style="color:#2e7d32"></i>
                             <?php elseif ($canAccess): ?><i data-lucide="play-circle" class="lucide-icon"></i>
                             <?php else: ?><i data-lucide="lock" class="lucide-icon"></i><?php endif; ?>
-                            <span><?= e($l['title']) ?></span>
-                            <?php if ($l['is_preview'] && !$isEnrolled): ?><span class="badge badge-free">Preview</span><?php endif; ?>
-                            <?php if ($isEnrolled && !$done): ?>
-                                <form method="post" style="margin-left:auto">
-                                    <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
-                                    <button type="submit" name="complete_lesson" value="<?= (int) $l['id'] ?>" class="btn btn-sm btn-outline">Mark Done</button>
-                                </form>
-                            <?php elseif ((int) $l['duration_minutes'] > 0): ?>
-                                <span class="dur"><?= (int) $l['duration_minutes'] ?> min</span>
+                            <?php if ($canAccess): ?>
+                                <a href="lesson.php?id=<?= (int) $l['id'] ?>"><?= e($l['title']) ?></a>
+                            <?php else: ?>
+                                <span><?= e($l['title']) ?></span>
                             <?php endif; ?>
+                            <?php if ($l['is_preview'] && !$isEnrolled): ?><span class="badge badge-free">Preview</span><?php endif; ?>
+                            <?php if ((int) $l['duration_minutes'] > 0): ?><span class="dur"><?= (int) $l['duration_minutes'] ?> min</span><?php endif; ?>
                         </div>
                     <?php endforeach; ?>
                 </details>

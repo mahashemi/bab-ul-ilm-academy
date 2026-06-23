@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['body'])) {
         // Cooldown per (recipient, sender) so a back-and-forth conversation
         // emails once per 30 minutes, not once per message.
         notifyUser($pdo, $withId, 'new_message', $user['id'], 30, function ($u) use ($user) {
-            $senderSafe = e($user['name']);
+            $senderSafe = e(displayNameOf($user));
             return [
                 $senderSafe . ' sent you a message',
                 '<p style="margin:0 0 16px">' . $senderSafe . ' sent you a new message on ' . e(SITE_NAME) . '.</p>',
@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['body'])) {
 
 // List of conversations, with unread count per conversation
 $convos = $pdo->prepare(
-    "SELECT u.id, u.name,
+    "SELECT u.id, u.name, u.display_name, u.avatar,
             (SELECT body FROM messages m2 WHERE (m2.sender_id=u.id AND m2.receiver_id=?) OR (m2.sender_id=? AND m2.receiver_id=u.id) ORDER BY m2.created_at DESC LIMIT 1) AS last_msg,
             (SELECT created_at FROM messages m3 WHERE (m3.sender_id=u.id AND m3.receiver_id=?) OR (m3.sender_id=? AND m3.receiver_id=u.id) ORDER BY m3.created_at DESC LIMIT 1) AS last_at,
             (SELECT COUNT(*) FROM messages m4 WHERE m4.sender_id=u.id AND m4.receiver_id=? AND m4.is_read=0) AS unread_count
@@ -48,7 +48,7 @@ $conversations = $convos->fetchAll();
 $activeMessages = [];
 $activeUser = null;
 if ($withId > 0) {
-    $stmt = $pdo->prepare('SELECT id, name FROM users WHERE id = ?');
+    $stmt = $pdo->prepare('SELECT id, name, display_name, avatar FROM users WHERE id = ?');
     $stmt->execute([$withId]);
     $activeUser = $stmt->fetch();
 
@@ -104,14 +104,14 @@ foreach ($activeMessages as $m) {
             <?php if (($user['role'] ?? '') === 'teacher'): ?><a href="add-course.php">+ New Course</a><?php endif; ?>
             <div class="nav-account">
                 <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="Account menu">
-                    <span class="nav-avatar"><?= e(mb_substr($user['name'], 0, 1)) ?></span>
+                    <?= renderAvatar($user) ?>
                     <i data-lucide="chevron-down" class="lucide-icon"></i>
                 </button>
                 <div class="nav-account-menu">
                     <div class="nav-account-header">
-                        <span class="nav-avatar"><?= e(mb_substr($user['name'], 0, 1)) ?></span>
+                        <?= renderAvatar($user) ?>
                         <div>
-                            <div class="nav-account-name"><?= e($user['name']) ?></div>
+                            <div class="nav-account-name"><?= e(displayNameOf($user)) ?></div>
                             <div class="nav-account-email"><?= e($user['email']) ?></div>
                         </div>
                     </div>
@@ -121,6 +121,7 @@ foreach ($activeMessages as $m) {
                     <?php if (($user['role'] ?? '') === 'teacher'): ?><a href="add-course.php"><i data-lucide="plus" class="lucide-icon"></i> New Course</a><?php endif; ?>
                     <div class="nav-menu-divider"></div>
                     <a href="edit-profile.php"><i data-lucide="user-cog" class="lucide-icon"></i> Edit Profile</a>
+                    <a href="activity-log.php"><i data-lucide="shield-check" class="lucide-icon"></i> Account Activity</a>
                     <?php if (($user['role'] ?? '') === 'admin'): ?><a href="admin.php"><i data-lucide="shield-check" class="lucide-icon"></i> Admin Panel</a><?php endif; ?>
                     <div class="nav-menu-divider"></div>
                     <a href="logout.php"><i data-lucide="log-out" class="lucide-icon"></i> Logout</a>
@@ -141,10 +142,10 @@ foreach ($activeMessages as $m) {
             <?php endif; ?>
             <?php foreach ($conversations as $c): ?>
                 <a href="chat.php?with=<?= (int) $c['id'] ?>" class="chat-list-item <?= $c['id'] == $withId ? 'active' : '' ?>">
-                    <div class="chat-avatar"><?= e(mb_substr($c['name'], 0, 1)) ?></div>
+                    <?= renderAvatar($c, 'chat-avatar') ?>
                     <div style="overflow:hidden;flex:1;min-width:0">
                         <div class="chat-preview-top">
-                            <span class="chat-preview-name"><?= e($c['name']) ?></span>
+                            <span class="chat-preview-name"><?= e(displayNameOf($c)) ?></span>
                             <span class="chat-preview-time"><?= $c['last_at'] ? chatTime($c['last_at']) : '' ?></span>
                         </div>
                         <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem">
@@ -164,15 +165,15 @@ foreach ($activeMessages as $m) {
             <?php else: ?>
                 <div class="chat-header">
                     <button class="chat-back" onclick="location.href='chat.php'" aria-label="Back to conversations"><i data-lucide="arrow-left" class="lucide-icon"></i></button>
-                    <div class="chat-avatar"><?= e(mb_substr($activeUser['name'], 0, 1)) ?></div>
+                    <?= renderAvatar($activeUser, 'chat-avatar') ?>
                     <div>
-                        <div class="chat-header-name"><?= e($activeUser['name']) ?></div>
+                        <div class="chat-header-name"><?= e(displayNameOf($activeUser)) ?></div>
                     </div>
                 </div>
                 <div class="chat-messages" id="chatMessages">
                     <?php foreach ($groups as $g): $isSent = $g['sender_id'] == $user['id']; ?>
                     <div class="msg-group <?= $isSent ? 'sent' : '' ?>">
-                        <div class="msg-group-avatar"><?= e(mb_substr($isSent ? $user['name'] : $activeUser['name'], 0, 1)) ?></div>
+                        <?= renderAvatar($isSent ? $user : $activeUser, 'msg-group-avatar') ?>
                         <div class="msg-bubbles">
                             <?php foreach ($g['messages'] as $m): ?>
                                 <div class="msg <?= $isSent ? 'msg-sent' : 'msg-recv' ?>"><?= e($m['body']) ?></div>

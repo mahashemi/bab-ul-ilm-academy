@@ -276,6 +276,30 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS headline VARCHAR(150) NULL;
 -- ── Personalization (occupation + learning fields, for course recommendations) ──
 ALTER TABLE users ADD COLUMN IF NOT EXISTS occupation VARCHAR(150) DEFAULT NULL;
 
+-- ── Password reset (separate token/expiry from email verification, since
+-- a user could have both a pending verification and a pending reset) ──
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token VARCHAR(64) NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires DATETIME NULL;
+
+-- ── Display name (shown publicly instead of the full/legal name where
+-- relevant — class chat, course instructor byline, reviews) — name itself
+-- stays the account's legal/full name. Falls back to name via COALESCE
+-- everywhere it's read, so this is purely additive. ──
+ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name VARCHAR(100) NULL;
+
+-- ── Account activity log (security — lets a user see "is this really my
+-- recent activity", same idea as Google/Facebook's account activity page) ──
+CREATE TABLE IF NOT EXISTS account_activity_log (
+    id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id    INT UNSIGNED NOT NULL,
+    action     VARCHAR(100) NOT NULL,
+    ip_address VARCHAR(45) NULL,
+    user_agent VARCHAR(255) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_time (user_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS user_learning_fields (
     user_id INT UNSIGNED NOT NULL,
     field_of_study_id INT UNSIGNED NOT NULL,

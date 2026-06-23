@@ -18,7 +18,7 @@ $subjects = $pdo->query(
 
 // Shared course fields (rating, review count, lesson count, hours, students) reused
 // across every row on this page so cards look consistent everywhere.
-$courseSelect = "c.*, u.name AS teacher_name, s.name AS subject_name, s.icon AS subject_icon,
+$courseSelect = "c.*, COALESCE(u.display_name, u.name) AS teacher_name, s.name AS subject_name, s.icon AS subject_icon,
             (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) AS student_count,
             (SELECT COUNT(*) FROM lessons l WHERE l.course_id = c.id) AS lesson_count,
             (SELECT COALESCE(SUM(duration_minutes),0) FROM lessons l WHERE l.course_id = c.id) AS total_minutes,
@@ -114,14 +114,14 @@ $stats = $pdo->query(
             <?php if (($user['role'] ?? '') === 'teacher'): ?><a href="add-course.php">+ New Course</a><?php endif; ?>
             <div class="nav-account">
                 <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="Account menu">
-                    <span class="nav-avatar"><?= e(mb_substr($user['name'], 0, 1)) ?></span>
+                    <?= renderAvatar($user) ?>
                     <i data-lucide="chevron-down" class="lucide-icon"></i>
                 </button>
                 <div class="nav-account-menu">
                     <div class="nav-account-header">
-                        <span class="nav-avatar"><?= e(mb_substr($user['name'], 0, 1)) ?></span>
+                        <?= renderAvatar($user) ?>
                         <div>
-                            <div class="nav-account-name"><?= e($user['name']) ?></div>
+                            <div class="nav-account-name"><?= e(displayNameOf($user)) ?></div>
                             <div class="nav-account-email"><?= e($user['email']) ?></div>
                         </div>
                     </div>
@@ -131,6 +131,7 @@ $stats = $pdo->query(
                     <?php if (($user['role'] ?? '') === 'teacher'): ?><a href="add-course.php"><i data-lucide="plus" class="lucide-icon"></i> New Course</a><?php endif; ?>
                     <div class="nav-menu-divider"></div>
                     <a href="edit-profile.php"><i data-lucide="user-cog" class="lucide-icon"></i> Edit Profile</a>
+                    <a href="activity-log.php"><i data-lucide="shield-check" class="lucide-icon"></i> Account Activity</a>
                     <?php if (($user['role'] ?? '') === 'admin'): ?><a href="admin.php"><i data-lucide="shield-check" class="lucide-icon"></i> Admin Panel</a><?php endif; ?>
                     <div class="nav-menu-divider"></div>
                     <a href="logout.php"><i data-lucide="log-out" class="lucide-icon"></i> Logout</a>

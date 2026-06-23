@@ -381,6 +381,21 @@ function siteBaseUrl(): string {
     return $scheme . '://' . $_SERVER['HTTP_HOST'] . $dir;
 }
 
+// Security activity log — lets a user see "is this really my recent
+// activity" (logins, password changes, etc.), same idea as Google/
+// Facebook's account activity page. Best-effort: never blocks the action
+// it's logging, so a logging failure can't break login/password-change.
+function logActivity(PDO $pdo, int $userId, string $action): void {
+    try {
+        $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+        $ua = isset($_SERVER['HTTP_USER_AGENT']) ? mb_substr($_SERVER['HTTP_USER_AGENT'], 0, 255) : null;
+        $pdo->prepare('INSERT INTO account_activity_log (user_id, action, ip_address, user_agent) VALUES (?, ?, ?, ?)')
+            ->execute([$userId, $action, $ip, $ua]);
+    } catch (Exception $e) {
+        // swallow — activity logging is best-effort, never fatal
+    }
+}
+
 function sendVerificationEmail(string $toEmail, string $name, string $token): bool {
     $link = siteBaseUrl() . '/verify.php?token=' . $token;
     $subject = 'Verify your ' . SITE_NAME . ' account';
@@ -427,6 +442,18 @@ HTML;
     $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
 
     return @mail($toEmail, $subject, $html, $headers);
+}
+
+function sendPasswordResetEmail(string $toEmail, string $name, string $token): bool {
+    $link = siteBaseUrl() . '/reset-password.php?token=' . $token;
+    return sendNotificationEmail(
+        $toEmail, $name,
+        'Reset your ' . SITE_NAME . ' password',
+        '<p style="margin:0 0 16px">We received a request to reset your password. Click the button below to choose a new one — this link expires in 1 hour.</p>'
+            . '<p style="margin:0;font-size:13px;color:#888888">If you didn\'t request this, you can safely ignore this email — your password will not be changed.</p>',
+        'Reset My Password',
+        $link
+    );
 }
 
 // ── Engagement notification emails ──────────────────────────────────────
@@ -544,6 +571,26 @@ function handleImageUpload(string $fieldName, string $subDir): ?string {
 
 function catIcon(?string $iconName): string {
     return '<i data-lucide="' . e($iconName ?: 'book-open') . '" class="lucide-icon"></i>';
+}
+
+// The name shown publicly (class chat, instructor byline, navbar) — falls
+// back to the account's legal name when no display name is set. The legal
+// name itself is never overwritten/hidden, just not shown by default.
+function displayNameOf(?array $user): string {
+    if (!$user) return '?';
+    return ($user['display_name'] ?? '') ?: ($user['name'] ?? '?');
+}
+
+// Renders a profile photo if the user has uploaded one, falling back to the
+// existing initial-letter circle otherwise — both fit the same nav-avatar/
+// chat-avatar sizing classes, so this is a drop-in replacement wherever an
+// avatar is shown. $user only needs 'name'/'display_name' and 'avatar' keys.
+function renderAvatar(?array $user, string $class = 'nav-avatar'): string {
+    $name = displayNameOf($user);
+    if (!empty($user['avatar'])) {
+        return '<img src="' . e($user['avatar']) . '" alt="" class="' . e($class) . ' ' . e($class) . '-img">';
+    }
+    return '<span class="' . e($class) . '">' . e(mb_substr($name, 0, 1)) . '</span>';
 }
 
 // Pops and renders the points-celebration popup (see awardPoints() /

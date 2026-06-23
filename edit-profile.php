@@ -26,6 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
 
     $name          = trim($_POST['name'] ?? '');
+    $displayName   = trim($_POST['display_name'] ?? '');
     $country       = trim($_POST['country'] ?? '');
     $bio           = trim($_POST['bio'] ?? '');
     $qualification = trim($_POST['qualification'] ?? '');
@@ -41,6 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $educationLevel = trim($_POST['education_level'] ?? '');
 
     if ($name === '' || mb_strlen($name) < 2) $errors[] = 'Please enter your full name.';
+    if ($displayName !== '' && mb_strlen($displayName) < 2) $errors[] = 'Display name must be at least 2 characters.';
     if ($country === '') $errors[] = 'Please select your country.';
     if ($phoneDigits !== '' || $dialCodeIn !== '') {
         if (!preg_match('/^\+\d{1,4}$/', $dialCodeIn)) $errors[] = 'Please select a valid country code.';
@@ -65,13 +67,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $qualToSave = $me['role'] === 'teacher' ? $qualification : $me['qualification'];
         $headlineToSave = $me['role'] === 'teacher' ? ($headline ?: null) : $me['headline'];
         $educationToSave = in_array($me['role'], ['student', 'parent'], true) ? ($educationLevel ?: null) : $me['education_level'];
+        $avatarPath = handleImageUpload('avatar', 'avatars') ?? $me['avatar'];
+        $displayNameToSave = $displayName ?: null;
         if ($newPass !== '') {
             $hash = password_hash($newPass, PASSWORD_DEFAULT);
-            $pdo->prepare('UPDATE users SET name=?, country=?, bio=?, phone=?, qualification=?, headline=?, gender=?, date_of_birth=?, preferred_language=?, education_level=?, password=? WHERE id=?')
-                ->execute([$name, $country, $bio, $phone, $qualToSave, $headlineToSave, $gender, $dob ?: null, $preferredLang ?: null, $educationToSave, $hash, $user['id']]);
+            $pdo->prepare('UPDATE users SET name=?, display_name=?, country=?, bio=?, phone=?, qualification=?, headline=?, gender=?, date_of_birth=?, preferred_language=?, education_level=?, avatar=?, password=? WHERE id=?')
+                ->execute([$name, $displayNameToSave, $country, $bio, $phone, $qualToSave, $headlineToSave, $gender, $dob ?: null, $preferredLang ?: null, $educationToSave, $avatarPath, $hash, $user['id']]);
+            logActivity($pdo, (int) $user['id'], 'Password changed');
         } else {
-            $pdo->prepare('UPDATE users SET name=?, country=?, bio=?, phone=?, qualification=?, headline=?, gender=?, date_of_birth=?, preferred_language=?, education_level=? WHERE id=?')
-                ->execute([$name, $country, $bio, $phone, $qualToSave, $headlineToSave, $gender, $dob ?: null, $preferredLang ?: null, $educationToSave, $user['id']]);
+            $pdo->prepare('UPDATE users SET name=?, display_name=?, country=?, bio=?, phone=?, qualification=?, headline=?, gender=?, date_of_birth=?, preferred_language=?, education_level=?, avatar=? WHERE id=?')
+                ->execute([$name, $displayNameToSave, $country, $bio, $phone, $qualToSave, $headlineToSave, $gender, $dob ?: null, $preferredLang ?: null, $educationToSave, $avatarPath, $user['id']]);
         }
 
         // Sync skills: reuse existing skill rows by name, create any new ones,
@@ -95,9 +100,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mySkills = $names;
 
         $_SESSION['user']['name'] = $name;
+        $_SESSION['user']['display_name'] = $displayNameToSave;
+        $_SESSION['user']['avatar'] = $avatarPath;
         $success = true;
-        $me['name'] = $name; $me['country'] = $country; $me['bio'] = $bio; $me['qualification'] = $qualToSave; $me['headline'] = $headlineToSave;
+        $me['name'] = $name; $me['display_name'] = $displayNameToSave; $me['country'] = $country; $me['bio'] = $bio; $me['qualification'] = $qualToSave; $me['headline'] = $headlineToSave;
         $me['gender'] = $gender; $me['date_of_birth'] = $dob; $me['preferred_language'] = $preferredLang; $me['education_level'] = $educationToSave;
+        $me['avatar'] = $avatarPath;
         $dialCode = $dialCodeIn; $phoneNumber = $phoneDigits;
     }
 }
@@ -189,14 +197,14 @@ document.addEventListener('DOMContentLoaded', function () {
             <?php if (($user['role'] ?? '') === 'teacher'): ?><a href="add-course.php">+ New Course</a><?php endif; ?>
             <div class="nav-account">
                 <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="Account menu">
-                    <span class="nav-avatar"><?= e(mb_substr($user['name'], 0, 1)) ?></span>
+                    <?= renderAvatar($user) ?>
                     <i data-lucide="chevron-down" class="lucide-icon"></i>
                 </button>
                 <div class="nav-account-menu">
                     <div class="nav-account-header">
-                        <span class="nav-avatar"><?= e(mb_substr($user['name'], 0, 1)) ?></span>
+                        <?= renderAvatar($user) ?>
                         <div>
-                            <div class="nav-account-name"><?= e($user['name']) ?></div>
+                            <div class="nav-account-name"><?= e(displayNameOf($user)) ?></div>
                             <div class="nav-account-email"><?= e($user['email']) ?></div>
                         </div>
                     </div>
@@ -206,6 +214,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     <?php if (($user['role'] ?? '') === 'teacher'): ?><a href="add-course.php"><i data-lucide="plus" class="lucide-icon"></i> New Course</a><?php endif; ?>
                     <div class="nav-menu-divider"></div>
                     <a href="edit-profile.php"><i data-lucide="user-cog" class="lucide-icon"></i> Edit Profile</a>
+                    <a href="activity-log.php"><i data-lucide="shield-check" class="lucide-icon"></i> Account Activity</a>
                     <?php if (($user['role'] ?? '') === 'admin'): ?><a href="admin.php"><i data-lucide="shield-check" class="lucide-icon"></i> Admin Panel</a><?php endif; ?>
                     <div class="nav-menu-divider"></div>
                     <a href="logout.php"><i data-lucide="log-out" class="lucide-icon"></i> Logout</a>
@@ -229,12 +238,31 @@ document.addEventListener('DOMContentLoaded', function () {
     <?php endif; ?>
 
     <div class="card"><div class="card-body">
-        <form method="post">
+        <form method="post" enctype="multipart/form-data">
             <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+
+            <div class="form-group">
+                <label class="form-label">Profile Photo</label>
+                <div style="display:flex;align-items:center;gap:1.2rem">
+                    <?php if ($me['avatar']): ?>
+                        <img src="<?= e($me['avatar']) ?>" alt="" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid var(--gold)">
+                    <?php else: ?>
+                        <span class="nav-avatar" style="width:72px;height:72px;font-size:1.8rem"><?= e(mb_substr($me['name'], 0, 1)) ?></span>
+                    <?php endif; ?>
+                    <input type="file" name="avatar" class="form-control" accept="image/jpeg,image/png,image/webp" style="flex:1">
+                </div>
+                <div class="form-hint">JPG, PNG, or WEBP. Max 5MB. Square images look best.</div>
+            </div>
 
             <div class="form-group">
                 <label class="form-label">Full Name</label>
                 <input type="text" name="name" class="form-control" value="<?= e($me['name']) ?>" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Display Name <span style="font-weight:400;font-size:.78rem;color:var(--text-light)">(optional)</span></label>
+                <input type="text" name="display_name" class="form-control" placeholder="e.g. Ahmad K." value="<?= e($me['display_name'] ?? '') ?>" maxlength="100">
+                <div class="form-hint">Shown instead of your full name in class chat, reviews, and as an instructor — your full name is never shown to other students/teachers unless you choose to.</div>
             </div>
 
             <div class="form-group">

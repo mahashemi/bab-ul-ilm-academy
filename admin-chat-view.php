@@ -70,20 +70,21 @@ function chatTime(string $dt): string {
         <a href="feedback.php">Feedback</a>
         <div class="nav-account">
             <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="Account menu">
-                <span class="nav-avatar"><?= e(mb_substr($user['name'], 0, 1)) ?></span>
+                <?= renderAvatar($user) ?>
                 <i data-lucide="chevron-down" class="lucide-icon"></i>
             </button>
             <div class="nav-account-menu">
                 <div class="nav-account-header">
-                    <span class="nav-avatar"><?= e(mb_substr($user['name'], 0, 1)) ?></span>
+                    <?= renderAvatar($user) ?>
                     <div>
-                        <div class="nav-account-name"><?= e($user['name']) ?></div>
+                        <div class="nav-account-name"><?= e(displayNameOf($user)) ?></div>
                         <div class="nav-account-email"><?= e($user['email']) ?></div>
                     </div>
                 </div>
                 <div class="nav-menu-divider"></div>
                 <a href="chat.php"><i data-lucide="message-circle" class="lucide-icon"></i> Messages</a>
                 <a href="edit-profile.php"><i data-lucide="user-cog" class="lucide-icon"></i> Edit Profile</a>
+                <a href="activity-log.php"><i data-lucide="shield-check" class="lucide-icon"></i> Account Activity</a>
                 <div class="nav-menu-divider"></div>
                 <a href="logout.php"><i data-lucide="log-out" class="lucide-icon"></i> Logout</a>
             </div>

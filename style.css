@@ -88,6 +88,9 @@ img { max-width: 100%; height: auto; display: block; }
     width: 34px; height: 34px; border-radius: 50%; background: var(--gold); color: var(--green-deep);
     font-weight: 700; font-size: .9rem; flex-shrink: 0;
 }
+.nav-avatar-img { object-fit: cover; }
+.chat-avatar-img { object-fit: cover; }
+.msg-group-avatar-img { object-fit: cover; }
 .nav-account-trigger .lucide-icon { color: rgba(255,255,255,.7); width: .9em; height: .9em; }
 .nav-account-menu {
     position: absolute; top: calc(100% + 10px); right: 0; width: 260px;
@@ -509,6 +512,7 @@ img { max-width: 100%; height: auto; display: block; }
 .auth-logo { text-align: center; margin-bottom: 1.5rem; }
 .auth-logo h2 { color: var(--green-deep); font-size: 1.5rem; font-weight: 800; }
 .auth-logo p  { color: var(--text-light); font-size: .85rem; }
+.auth-logo-img { height: 64px; width: auto; margin: 0 auto; display: block; }
 
 /* ── Forms ── */
 .form-group { margin-bottom: 1.1rem; }

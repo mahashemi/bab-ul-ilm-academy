@@ -53,6 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $token,
         ]);
         $newUserId = (int) $pdo->lastInsertId();
+        logActivity($pdo, $newUserId, 'Account created');
 
         sendVerificationEmail($email, $name, $token);
         $devParam = DEV_SHOW_VERIFY_LINK ? '&token=' . $token : '';
@@ -84,7 +85,7 @@ $ROLES = [
 <div class="auth-wrap">
     <div class="auth-box" style="max-width:520px">
         <div class="auth-logo">
-            <h2><i data-lucide="landmark" class="lucide-icon"></i> <?= e(SITE_NAME) ?></h2>
+            <img src="assets/lockup-green.svg" alt="<?= e(SITE_NAME) ?>" class="auth-logo-img">
             <p><?= e(SITE_TAGLINE) ?></p>
             <p style="font-size:1rem;font-weight:600;color:var(--green-mid);margin-top:.3rem"><?= e(SITE_AFFILIATION) ?></p>
         </div>

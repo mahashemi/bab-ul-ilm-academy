@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email    = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
 
-    $stmt = $pdo->prepare('SELECT id, name, email, password, role, is_approved, is_verified FROM users WHERE email = ?');
+    $stmt = $pdo->prepare('SELECT id, name, display_name, email, password, role, avatar, is_approved, is_verified FROM users WHERE email = ?');
     $stmt->execute([$email]);
     $u = $stmt->fetch();
 
@@ -23,7 +23,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!$u['is_verified']) {
         $unverifiedEmail = $email;
     } else {
-        $_SESSION['user'] = ['id' => $u['id'], 'name' => $u['name'], 'email' => $u['email'], 'role' => $u['role']];
+        $_SESSION['user'] = ['id' => $u['id'], 'name' => $u['name'], 'display_name' => $u['display_name'], 'email' => $u['email'], 'role' => $u['role'], 'avatar' => $u['avatar']];
+        logActivity($pdo, (int) $u['id'], 'Logged in');
         redirect('dashboard.php');
     }
 }
@@ -45,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="auth-wrap">
     <div class="auth-box">
         <div class="auth-logo">
-            <h2><i data-lucide="landmark" class="lucide-icon"></i> <?= e(SITE_NAME) ?></h2>
+            <img src="assets/lockup-green.svg" alt="<?= e(SITE_NAME) ?>" class="auth-logo-img">
             <p><?= e(SITE_TAGLINE) ?></p>
             <p style="font-size:1rem;font-weight:600;color:var(--green-mid);margin-top:.3rem"><?= e(SITE_AFFILIATION) ?></p>
         </div>
@@ -70,7 +71,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div class="form-group">
-                <label class="form-label">Password</label>
+                <div style="display:flex;justify-content:space-between;align-items:baseline">
+                    <label class="form-label">Password</label>
+                    <a href="forgot-password.php" style="font-size:.8rem">Forgot password?</a>
+                </div>
                 <input type="password" name="password" class="form-control" placeholder="Your password" required>
             </div>
 

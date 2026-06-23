@@ -7,35 +7,22 @@ $errors = [];
 $role = $_POST['role'] ?? 'student';
 if (!in_array($role, ['student', 'teacher', 'parent', 'institution'], true)) $role = 'student';
 
-$fieldsOfStudy = $pdo->query('SELECT * FROM fields_of_study ORDER BY name')->fetchAll();
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
 
     $name           = trim($_POST['name'] ?? '');
     $email          = trim($_POST['email'] ?? '');
     $password       = $_POST['password'] ?? '';
-    $passwordConfirm = $_POST['password_confirm'] ?? '';
-    $gender         = $_POST['gender'] ?? 'unspecified';
     $country        = trim($_POST['country'] ?? '');
     $dialCode       = trim($_POST['dial_code'] ?? '');
     $phoneDigits    = preg_replace('/\D/', '', $_POST['phone_number'] ?? '');
-    $preferredLang  = trim($_POST['preferred_language'] ?? '');
-    $dob            = trim($_POST['date_of_birth'] ?? '');
-    $educationLevel = trim($_POST['education_level'] ?? '');
     $qualification  = trim($_POST['qualification'] ?? '');
     $organization   = trim($_POST['organization_name'] ?? '');
-    $fieldIds       = array_filter(array_map('intval', $_POST['learning_field_ids'] ?? []));
-    $agreed         = isset($_POST['agree_terms']);
 
     if ($name === '' || mb_strlen($name) < 2) $errors[] = 'Please enter your full name.';
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Please enter a valid email address.';
-
     if (mb_strlen($password) < 8) $errors[] = 'Password must be at least 8 characters.';
-    elseif (!preg_match('/[A-Za-z]/', $password) || !preg_match('/[0-9]/', $password)) $errors[] = 'Password must contain both letters and numbers.';
-    if ($password !== $passwordConfirm) $errors[] = 'Passwords do not match.';
 
-    if (!in_array($gender, ['male', 'female', 'unspecified'], true)) $gender = 'unspecified';
     if ($country === '') $errors[] = 'Please select your country.';
     if ($phoneDigits !== '' || $dialCode !== '') {
         if (!preg_match('/^\+\d{1,4}$/', $dialCode)) $errors[] = 'Please select a valid country code.';
@@ -43,14 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $phone = $phoneDigits !== '' ? $dialCode . ' ' . $phoneDigits : '';
 
-    if ($dob !== '') {
-        $dobTime = strtotime($dob);
-        if (!$dobTime || $dobTime > time()) $errors[] = 'Please enter a valid date of birth.';
-    }
-
     if ($role === 'teacher' && mb_strlen($qualification) < 5) $errors[] = 'Please describe your teaching qualification (min 5 characters).';
     if ($role === 'institution' && mb_strlen($organization) < 2) $errors[] = 'Please enter your institution\'s name.';
-    if (!$agreed) $errors[] = 'Please confirm you agree to the community guidelines to continue.';
 
     if (!$errors) {
         $stmt = $pdo->prepare('SELECT id FROM users WHERE email = ?');
@@ -62,26 +43,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $hash = password_hash($password, PASSWORD_DEFAULT);
         $token = generateVerificationToken();
         $stmt = $pdo->prepare(
-            'INSERT INTO users (name, email, password, role, gender, country, phone, preferred_language, date_of_birth,
-                                 education_level, qualification, organization_name, verification_token, verification_expires)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 24 HOUR))'
+            'INSERT INTO users (name, email, password, role, country, phone, qualification, organization_name, verification_token, verification_expires)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 24 HOUR))'
         );
         $stmt->execute([
-            $name, $email, $hash, $role, $gender, $country, $phone,
-            $preferredLang ?: null, $dob ?: null,
-            in_array($role, ['student', 'parent'], true) ? ($educationLevel ?: null) : null,
+            $name, $email, $hash, $role, $country, $phone,
             $role === 'teacher' ? $qualification : null,
             $role === 'institution' ? $organization : null,
             $token,
         ]);
         $newUserId = (int) $pdo->lastInsertId();
-
-        if ($fieldIds) {
-            $values = implode(',', array_fill(0, count($fieldIds), '(?, ?)'));
-            $params = [];
-            foreach ($fieldIds as $fid) { $params[] = $newUserId; $params[] = $fid; }
-            $pdo->prepare("INSERT INTO user_learning_fields (user_id, field_of_study_id) VALUES $values")->execute($params);
-        }
 
         sendVerificationEmail($email, $name, $token);
         $devParam = DEV_SHOW_VERIFY_LINK ? '&token=' . $token : '';
@@ -107,7 +78,7 @@ $ROLES = [
 </head>
 <body>
 <div class="auth-wrap">
-    <div class="auth-box" style="max-width:640px">
+    <div class="auth-box" style="max-width:520px">
         <div class="auth-logo">
             <h2><i data-lucide="landmark" class="lucide-icon"></i> <?= e(SITE_NAME) ?></h2>
             <p><?= e(SITE_TAGLINE) ?></p>
@@ -135,7 +106,6 @@ $ROLES = [
                 <?php endforeach; ?>
             </div>
 
-            <h3 class="reg-section-title">Account Details</h3>
             <div class="form-group">
                 <label class="form-label">Full Name</label>
                 <input type="text" name="name" class="form-control" placeholder="e.g. Ahmad Hassan" value="<?= e($_POST['name'] ?? '') ?>" required>
@@ -145,57 +115,15 @@ $ROLES = [
                 <input type="email" name="email" class="form-control" placeholder="you@example.com" value="<?= e($_POST['email'] ?? '') ?>" required>
                 <div class="form-hint">We'll send a verification link here before your account is active.</div>
             </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Password</label>
-                    <div style="position:relative">
-                        <input type="password" name="password" id="pwInput" class="form-control" placeholder="At least 8 characters" oninput="checkStrength()" required>
-                        <button type="button" onclick="togglePw('pwInput',this)" class="pw-toggle" aria-label="Show password"><i data-lucide="eye" class="lucide-icon"></i></button>
-                    </div>
-                    <div class="pw-strength-track"><div class="pw-strength-fill" id="pwStrengthFill"></div></div>
-                    <div class="form-hint" id="pwStrengthLabel">Use 8+ characters with letters and numbers.</div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Confirm Password</label>
-                    <div style="position:relative">
-                        <input type="password" name="password_confirm" id="pwConfirm" class="form-control" placeholder="Re-enter password" required>
-                        <button type="button" onclick="togglePw('pwConfirm',this)" class="pw-toggle" aria-label="Show password"><i data-lucide="eye" class="lucide-icon"></i></button>
-                    </div>
-                </div>
-            </div>
 
-            <h3 class="reg-section-title">Profile Details</h3>
             <div class="form-group">
-                <label class="form-label">Gender</label>
-                <div class="gender-pill-row">
-                    <?php foreach (['male' => 'Male', 'female' => 'Female', 'unspecified' => 'Prefer not to say'] as $val => $label): ?>
-                    <label class="gender-pill">
-                        <input type="radio" name="gender" value="<?= $val ?>" <?= ($_POST['gender'] ?? 'unspecified') === $val ? 'checked' : '' ?>>
-                        <span><?= e($label) ?></span>
-                    </label>
+                <label class="form-label">Country</label>
+                <select name="country" id="countrySelect" class="form-control" onchange="updateDialCode()" required>
+                    <option value="">Select country</option>
+                    <?php foreach (['Pakistan','India','Bangladesh','Saudi Arabia','United Arab Emirates','Qatar','Kuwait','Bahrain','Oman','Turkey','Egypt','Indonesia','Malaysia','Afghanistan','Iran','Iraq','Jordan','Lebanon','Morocco','Tunisia','Algeria','Nigeria','South Africa','Sri Lanka','United Kingdom','United States','Canada','Australia','Germany','France','Other'] as $c): ?>
+                        <option value="<?= e($c) ?>" <?= ($_POST['country'] ?? '') === $c ? 'selected' : '' ?>><?= e($c) ?></option>
                     <?php endforeach; ?>
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Country</label>
-                    <select name="country" id="countrySelect" class="form-control" onchange="updateDialCode()" required>
-                        <option value="">Select country</option>
-                        <?php foreach (['Pakistan','India','Bangladesh','Saudi Arabia','United Arab Emirates','Qatar','Kuwait','Bahrain','Oman','Turkey','Egypt','Indonesia','Malaysia','Afghanistan','Iran','Iraq','Jordan','Lebanon','Morocco','Tunisia','Algeria','Nigeria','South Africa','Sri Lanka','United Kingdom','United States','Canada','Australia','Germany','France','Other'] as $c): ?>
-                            <option value="<?= e($c) ?>" <?= ($_POST['country'] ?? '') === $c ? 'selected' : '' ?>><?= e($c) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Preferred Language</label>
-                    <select name="preferred_language" class="form-control">
-                        <option value="">Select language</option>
-                        <?php foreach (['English','Arabic','Urdu','Persian/Farsi','Turkish','Indonesian/Malay','French','Other'] as $l): ?>
-                            <option value="<?= e($l) ?>" <?= ($_POST['preferred_language'] ?? '') === $l ? 'selected' : '' ?>><?= e($l) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
+                </select>
             </div>
 
             <div class="form-group">
@@ -205,23 +133,6 @@ $ROLES = [
                     <input type="text" name="phone_number" class="form-control" placeholder="3001234567" maxlength="10" inputmode="numeric" oninput="cleanPhoneInput(this)" value="<?= e($_POST['phone_number'] ?? '') ?>">
                 </div>
                 <div class="form-hint">Select your country above to auto-fill the code, then enter your 10-digit number without the leading 0.</div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Date of Birth (optional)</label>
-                <input type="date" name="date_of_birth" class="form-control" max="<?= date('Y-m-d') ?>" value="<?= e($_POST['date_of_birth'] ?? '') ?>">
-            </div>
-
-            <div id="studentParentFields" style="display:<?= in_array($role, ['student','parent'], true) ? 'block' : 'none' ?>">
-                <div class="form-group">
-                    <label class="form-label">Education Level</label>
-                    <select name="education_level" class="form-control">
-                        <option value="">Select level</option>
-                        <?php foreach (['Primary School','Secondary / High School','Undergraduate','Graduate','Postgraduate','Other'] as $lvl): ?>
-                            <option value="<?= e($lvl) ?>" <?= ($_POST['education_level'] ?? '') === $lvl ? 'selected' : '' ?>><?= e($lvl) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
             </div>
 
             <div id="teacherFields" style="display:<?= $role === 'teacher' ? 'block' : 'none' ?>">
@@ -238,23 +149,13 @@ $ROLES = [
                 </div>
             </div>
 
-            <h3 class="reg-section-title">Learning Interests <span style="font-weight:400;font-size:.78rem;color:var(--text-light)">(optional — helps us recommend courses)</span></h3>
             <div class="form-group">
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.6rem">
-                    <?php foreach ($fieldsOfStudy as $f): ?>
-                    <label class="card" style="cursor:pointer;text-align:center;padding:.9rem .5rem;margin:0">
-                        <input type="checkbox" name="learning_field_ids[]" value="<?= (int) $f['id'] ?>" style="width:auto;margin-bottom:.4rem">
-                        <div style="font-size:1.3rem;color:var(--green-deep)"><?= catIcon($f['icon']) ?></div>
-                        <div style="font-weight:600;font-size:.8rem;margin-top:.25rem"><?= e($f['name']) ?></div>
-                    </label>
-                    <?php endforeach; ?>
+                <label class="form-label">Password</label>
+                <div style="position:relative">
+                    <input type="password" name="password" id="pwInput" class="form-control" placeholder="At least 8 characters" required>
+                    <button type="button" onclick="togglePw('pwInput',this)" class="pw-toggle" aria-label="Show password"><i data-lucide="eye" class="lucide-icon"></i></button>
                 </div>
             </div>
-
-            <label style="display:flex;align-items:flex-start;gap:.6rem;cursor:pointer;margin:1.2rem 0;font-size:.85rem;color:var(--text-mid)">
-                <input type="checkbox" name="agree_terms" value="1" style="width:auto;margin-top:.2rem" required>
-                <span>I confirm the information above is accurate and I agree to <?= e(SITE_NAME) ?>'s community guidelines.</span>
-            </label>
 
             <button type="submit" class="btn btn-primary btn-full">Create My Account</button>
         </form>
@@ -272,7 +173,6 @@ function setRole(r) {
     });
     document.getElementById('teacherFields').style.display = (r === 'teacher') ? 'block' : 'none';
     document.getElementById('institutionFields').style.display = (r === 'institution') ? 'block' : 'none';
-    document.getElementById('studentParentFields').style.display = (r === 'student' || r === 'parent') ? 'block' : 'none';
 }
 const COUNTRIES = [
     {name:"Pakistan", dial:"+92"}, {name:"India", dial:"+91"}, {name:"Bangladesh", dial:"+880"},
@@ -301,29 +201,6 @@ function togglePw(id, btn) {
     input.type = showing ? 'password' : 'text';
     btn.innerHTML = '<i data-lucide="' + (showing ? 'eye' : 'eye-off') + '" class="lucide-icon"></i>';
     if (window.lucide) lucide.createIcons();
-}
-function checkStrength() {
-    const val = document.getElementById('pwInput').value;
-    const fill = document.getElementById('pwStrengthFill');
-    const label = document.getElementById('pwStrengthLabel');
-    let score = 0;
-    if (val.length >= 8) score++;
-    if (val.length >= 12) score++;
-    if (/[A-Z]/.test(val) && /[a-z]/.test(val)) score++;
-    if (/[0-9]/.test(val)) score++;
-    if (/[^A-Za-z0-9]/.test(val)) score++;
-    const levels = [
-        {w:'0%', c:'#ccc', t:'Use 8+ characters with letters and numbers.'},
-        {w:'20%', c:'#e53935', t:'Very weak'},
-        {w:'40%', c:'#fb8c00', t:'Weak'},
-        {w:'60%', c:'#fdd835', t:'Fair'},
-        {w:'80%', c:'#7cb342', t:'Strong'},
-        {w:'100%', c:'#2e7d32', t:'Very strong'},
-    ];
-    const lv = val.length === 0 ? levels[0] : levels[Math.min(score, 5)];
-    fill.style.width = lv.w;
-    fill.style.background = lv.c;
-    label.textContent = lv.t;
 }
 </script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>

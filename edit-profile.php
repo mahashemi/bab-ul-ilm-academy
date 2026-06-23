@@ -35,6 +35,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $currentPass   = $_POST['current_password'] ?? '';
     $newPass       = $_POST['new_password'] ?? '';
     $skillsCsv     = trim($_POST['skills_csv'] ?? '');
+    $gender        = $_POST['gender'] ?? $me['gender'] ?? 'unspecified';
+    $dob           = trim($_POST['date_of_birth'] ?? '');
+    $preferredLang = trim($_POST['preferred_language'] ?? '');
+    $educationLevel = trim($_POST['education_level'] ?? '');
 
     if ($name === '' || mb_strlen($name) < 2) $errors[] = 'Please enter your full name.';
     if ($country === '') $errors[] = 'Please select your country.';
@@ -43,6 +47,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!preg_match('/^\d{10}$/', $phoneDigits)) $errors[] = 'Phone number must be exactly 10 digits (without the leading 0 or country code).';
     }
     $phone = $phoneDigits !== '' ? $dialCodeIn . ' ' . $phoneDigits : '';
+
+    if (!in_array($gender, ['male', 'female', 'unspecified'], true)) $gender = 'unspecified';
+    if ($dob !== '') {
+        $dobTime = strtotime($dob);
+        if (!$dobTime || $dobTime > time()) $errors[] = 'Please enter a valid date of birth.';
+    }
 
     if ($me['role'] === 'teacher' && mb_strlen($qualification) < 5) $errors[] = 'Please describe your teaching qualification (min 5 characters).';
 
@@ -54,13 +64,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$errors) {
         $qualToSave = $me['role'] === 'teacher' ? $qualification : $me['qualification'];
         $headlineToSave = $me['role'] === 'teacher' ? ($headline ?: null) : $me['headline'];
+        $educationToSave = in_array($me['role'], ['student', 'parent'], true) ? ($educationLevel ?: null) : $me['education_level'];
         if ($newPass !== '') {
             $hash = password_hash($newPass, PASSWORD_DEFAULT);
-            $pdo->prepare('UPDATE users SET name=?, country=?, bio=?, phone=?, qualification=?, headline=?, password=? WHERE id=?')
-                ->execute([$name, $country, $bio, $phone, $qualToSave, $headlineToSave, $hash, $user['id']]);
+            $pdo->prepare('UPDATE users SET name=?, country=?, bio=?, phone=?, qualification=?, headline=?, gender=?, date_of_birth=?, preferred_language=?, education_level=?, password=? WHERE id=?')
+                ->execute([$name, $country, $bio, $phone, $qualToSave, $headlineToSave, $gender, $dob ?: null, $preferredLang ?: null, $educationToSave, $hash, $user['id']]);
         } else {
-            $pdo->prepare('UPDATE users SET name=?, country=?, bio=?, phone=?, qualification=?, headline=? WHERE id=?')
-                ->execute([$name, $country, $bio, $phone, $qualToSave, $headlineToSave, $user['id']]);
+            $pdo->prepare('UPDATE users SET name=?, country=?, bio=?, phone=?, qualification=?, headline=?, gender=?, date_of_birth=?, preferred_language=?, education_level=? WHERE id=?')
+                ->execute([$name, $country, $bio, $phone, $qualToSave, $headlineToSave, $gender, $dob ?: null, $preferredLang ?: null, $educationToSave, $user['id']]);
         }
 
         // Sync skills: reuse existing skill rows by name, create any new ones,
@@ -86,6 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['user']['name'] = $name;
         $success = true;
         $me['name'] = $name; $me['country'] = $country; $me['bio'] = $bio; $me['qualification'] = $qualToSave; $me['headline'] = $headlineToSave;
+        $me['gender'] = $gender; $me['date_of_birth'] = $dob; $me['preferred_language'] = $preferredLang; $me['education_level'] = $educationToSave;
         $dialCode = $dialCodeIn; $phoneNumber = $phoneDigits;
     }
 }
@@ -245,6 +257,51 @@ document.addEventListener('DOMContentLoaded', function () {
                 <label class="form-label">Bio</label>
                 <textarea name="bio" class="form-control" placeholder="A little about yourself..."><?= e($me['bio'] ?? '') ?></textarea>
             </div>
+
+            <hr style="border:none;border-top:1px solid var(--border);margin:1.2rem 0">
+            <h3 style="font-size:1rem;margin-bottom:.8rem">More About You <span style="font-weight:400;font-size:.78rem;color:var(--text-light)">(optional)</span></h3>
+
+            <div class="form-group">
+                <label class="form-label">Gender</label>
+                <div class="gender-pill-row">
+                    <?php foreach (['male' => 'Male', 'female' => 'Female', 'unspecified' => 'Prefer not to say'] as $val => $label): ?>
+                    <label class="gender-pill">
+                        <input type="radio" name="gender" value="<?= $val ?>" <?= ($me['gender'] ?? 'unspecified') === $val ? 'checked' : '' ?>>
+                        <span><?= e($label) ?></span>
+                    </label>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Date of Birth</label>
+                    <input type="date" name="date_of_birth" class="form-control" max="<?= date('Y-m-d') ?>" value="<?= e($me['date_of_birth'] ?? '') ?>">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Preferred Language</label>
+                    <select name="preferred_language" class="form-control">
+                        <option value="">Select language</option>
+                        <?php foreach (['English','Arabic','Urdu','Persian/Farsi','Turkish','Indonesian/Malay','French','Other'] as $l): ?>
+                            <option value="<?= e($l) ?>" <?= ($me['preferred_language'] ?? '') === $l ? 'selected' : '' ?>><?= e($l) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+
+            <?php if (in_array($me['role'], ['student', 'parent'], true)): ?>
+            <div class="form-group">
+                <label class="form-label">Education Level</label>
+                <select name="education_level" class="form-control">
+                    <option value="">Select level</option>
+                    <?php foreach (['Primary School','Secondary / High School','Undergraduate','Graduate','Postgraduate','Other'] as $lvl): ?>
+                        <option value="<?= e($lvl) ?>" <?= ($me['education_level'] ?? '') === $lvl ? 'selected' : '' ?>><?= e($lvl) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <?php endif; ?>
+
+            <p style="font-size:.85rem"><a href="personalize.php"><i data-lucide="sparkles" class="lucide-icon"></i> Set your learning interests</a> — helps us recommend courses for you.</p>
 
             <?php if ($me['role'] === 'teacher'): ?>
             <div class="form-group">

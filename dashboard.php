@@ -17,6 +17,15 @@ $myFields = $myFieldsStmt->fetchAll();
 $myFieldIds = array_column($myFields, 'id');
 $myFieldNames = array_column($myFields, 'name');
 
+$profileCompletion = profileCompletionPercent($pdo, $me);
+$myPoints = getUserPoints($pdo, $user['id']);
+$myBadges = $pdo->prepare(
+    'SELECT b.code, b.name, b.description, b.icon, ub.earned_at FROM user_badges ub
+     JOIN badges b ON b.id = ub.badge_id WHERE ub.user_id = ? ORDER BY ub.earned_at DESC'
+);
+$myBadges->execute([$user['id']]);
+$myBadges = $myBadges->fetchAll();
+
 $recommended = [];
 if (($user['role'] ?? '') !== 'teacher' && $myFieldIds) {
     $placeholders = implode(',', array_fill(0, count($myFieldIds), '?'));
@@ -98,6 +107,36 @@ $dashBg = siteSetting($pdo, 'dashboard_banner_bg');
         <p><?= ($user['role'] ?? '') === 'teacher' ? 'Manage your courses and track your students.' : 'Continue your learning journey.' ?></p>
         <span class="dashboard-role"><?= e(ucfirst(($user['role'] ?? ''))) ?></span>
     </div>
+
+    <?php if ($profileCompletion < 100): ?>
+    <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:.6rem;margin-bottom:.5rem;flex-wrap:wrap">
+            <strong style="font-size:.92rem"><i data-lucide="user-check" class="lucide-icon"></i> Your profile is <?= $profileCompletion ?>% complete</strong>
+            <a href="edit-profile.php" class="btn btn-outline btn-sm">Complete Your Profile</a>
+        </div>
+        <div class="profile-progress-track"><div class="profile-progress-fill" style="width:<?= $profileCompletion ?>%"></div></div>
+        <p style="font-size:.8rem;color:var(--text-light);margin-top:.5rem">A complete profile helps us recommend better courses and helps teachers/classmates know who you are.</p>
+    </div></div>
+    <?php endif; ?>
+
+    <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.6rem;margin-bottom:<?= $myBadges ? '1rem' : '0' ?>">
+            <strong style="font-size:.92rem"><i data-lucide="zap" class="lucide-icon"></i> <?= number_format($myPoints) ?> Points</strong>
+            <span style="font-size:.78rem;color:var(--text-light)"><?= count($myBadges) ?> badge<?= count($myBadges) === 1 ? '' : 's' ?> earned</span>
+        </div>
+        <?php if ($myBadges): ?>
+        <div style="display:flex;flex-wrap:wrap;gap:.8rem">
+            <?php foreach ($myBadges as $b): ?>
+            <div style="text-align:center;width:90px" data-tip="<?= e($b['description']) ?>">
+                <div style="width:52px;height:52px;border-radius:50%;background:var(--cream);border:1.5px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:var(--green-deep);margin:0 auto .4rem"><?= catIcon($b['icon']) ?></div>
+                <div style="font-size:.72rem;font-weight:600;line-height:1.25"><?= e($b['name']) ?></div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php else: ?>
+            <p style="font-size:.85rem;color:var(--text-light)">No badges yet — enroll in a course, complete lessons, or join a class discussion to start earning points and badges.</p>
+        <?php endif; ?>
+    </div></div>
 
     <?php if (flash('success')): ?><div class="alert alert-success"><?= e(flash('success')) ?></div><?php endif; ?>
 

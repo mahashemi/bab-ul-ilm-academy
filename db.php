@@ -90,6 +90,36 @@ function canEnroll(?string $role): bool {
     return in_array($role, ['student', 'parent', 'institution'], true);
 }
 
+// Registration only collects the minimum (name/email/country/password) — everything
+// else is filled in later from Edit Profile. This scores how much of that optional
+// detail is filled in, so the dashboard can nudge users to complete it.
+function profileCompletionPercent(PDO $pdo, array $me): int {
+    $checks = [
+        !empty($me['bio']),
+        !empty($me['phone']),
+        ($me['gender'] ?? 'unspecified') !== 'unspecified',
+        !empty($me['date_of_birth']),
+        !empty($me['preferred_language']),
+    ];
+    if (in_array($me['role'], ['student', 'parent'], true)) {
+        $checks[] = !empty($me['education_level']);
+    }
+    if ($me['role'] === 'teacher') {
+        $checks[] = !empty($me['headline']);
+    }
+
+    $fieldCount = $pdo->prepare('SELECT COUNT(*) FROM user_learning_fields WHERE user_id = ?');
+    $fieldCount->execute([$me['id']]);
+    $checks[] = (int) $fieldCount->fetchColumn() > 0;
+
+    $skillCount = $pdo->prepare('SELECT COUNT(*) FROM user_skills WHERE user_id = ?');
+    $skillCount->execute([$me['id']]);
+    $checks[] = (int) $skillCount->fetchColumn() > 0;
+
+    $done = count(array_filter($checks));
+    return $checks ? (int) round($done / count($checks) * 100) : 100;
+}
+
 // ── Class Chat Moderation ───────────────────────────────────────────────
 // Rule-based heuristics (keyword/pattern matching + recent-message lookback)
 // — NOT a live AI/LLM call. Deliberately simple, fast, and explainable: every
@@ -163,6 +193,101 @@ function chatTime(string $dt): string {
     $ts = strtotime($dt);
     $today = date('Y-m-d', $ts) === date('Y-m-d');
     return $today ? date('g:i A', $ts) : date('M j, g:i A', $ts);
+}
+
+// ── Gamification: points & badges ───────────────────────────────────────
+// Points map only to real platform actions (enroll, complete a lesson, post
+// a clean class-chat message, leave/receive a review, get a course approved)
+// — no fabricated quiz/assignment features that don't exist yet. Every award
+// is logged in point_log for an auditable history, and awarding points always
+// re-checks badge eligibility since several badges are point-threshold based.
+function awardPoints(PDO $pdo, int $userId, int $points, string $reason): void {
+    $pdo->prepare('INSERT INTO user_points (user_id, points) VALUES (?, ?) ON DUPLICATE KEY UPDATE points = points + ?')
+        ->execute([$userId, $points, $points]);
+    $pdo->prepare('INSERT INTO point_log (user_id, points, reason) VALUES (?, ?, ?)')
+        ->execute([$userId, $points, $reason]);
+    checkAndAwardBadges($pdo, $userId);
+}
+
+function getUserPoints(PDO $pdo, int $userId): int {
+    $stmt = $pdo->prepare('SELECT points FROM user_points WHERE user_id = ?');
+    $stmt->execute([$userId]);
+    return (int) ($stmt->fetchColumn() ?: 0);
+}
+
+function awardBadge(PDO $pdo, int $userId, string $code): bool {
+    $badge = $pdo->prepare('SELECT id FROM badges WHERE code = ?');
+    $badge->execute([$code]);
+    $badgeId = $badge->fetchColumn();
+    if (!$badgeId) return false;
+    $stmt = $pdo->prepare('INSERT IGNORE INTO user_badges (user_id, badge_id) VALUES (?, ?)');
+    $stmt->execute([$userId, $badgeId]);
+    return $stmt->rowCount() > 0;
+}
+
+// Re-evaluates every badge condition for a user. Idempotent — awardBadge()
+// uses INSERT IGNORE — so it's safe to call after any point-earning action.
+function checkAndAwardBadges(PDO $pdo, int $userId): void {
+    $userStmt = $pdo->prepare('SELECT role FROM users WHERE id = ?');
+    $userStmt->execute([$userId]);
+    $role = $userStmt->fetchColumn();
+
+    $points = getUserPoints($pdo, $userId);
+    if ($points >= 100) awardBadge($pdo, $userId, 'bronze_learner');
+    if ($points >= 500) awardBadge($pdo, $userId, 'silver_learner');
+    if ($points >= 1000) awardBadge($pdo, $userId, 'gold_learner');
+
+    $enrollStmt = $pdo->prepare('SELECT COUNT(*) FROM enrollments WHERE student_id = ?');
+    $enrollStmt->execute([$userId]);
+    if ((int) $enrollStmt->fetchColumn() >= 1) awardBadge($pdo, $userId, 'first_enrollment');
+
+    $completedStmt = $pdo->prepare(
+        "SELECT COUNT(*) FROM (
+            SELECT e.course_id
+            FROM enrollments e
+            JOIN lessons l ON l.course_id = e.course_id
+            LEFT JOIN lesson_progress lp ON lp.lesson_id = l.id AND lp.student_id = e.student_id
+            WHERE e.student_id = ?
+            GROUP BY e.course_id
+            HAVING COUNT(l.id) > 0 AND COUNT(l.id) = COUNT(lp.lesson_id)
+        ) completed"
+    );
+    $completedStmt->execute([$userId]);
+    $completedCount = (int) $completedStmt->fetchColumn();
+    if ($completedCount >= 1) awardBadge($pdo, $userId, 'first_completion');
+    if ($completedCount >= 5) awardBadge($pdo, $userId, 'five_completions');
+
+    $skillStmt = $pdo->prepare('SELECT COUNT(*) FROM user_skills WHERE user_id = ?');
+    $skillStmt->execute([$userId]);
+    if ((int) $skillStmt->fetchColumn() >= 5) awardBadge($pdo, $userId, 'skilled');
+
+    $chatStmt = $pdo->prepare(
+        'SELECT COUNT(*) FROM class_messages cm
+         WHERE cm.sender_id = ? AND cm.is_deleted = 0
+         AND NOT EXISTS (SELECT 1 FROM message_flags mf WHERE mf.message_id = cm.id)'
+    );
+    $chatStmt->execute([$userId]);
+    if ((int) $chatStmt->fetchColumn() >= 10) awardBadge($pdo, $userId, 'chatty');
+
+    if ($role === 'teacher') {
+        $publishedStmt = $pdo->prepare("SELECT COUNT(*) FROM courses WHERE teacher_id = ? AND moderation_status = 'approved'");
+        $publishedStmt->execute([$userId]);
+        if ((int) $publishedStmt->fetchColumn() >= 1) awardBadge($pdo, $userId, 'published_teacher');
+
+        $studentStmt = $pdo->prepare('SELECT COUNT(*) FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.teacher_id = ?');
+        $studentStmt->execute([$userId]);
+        if ((int) $studentStmt->fetchColumn() >= 50) awardBadge($pdo, $userId, 'popular_teacher');
+
+        $ratingStmt = $pdo->prepare(
+            'SELECT AVG(r.rating) avg_rating, COUNT(*) review_count
+             FROM course_reviews r JOIN courses c ON c.id = r.course_id WHERE c.teacher_id = ?'
+        );
+        $ratingStmt->execute([$userId]);
+        $ratingRow = $ratingStmt->fetch();
+        if ($ratingRow && (float) $ratingRow['avg_rating'] >= 4.5 && (int) $ratingRow['review_count'] >= 5) {
+            awardBadge($pdo, $userId, 'top_rated');
+        }
+    }
 }
 
 function redirect(string $url): void {

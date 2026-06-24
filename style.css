@@ -354,6 +354,7 @@ img { max-width: 100%; height: auto; display: block; }
    number of subjects from overwhelming the page vertically, especially
    on mobile. Chips use M3's "small" 8px shape (not a pill) so they read as
    filters, distinct from pill-shaped call-to-action buttons. */
+.filter-bar { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; margin-bottom: 1.5rem; }
 .chip-row {
     display: flex; gap: .6rem; flex-wrap: nowrap;
     overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;

@@ -174,6 +174,24 @@ $courses = $pdo->query(
      ORDER BY c.created_at DESC"
 )->fetchAll();
 $pendingCourses = array_values(array_filter($courses, fn($c) => $c['moderation_status'] === 'pending'));
+
+// Filters for the Courses tab only -- applied in-memory rather than a
+// separate SQL query, since $courses is already fully loaded for the
+// Pending tab/tab-count-badges and admin course lists are small enough
+// that this is simpler than threading filter params through the query.
+$courseLevelFilter  = $_GET['course_level'] ?? '';
+$courseStatusFilter = $_GET['course_status'] ?? '';
+$courseLessonFilter = $_GET['course_lessons'] ?? '';
+$coursePriceFilter  = $_GET['course_price'] ?? '';
+$filteredCourses = array_values(array_filter($courses, function ($c) use ($courseLevelFilter, $courseStatusFilter, $courseLessonFilter, $coursePriceFilter) {
+    if ($courseLevelFilter !== '' && $c['level'] !== $courseLevelFilter) return false;
+    if ($courseStatusFilter !== '' && $c['moderation_status'] !== $courseStatusFilter) return false;
+    if ($courseLessonFilter === 'none' && (int) $c['lesson_count'] > 0) return false;
+    if ($courseLessonFilter === 'has' && (int) $c['lesson_count'] === 0) return false;
+    if ($coursePriceFilter === 'free' && (float) $c['price'] > 0) return false;
+    if ($coursePriceFilter === 'paid' && (float) $c['price'] == 0) return false;
+    return true;
+}));
 $fieldsOfStudy = $pdo->query('SELECT * FROM fields_of_study ORDER BY name')->fetchAll();
 $subjects = $pdo->query(
     'SELECT s.*, f.name AS field_name FROM subjects s LEFT JOIN fields_of_study f ON f.id = s.field_of_study_id ORDER BY f.name, s.name'
@@ -258,12 +276,14 @@ $flaggedMessages = $pdo->query(
     </div>
 </nav>
 
-<div class="dashboard-wrap" style="max-width:1100px">
-    <div class="dashboard-header">
-        <h2><i data-lucide="wrench" class="lucide-icon"></i> Admin Panel</h2>
-        <p>Manage teachers, students, and courses.</p>
+<section class="course-hero-band">
+    <div class="course-hero-inner">
+        <h1 class="course-hero-title" style="font-size:1.6rem;margin-bottom:.3rem"><i data-lucide="wrench" class="lucide-icon"></i> Admin Panel</h1>
+        <p class="course-hero-meta" style="font-size:.95rem">Manage teachers, students, and courses.</p>
     </div>
+</section>
 
+<div class="dashboard-wrap" style="max-width:1100px">
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-bottom:1.5rem">
         <div style="background:var(--white);border-radius:var(--radius-sm);padding:1.2rem;box-shadow:var(--shadow);border:1.5px solid var(--border);text-align:center">
             <div style="font-size:1.8rem;font-weight:800;color:var(--green-deep)"><?= (int) $stats['teachers'] ?></div>
@@ -321,13 +341,41 @@ $flaggedMessages = $pdo->query(
         </div>
         <?php endif; ?>
     <?php elseif ($tab === 'courses'): ?>
-        <div style="display:flex;justify-content:flex-end;margin-bottom:1rem">
-            <a href="?export=courses" class="btn btn-outline btn-sm"><i data-lucide="download" class="lucide-icon"></i> Download CSV</a>
-        </div>
+        <form method="get" class="filter-bar">
+            <input type="hidden" name="tab" value="courses">
+            <select name="course_level" class="form-control" style="flex:1;min-width:130px" onchange="this.form.submit()">
+                <option value="">All Levels</option>
+                <?php foreach (['beginner' => 'Beginner', 'intermediate' => 'Intermediate', 'advanced' => 'Advanced'] as $val => $label): ?>
+                    <option value="<?= $val ?>" <?= $courseLevelFilter === $val ? 'selected' : '' ?>><?= $label ?></option>
+                <?php endforeach; ?>
+            </select>
+            <select name="course_status" class="form-control" style="flex:1;min-width:130px" onchange="this.form.submit()">
+                <option value="">All Statuses</option>
+                <?php foreach (['pending' => 'Pending', 'approved' => 'Approved', 'rejected' => 'Rejected'] as $val => $label): ?>
+                    <option value="<?= $val ?>" <?= $courseStatusFilter === $val ? 'selected' : '' ?>><?= $label ?></option>
+                <?php endforeach; ?>
+            </select>
+            <select name="course_lessons" class="form-control" style="flex:1;min-width:140px" onchange="this.form.submit()">
+                <option value="">Any Lesson Count</option>
+                <option value="none" <?= $courseLessonFilter === 'none' ? 'selected' : '' ?>>No Lessons</option>
+                <option value="has" <?= $courseLessonFilter === 'has' ? 'selected' : '' ?>>Has Lessons</option>
+            </select>
+            <select name="course_price" class="form-control" style="flex:1;min-width:110px" onchange="this.form.submit()">
+                <option value="">Any Price</option>
+                <option value="free" <?= $coursePriceFilter === 'free' ? 'selected' : '' ?>>Free</option>
+                <option value="paid" <?= $coursePriceFilter === 'paid' ? 'selected' : '' ?>>Paid</option>
+            </select>
+            <noscript><button type="submit" class="btn btn-primary btn-sm">Apply</button></noscript>
+            <?php if ($courseLevelFilter || $courseStatusFilter || $courseLessonFilter || $coursePriceFilter): ?>
+                <a href="?tab=courses" class="btn btn-outline btn-sm">Clear</a>
+            <?php endif; ?>
+            <a href="?export=courses" class="btn btn-outline btn-sm" style="margin-left:auto"><i data-lucide="download" class="lucide-icon"></i> Download CSV</a>
+        </form>
+        <p class="section-sub"><?= count($filteredCourses) ?> of <?= count($courses) ?> course(s) shown</p>
         <table class="table">
             <thead><tr><th>Title</th><th>Teacher</th><th>Subject</th><th>Level</th><th>Price</th><th>Lessons</th><th>Students</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
-                <?php foreach ($courses as $c): ?>
+                <?php foreach ($filteredCourses as $c): ?>
                 <tr>
                     <td><a href="course.php?id=<?= (int) $c['id'] ?>" target="_blank"><?= e($c['title']) ?></a></td>
                     <td><?= e($c['teacher_name']) ?></td>

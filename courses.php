@@ -5,6 +5,17 @@ $user = auth();
 $subjectId = (int) ($_GET['subject'] ?? 0);
 $fieldId   = (int) ($_GET['field'] ?? 0);
 $q = trim($_GET['q'] ?? '');
+$level     = $_GET['level'] ?? '';
+$language  = trim($_GET['language'] ?? '');
+$price     = $_GET['price'] ?? '';
+$sort      = $_GET['sort'] ?? 'newest';
+
+if (!in_array($level, ['beginner', 'intermediate', 'advanced'], true)) $level = '';
+if (!in_array($price, ['free', 'paid'], true)) $price = '';
+
+$availableLanguages = $pdo->query(
+    "SELECT DISTINCT language FROM courses WHERE is_published = 1 AND moderation_status = 'approved' AND language != '' ORDER BY language"
+)->fetchAll(PDO::FETCH_COLUMN);
 
 $courseSelect = "c.*, COALESCE(u.display_name, u.name) AS teacher_name, s.name AS subject_name, s.icon AS subject_icon,
             (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) AS student_count,
@@ -21,8 +32,18 @@ $sql = "SELECT $courseSelect
 $params = [];
 if ($subjectId > 0) { $sql .= ' AND c.subject_id = ?'; $params[] = $subjectId; }
 elseif ($fieldId > 0) { $sql .= ' AND s.field_of_study_id = ?'; $params[] = $fieldId; }
-if ($q !== '') { $sql .= ' AND (c.title LIKE ? OR c.description LIKE ? OR u.name LIKE ? OR s.name LIKE ?)'; array_push($params, "%$q%", "%$q%", "%$q%", "%$q%"); }
-$sql .= ' ORDER BY c.created_at DESC';
+if ($q !== '') { $sql .= ' AND (c.title LIKE ? OR c.description LIKE ? OR u.name LIKE ? OR u.display_name LIKE ? OR s.name LIKE ?)'; array_push($params, "%$q%", "%$q%", "%$q%", "%$q%", "%$q%"); }
+if ($level !== '') { $sql .= ' AND c.level = ?'; $params[] = $level; }
+if ($language !== '') { $sql .= ' AND c.language = ?'; $params[] = $language; }
+if ($price === 'free') { $sql .= ' AND c.price = 0'; }
+elseif ($price === 'paid') { $sql .= ' AND c.price > 0'; }
+
+switch ($sort) {
+    case 'price_low': $sql .= ' ORDER BY c.price ASC'; break;
+    case 'price_high': $sql .= ' ORDER BY c.price DESC'; break;
+    case 'rating': $sql .= ' ORDER BY avg_rating DESC'; break;
+    default: $sql .= ' ORDER BY c.created_at DESC';
+}
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $courses = $stmt->fetchAll();
@@ -99,9 +120,37 @@ $bestsellerIds = array_column(array_filter(array_slice($rankedByStudents, 0, 3),
 <div class="container section">
     <h2 class="section-title">All <span>Courses</span></h2>
 
-    <form method="get" style="display:flex;gap:.6rem;margin-bottom:1.5rem;max-width:500px">
-        <input type="text" name="q" class="form-control" placeholder="Search by course, teacher, or subject..." value="<?= e($q) ?>">
-        <button type="submit" class="btn btn-primary">Search</button>
+    <form method="get" class="filter-bar">
+        <?php if ($subjectId): ?><input type="hidden" name="subject" value="<?= $subjectId ?>"><?php endif; ?>
+        <?php if ($fieldId): ?><input type="hidden" name="field" value="<?= $fieldId ?>"><?php endif; ?>
+        <input type="text" name="q" class="form-control" placeholder="Search by course, teacher, or subject..." value="<?= e($q) ?>" style="flex:2;min-width:200px">
+        <select name="level" class="form-control" style="flex:1;min-width:130px">
+            <option value="">All Levels</option>
+            <?php foreach (['beginner' => 'Beginner', 'intermediate' => 'Intermediate', 'advanced' => 'Advanced'] as $val => $label): ?>
+                <option value="<?= $val ?>" <?= $level === $val ? 'selected' : '' ?>><?= $label ?></option>
+            <?php endforeach; ?>
+        </select>
+        <select name="language" class="form-control" style="flex:1;min-width:130px">
+            <option value="">All Languages</option>
+            <?php foreach ($availableLanguages as $lang): ?>
+                <option value="<?= e($lang) ?>" <?= $language === $lang ? 'selected' : '' ?>><?= e($lang) ?></option>
+            <?php endforeach; ?>
+        </select>
+        <select name="price" class="form-control" style="flex:1;min-width:110px">
+            <option value="">Any Price</option>
+            <option value="free" <?= $price === 'free' ? 'selected' : '' ?>>Free</option>
+            <option value="paid" <?= $price === 'paid' ? 'selected' : '' ?>>Paid</option>
+        </select>
+        <select name="sort" class="form-control" style="flex:1;min-width:130px">
+            <option value="newest" <?= $sort === 'newest' ? 'selected' : '' ?>>Newest</option>
+            <option value="rating" <?= $sort === 'rating' ? 'selected' : '' ?>>Highest Rated</option>
+            <option value="price_low" <?= $sort === 'price_low' ? 'selected' : '' ?>>Price: Low to High</option>
+            <option value="price_high" <?= $sort === 'price_high' ? 'selected' : '' ?>>Price: High to Low</option>
+        </select>
+        <button type="submit" class="btn btn-primary">Apply Filters</button>
+        <?php if ($q || $level || $language || $price || $sort !== 'newest'): ?>
+            <a href="?<?= $subjectId ? 'subject=' . $subjectId : ($fieldId ? 'field=' . $fieldId : '') ?>" class="btn btn-outline">Clear</a>
+        <?php endif; ?>
     </form>
 
     <p class="section-sub"><?= count($courses) ?> course(s) found</p>

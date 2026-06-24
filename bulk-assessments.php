@@ -1,11 +1,11 @@
 <?php
 require_once __DIR__ . '/db.php';
-requireRole('teacher');
+$teacherId = requireTeacherOrSupport();
 $user = auth();
 
 $courseId = (int) ($_GET['course_id'] ?? $_POST['course_id'] ?? 0);
 $stmt = $pdo->prepare('SELECT * FROM courses WHERE id = ? AND teacher_id = ?');
-$stmt->execute([$courseId, $user['id']]);
+$stmt->execute([$courseId, $teacherId]);
 $course = $stmt->fetch();
 
 if (!$course) {
@@ -110,6 +110,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $lessonCount > 0) {
 
         $quizResult = ['quizzes' => $quizzesCreated, 'questions' => $questionsCreated, 'errors' => $rowErrors, 'header' => $parsed['header'], 'rows' => $parsed['rows'], 'raw' => $parsed['raw']];
         if ($quizzesCreated > 0 && !$rowErrors) {
+            if ($teacherId !== (int) $user['id']) {
+                logActivity($pdo, $user['id'], 'Bulk-added ' . $quizzesCreated . ' quiz(zes) to course #' . $courseId . ' on behalf of teacher #' . $teacherId);
+            }
             flash('success', $quizzesCreated . ' quiz(zes) with ' . $questionsCreated . ' question(s) created for "' . $course['title'] . '"!');
             redirect('manage-quizzes.php?course_id=' . $courseId);
         }
@@ -162,6 +165,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $lessonCount > 0) {
 
         $assignmentResult = ['created' => $created, 'errors' => $rowErrors, 'header' => $parsed['header'], 'rows' => $parsed['rows'], 'raw' => $parsed['raw']];
         if ($created > 0 && !$rowErrors) {
+            if ($teacherId !== (int) $user['id']) {
+                logActivity($pdo, $user['id'], 'Bulk-added ' . $created . ' assignment(s) to course #' . $courseId . ' on behalf of teacher #' . $teacherId);
+            }
             flash('success', $created . ' assignment(s) created for "' . $course['title'] . '"!');
             redirect('manage-assignments.php?course_id=' . $courseId);
         }
@@ -229,6 +235,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $lessonCount > 0) {
         <h2><i data-lucide="upload" class="lucide-icon"></i> Bulk Add Quizzes &amp; Assignments</h2>
         <p><?= e($course['title']) ?></p>
     </div>
+
+    <?= renderActingAsBanner($pdo) ?>
 
     <?php if (flash('error')): ?><div class="alert alert-error"><?= e(flash('error')) ?></div><?php endif; ?>
     <?php if (flash('success')): ?><div class="alert alert-success"><?= e(flash('success')) ?></div><?php endif; ?>

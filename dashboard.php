@@ -3,6 +3,7 @@ require_once __DIR__ . '/db.php';
 requireAuth();
 $user = auth();
 if (($user['role'] ?? '') === 'admin') redirect('admin.php');
+if (($user['role'] ?? '') === 'customer_service') redirect('support-panel.php');
 
 $meStmt = $pdo->prepare('SELECT * FROM users WHERE id = ?');
 $meStmt->execute([$user['id']]);
@@ -204,7 +205,7 @@ $dashBg = siteSetting($pdo, 'dashboard_banner_bg');
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
             <h3 style="font-size:1.1rem;color:var(--green-deep)">My Courses (<?= count($myCourses) ?>)</h3>
             <div style="display:flex;gap:.5rem">
-                <a href="bulk-courses.php" class="btn btn-outline btn-sm"><i data-lucide="upload" class="lucide-icon"></i> Bulk Upload</a>
+                <a href="single-upload.php" class="btn btn-outline btn-sm"><i data-lucide="upload" class="lucide-icon"></i> Single Upload</a>
                 <a href="add-course.php" class="btn btn-primary btn-sm">+ New Course</a>
             </div>
         </div>

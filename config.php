@@ -13,6 +13,11 @@ define('DB_NAME', 'bab_ul_ilm');
 define('SITE_NAME_DEFAULT', 'Bab ul Ilm Academy');
 define('SITE_TAGLINE_DEFAULT', 'Teach and Learn Any Subject — All Levels, Anywhere, Everywhere');
 define('SITE_AFFILIATION_DEFAULT', 'Under Alia University of Holland');
+// Separate from SITE_TAGLINE (which is plain text, used in <title>/meta tags
+// where HTML would show up literally) -- this one is rendered unescaped on
+// the homepage hero, so an admin can use basic HTML (e.g. a <span> for the
+// gold-colored part) and real line breaks.
+define('HOME_HERO_HEADLINE_DEFAULT', "Teach and Learn Any Subject — <span>All Levels, Anywhere, Everywhere</span>");
 define('SITE_URL', '');             // e.g. https://babulilmacademy.com
 
 // Email verification: when true, the verification link is also shown on screen

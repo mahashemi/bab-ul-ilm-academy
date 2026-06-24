@@ -557,6 +557,16 @@ CREATE TABLE IF NOT EXISTS ai_prompt_templates (
     FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ── Customer Service role ──
+-- Scoped support staff: can author courses/lessons/quizzes/assignments on
+-- behalf of a teacher who called in for help, but cannot manage users,
+-- settings, or moderation like a full admin can. The existing
+-- courses.updated_by / lessons-side activity log (see logActivity() calls
+-- in the authoring pages) record the REAL actor, while teacher_id always
+-- stays the actual teacher being helped -- so "who really created this"
+-- stays auditable even though the content is attributed to the teacher.
+ALTER TABLE users MODIFY role ENUM('student','teacher','parent','institution','admin','customer_service') DEFAULT 'student';
+
 -- ── Initial Admin Account ───────────────────────────────────────────────
 -- Default password: Admin@123
 -- IMPORTANT: Log in immediately and change this password via your profile.

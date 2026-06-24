@@ -360,6 +360,12 @@ img { max-width: 100%; height: auto; display: block; }
    overflowing the card on mobile. */
 .ai-prompt-box { background: var(--cream); border-radius: var(--radius-sm); padding: 1rem; border: 1.5px solid var(--border); }
 .ai-prompt-box pre { font-family: ui-monospace, 'SF Mono', Consolas, monospace; font-size: .78rem; white-space: pre-wrap; word-break: break-word; max-height: 260px; overflow-y: auto; margin: 0 0 .8rem; color: var(--text-dark); }
+.acting-as-banner {
+    background: var(--gold); color: var(--green-deep); font-size: .85rem; font-weight: 600;
+    padding: .7rem 1.2rem; display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+    border-radius: var(--radius-sm); margin-bottom: 1.2rem;
+}
+.acting-as-banner a { color: var(--green-deep); text-decoration: underline; margin-left: auto; }
 .chip-row {
     display: flex; gap: .6rem; flex-wrap: nowrap;
     overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
@@ -552,6 +558,8 @@ img { max-width: 100%; height: auto; display: block; }
     padding: 2.2rem max(1.5rem, calc(50vw - 590px)) 2.4rem;
     margin: 0 calc(-50vw + 50%) 1.8rem;
     width: 100vw;
+    min-height: 230px;
+    display: flex; flex-direction: column; justify-content: center;
     position: relative;
 }
 .dashboard-header::before {
@@ -563,7 +571,7 @@ img { max-width: 100%; height: auto; display: block; }
 .dashboard-header h2 { font-size: 1.6rem; font-weight: 800; }
 .dashboard-header p  { opacity: .85; font-size: .92rem; margin-top: .4rem; }
 @media (max-width: 768px) {
-    .dashboard-header { padding: 1.6rem 1.2rem 1.8rem; margin-bottom: 1.4rem; }
+    .dashboard-header { padding: 1.6rem 1.2rem 1.8rem; margin-bottom: 1.4rem; min-height: 190px; }
     .dashboard-header h2 { font-size: 1.3rem; }
 }
 .dashboard-header-link { opacity: 1; color: var(--gold); font-weight: 600; text-decoration: underline; }
@@ -700,7 +708,6 @@ footer { background: var(--green-deep); color: rgba(255,255,255,.75); padding: 3
     .auth-box { padding: 1.5rem; }
     .container, .section { padding-left: 1rem; padding-right: 1rem; }
     .dashboard-wrap { padding: 0 1rem; }
-    .dashboard-header { padding: 1.2rem 1.4rem; }
 
     /* Tables become Material-style elevated cards instead of horizontal-scrolling grids */
     .table thead { display: none; }

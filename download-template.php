@@ -1,6 +1,12 @@
 <?php
 require_once __DIR__ . '/db.php';
-requireRole('teacher');
+requireAuth();
+// Templates aren't teacher-specific content, so this only needs a role
+// check -- not the full requireTeacherOrSupport() gate that would force a
+// customer_service/admin rep to pick a teacher before downloading one.
+if (!in_array(auth()['role'] ?? '', ['teacher', 'admin', 'customer_service'], true)) {
+    redirect('dashboard.php');
+}
 
 $type = $_GET['type'] ?? '';
 
@@ -14,15 +20,16 @@ $findSubject = function (string $needle, array $pool, string $fallback) {
     }
     return $fallback;
 };
-$compSciSubject = $findSubject('computer', $allSubjects, $allSubjects[0] ?? '');
-$arabicSubject  = $findSubject('arabic', $allSubjects, $allSubjects[1] ?? ($allSubjects[0] ?? ''));
+$arabicSubject  = $findSubject('arabic', $allSubjects, $allSubjects[0] ?? '');
 
 $templates = [
     'courses' => [
         'filename' => 'bab-ul-ilm-courses-template.csv',
         'header' => ['title', 'description', 'subject', 'level', 'language', 'price', 'learning_objectives', 'requirements', 'textbook'],
         'rows' => [
-            ['Introduction to Python Programming', 'A beginner-friendly course covering Python syntax, data types, loops, functions, and simple projects.', $compSciSubject, 'beginner', 'English', '0', 'Write basic Python scripts; Understand variables, loops, and functions; Build a small command-line project', 'A computer with internet access. No prior programming experience needed.', ''],
+            // single-upload.php accepts exactly one data row, so the template
+            // ships with exactly one example -- download-then-reupload-as-is
+            // should always succeed, never trip the row-count validation.
             ['Advanced Arabic Grammar (Nahw)', 'An in-depth study of Arabic sentence structure for students who have completed basic Arabic.', $arabicSubject, 'advanced', 'English', '25', 'Parse complex Arabic sentences; Identify case endings; Read classical texts with confidence', 'Completion of a beginner Arabic course', 'Al-Nahw Al-Wadih, Part 1'],
         ],
     ],

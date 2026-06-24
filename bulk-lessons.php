@@ -1,11 +1,11 @@
 <?php
 require_once __DIR__ . '/db.php';
-requireRole('teacher');
+$teacherId = requireTeacherOrSupport();
 $user = auth();
 
 $courseId = (int) ($_GET['course_id'] ?? $_POST['course_id'] ?? 0);
 $stmt = $pdo->prepare('SELECT * FROM courses WHERE id = ? AND teacher_id = ?');
-$stmt->execute([$courseId, $user['id']]);
+$stmt->execute([$courseId, $teacherId]);
 $course = $stmt->fetch();
 
 if (!$course) {
@@ -77,6 +77,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $result = ['created' => $created, 'errors' => $rowErrors, 'header' => $parsed['header'], 'rows' => $parsed['rows'], 'raw' => $parsed['raw']];
 
     if ($created > 0 && !$rowErrors) {
+        if ($teacherId !== (int) $user['id']) {
+            logActivity($pdo, $user['id'], 'Bulk-added ' . $created . ' lesson(s) to course #' . $courseId . ' on behalf of teacher #' . $teacherId);
+        }
         flash('success', $created . ' lesson(s) added to "' . $course['title'] . '"!');
         redirect('edit-course.php?id=' . $courseId);
     }
@@ -143,6 +146,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <h2><i data-lucide="upload" class="lucide-icon"></i> Bulk Add Lessons</h2>
         <p><?= e($course['title']) ?> · Upload a CSV to add many lessons at once instead of typing each one individually.</p>
     </div>
+
+    <?= renderActingAsBanner($pdo) ?>
 
     <?php if (flash('error')): ?><div class="alert alert-error"><?= e(flash('error')) ?></div><?php endif; ?>
     <?php if (flash('success')): ?><div class="alert alert-success"><?= e(flash('success')) ?></div><?php endif; ?>

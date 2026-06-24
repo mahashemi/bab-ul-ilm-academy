@@ -42,9 +42,10 @@ function loadSiteSettings(PDO $pdo, array $defaults): void {
     }
 }
 loadSiteSettings($pdo, [
-    'SITE_NAME'        => SITE_NAME_DEFAULT,
-    'SITE_TAGLINE'      => SITE_TAGLINE_DEFAULT,
-    'SITE_AFFILIATION'  => SITE_AFFILIATION_DEFAULT,
+    'SITE_NAME'           => SITE_NAME_DEFAULT,
+    'SITE_TAGLINE'        => SITE_TAGLINE_DEFAULT,
+    'SITE_AFFILIATION'    => SITE_AFFILIATION_DEFAULT,
+    'HOME_HERO_HEADLINE'  => HOME_HERO_HEADLINE_DEFAULT,
 ]);
 
 // Drives the "Delivered" message state (recipient has been active on the
@@ -103,6 +104,78 @@ function requireRole(string $role): void {
 // only teachers (who create them) and admins are excluded.
 function canEnroll(?string $role): bool {
     return in_array($role, ['student', 'parent', 'institution'], true);
+}
+
+function roleLabel(string $role): string {
+    $labels = ['customer_service' => 'Customer Service'];
+    return $labels[$role] ?? ucfirst($role);
+}
+
+// ── Customer Service "Acting As Teacher" ────────────────────────────────
+// A CS executive doesn't author content under their own account -- on a
+// support call they gather a teacher's course info, pick that teacher on
+// support-panel.php, and from then on the course/lesson/quiz/assignment
+// authoring pages create content attributed to THAT teacher. Every
+// create/edit action is still logActivity()'d under the CS rep's own
+// user id (see the authoring pages), so "who actually did this" stays
+// auditable even though the content correctly belongs to the teacher.
+
+// The teacher_id content should be attributed to: the logged-in user's
+// own id if they ARE a teacher, or whichever teacher an admin/customer_service
+// rep has selected, or null if neither applies.
+function effectiveTeacherId(array $user): ?int {
+    if (($user['role'] ?? '') === 'teacher') {
+        return (int) $user['id'];
+    }
+    if (in_array($user['role'] ?? '', ['customer_service', 'admin'], true) && !empty($_SESSION['acting_as_teacher_id'])) {
+        return (int) $_SESSION['acting_as_teacher_id'];
+    }
+    return null;
+}
+
+// Like requireRole('teacher'), but also admits an admin or customer_service
+// rep who has already selected a teacher on support-panel.php. Returns the
+// effective teacher_id for the caller to use in place of auth()['id']
+// wherever content is being created or its ownership checked.
+function requireTeacherOrSupport(): int {
+    requireAuth();
+    $user = auth();
+    $role = $user['role'] ?? '';
+    if ($role === 'teacher') {
+        return (int) $user['id'];
+    }
+    if (in_array($role, ['customer_service', 'admin'], true)) {
+        $teacherId = effectiveTeacherId($user);
+        if ($teacherId) return $teacherId;
+        flash('error', 'Select a teacher to act on behalf of first.');
+        header('Location: support-panel.php');
+        exit;
+    }
+    header('Location: dashboard.php');
+    exit;
+}
+
+// Persistent banner on the authoring pages while a customer_service rep
+// is acting on behalf of a teacher, so it is never ambiguous whose
+// course is actually being edited.
+function renderActingAsBanner(PDO $pdo): string {
+    $user = auth();
+    if (!in_array($user['role'] ?? '', ['customer_service', 'admin'], true) || empty($_SESSION['acting_as_teacher_id'])) {
+        return '';
+    }
+    $stmt = $pdo->prepare('SELECT COALESCE(display_name, name) AS name, email FROM users WHERE id = ?');
+    $stmt->execute([(int) $_SESSION['acting_as_teacher_id']]);
+    $teacher = $stmt->fetch();
+    if (!$teacher) return '';
+    ob_start();
+    ?>
+    <div class="acting-as-banner">
+        <i data-lucide="headset" class="lucide-icon"></i>
+        Acting on behalf of <strong><?= e($teacher['name']) ?></strong> <span style="opacity:.75">(<?= e($teacher['email']) ?>)</span>
+        <a href="support-panel.php">Switch teacher</a>
+    </div>
+    <?php
+    return ob_get_clean();
 }
 
 // Registration only collects the minimum (name/email/country/password) — everything
@@ -782,14 +855,14 @@ function buildAnnotatedCsv(array $header, array $rows, array $rowErrors): string
 function aiPromptDefaults(): array {
     return [
         'course_creation' => [
-            'label' => 'Course Creation (course shells, no specific course yet)',
+            'label' => 'Single Course Upload (no specific course yet)',
             'placeholders_help' => '{{site_name}} -- platform name. {{subject_list}} -- comma-separated list of every valid subject name, generated live from the subjects table.',
             'template_text' => <<<'TXT'
-I'm creating course(s) for an online learning platform called {{site_name}}. Generate a CSV file I can upload directly.
+I'm creating a course for an online learning platform called {{site_name}}. Generate a CSV file I can upload directly.
 
-My course topic(s): [DESCRIBE YOUR COURSE(S) HERE — e.g. "A beginner course on Tajweed rules for Quran recitation"]
+My course topic: [DESCRIBE YOUR COURSE HERE — e.g. "A beginner course on Tajweed rules for Quran recitation"]
 
-Output ONLY raw CSV text (no explanation, no markdown code fences) with EXACTLY these column headers, in this order:
+Output ONLY raw CSV text (no explanation, no markdown code fences) with EXACTLY these column headers, in this order, and EXACTLY one data row below the header:
 title,description,subject,level,language,price,learning_objectives,requirements,textbook
 
 Rules for each column:
@@ -802,8 +875,6 @@ Rules for each column:
 - learning_objectives: 3-5 short points separated by semicolons
 - requirements: prerequisites, or "None" if there aren't any
 - textbook: a real reference textbook/material this course is based on, or leave blank if none
-
-Generate one row per course.
 TXT,
         ],
         'course_lessons' => [

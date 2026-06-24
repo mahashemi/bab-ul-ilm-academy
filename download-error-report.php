@@ -1,6 +1,9 @@
 <?php
 require_once __DIR__ . '/db.php';
-requireRole('teacher');
+requireAuth();
+if (!in_array(auth()['role'] ?? '', ['teacher', 'admin', 'customer_service'], true)) {
+    redirect('dashboard.php');
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);

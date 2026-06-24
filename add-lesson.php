@@ -1,11 +1,11 @@
 <?php
 require_once __DIR__ . '/db.php';
-requireRole('teacher');
+$teacherId = requireTeacherOrSupport();
 $user = auth();
 
 $courseId = (int) ($_GET['course_id'] ?? $_POST['course_id'] ?? 0);
 $stmt = $pdo->prepare('SELECT * FROM courses WHERE id = ? AND teacher_id = ?');
-$stmt->execute([$courseId, $user['id']]);
+$stmt->execute([$courseId, $teacherId]);
 $course = $stmt->fetch();
 
 if (!$course) {
@@ -55,6 +55,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['title'])) {
 
         $stmt = $pdo->prepare('INSERT INTO lessons (course_id, section_title, title, content, video_url, duration_minutes, is_preview, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
         $stmt->execute([$courseId, $sectionTitle ?: null, $title, $content, $videoUrl, $duration, $isPreview, $next]);
+        if ($teacherId !== (int) $user['id']) {
+            logActivity($pdo, $user['id'], 'Added a lesson to course #' . $courseId . ' on behalf of teacher #' . $teacherId);
+        }
         flash('success', 'Lesson added!');
         redirect('add-lesson.php?course_id=' . $courseId);
     }
@@ -135,6 +138,8 @@ $suggestedSection = 'Week ' . (count($existingSections) + 1);
 
 <div class="dashboard-wrap">
     <div class="dashboard-header"><h2><i data-lucide="clipboard-list" class="lucide-icon"></i> Lessons — <?= e($course['title']) ?></h2><p>Add lessons in the order students should learn them.</p></div>
+
+    <?= renderActingAsBanner($pdo) ?>
 
     <?php if (flash('success')): ?><div class="alert alert-success"><?= e(flash('success')) ?></div><?php endif; ?>
     <?php if ($errors): ?><div class="alert alert-error"><?php foreach ($errors as $err): ?><div><?= e($err) ?></div><?php endforeach; ?></div><?php endif; ?>

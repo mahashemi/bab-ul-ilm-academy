@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/db.php';
-requireRole('teacher');
+$teacherId = requireTeacherOrSupport();
 $user = auth();
 
 $fields = $pdo->query(
@@ -42,8 +42,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             "INSERT INTO courses (teacher_id, subject_id, title, description, learning_objectives, requirements, textbook, level, language, price, cover_url, is_published, moderation_status)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'pending')"
         );
-        $stmt->execute([$user['id'], $subjectId ?: null, $title, $description, $objectives ?: null, $requirements ?: null, $textbook ?: null, $level, $language, $price, $imagePath]);
+        $stmt->execute([$teacherId, $subjectId ?: null, $title, $description, $objectives ?: null, $requirements ?: null, $textbook ?: null, $level, $language, $price, $imagePath]);
         $newId = (int) $pdo->lastInsertId();
+        if ($teacherId !== (int) $user['id']) {
+            logActivity($pdo, $user['id'], 'Created course #' . $newId . ' on behalf of teacher #' . $teacherId);
+        }
         flash('success', 'Course created! It will be reviewed by an admin before it appears publicly. Now add some lessons.');
         redirect('add-lesson.php?course_id=' . $newId);
     }
@@ -112,6 +115,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <div class="dashboard-wrap">
     <div class="dashboard-header"><h2><i data-lucide="book-open" class="lucide-icon"></i> Create a New Course</h2><p>Fill in the details below to publish your course. New to this? <a href="tutorial.php" style="color:var(--gold);text-decoration:underline">See the step-by-step tutorial</a>.</p></div>
+
+    <?= renderActingAsBanner($pdo) ?>
 
     <?php if ($errors): ?>
         <div class="alert alert-error"><?php foreach ($errors as $err): ?><div><?= e($err) ?></div><?php endforeach; ?></div>

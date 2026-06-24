@@ -1,11 +1,11 @@
 <?php
 require_once __DIR__ . '/db.php';
-requireRole('teacher');
+$teacherId = requireTeacherOrSupport();
 $user = auth();
 
 $courseId = (int) ($_GET['course_id'] ?? 0);
 $stmt = $pdo->prepare('SELECT * FROM courses WHERE id = ? AND teacher_id = ?');
-$stmt->execute([$courseId, $user['id']]);
+$stmt->execute([$courseId, $teacherId]);
 $course = $stmt->fetch();
 
 if (!$course) {
@@ -97,6 +97,8 @@ $assignments = $assignments->fetchAll();
 <div class="dashboard-wrap">
     <p style="font-size:.85rem;margin-bottom:.6rem"><a href="edit-course.php?id=<?= $courseId ?>"><i data-lucide="arrow-left" class="lucide-icon"></i> Back to Edit Course</a></p>
     <div class="dashboard-header"><h2><i data-lucide="file-edit" class="lucide-icon"></i> Assignments — <?= e($course['title']) ?></h2><p>Give students practical work to apply what they've learned.</p></div>
+
+    <?= renderActingAsBanner($pdo) ?>
 
     <?php if (flash('success')): ?><div class="alert alert-success"><?= e(flash('success')) ?></div><?php endif; ?>
     <?php if ($errors): ?><div class="alert alert-error"><?php foreach ($errors as $err): ?><div><?= e($err) ?></div><?php endforeach; ?></div><?php endif; ?>

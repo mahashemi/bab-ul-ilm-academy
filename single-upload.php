@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/db.php';
-requireRole('teacher');
+$teacherId = requireTeacherOrSupport();
 $user = auth();
 
 $subjects = $pdo->query('SELECT name FROM subjects ORDER BY name')->fetchAll(PDO::FETCH_COLUMN);
@@ -14,21 +14,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($parsed === null) {
         flash('error', 'Please choose a CSV file to upload.');
-        redirect('bulk-courses.php');
+        redirect('single-upload.php');
     }
     if (isset($parsed['error'])) {
         flash('error', $parsed['error']);
-        redirect('bulk-courses.php');
+        redirect('single-upload.php');
     }
 
     $requiredCols = ['title', 'description', 'level'];
     $missingCols = array_diff($requiredCols, $parsed['header']);
     if ($missingCols) {
         flash('error', 'Your CSV is missing required column(s): ' . implode(', ', $missingCols) . '. Download the template below to see the exact column names.');
-        redirect('bulk-courses.php');
+        redirect('single-upload.php');
+    }
+    if (count($parsed['rows']) > 1) {
+        flash('error', 'This uploads one course at a time, but your CSV has ' . count($parsed['rows']) . ' data rows. Remove all but one row, or upload each course separately.');
+        redirect('single-upload.php');
+    }
+    if (count($parsed['rows']) === 0) {
+        flash('error', 'Your CSV has no data rows — add one row with your course details below the header.');
+        redirect('single-upload.php');
     }
 
-    $created = 0;
+    $newCourseId = null;
     $rowErrors = [];
     foreach ($parsed['rows'] as $i => $row) {
         $errors = [];
@@ -52,8 +60,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $idx = array_search(mb_strtolower($subjectName), $subjectsLower, true);
             if ($idx === false) {
                 $errors[] = "subject '" . $subjectName . "' was not found. See the valid subject list above.";
-            } else {
-                $subjectId = $idx; // placeholder, resolved properly below
             }
         }
         $price = 0;
@@ -80,15 +86,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare(
             "INSERT INTO courses (teacher_id, subject_id, title, description, learning_objectives, requirements, textbook, level, language, price, is_published, moderation_status)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'pending')"
-        )->execute([$user['id'], $realSubjectId, $title, $description, $objectives ?: null, $requirements ?: null, $textbook ?: null, $level, $language, $price]);
-        $created++;
+        )->execute([$teacherId, $realSubjectId, $title, $description, $objectives ?: null, $requirements ?: null, $textbook ?: null, $level, $language, $price]);
+        $newCourseId = (int) $pdo->lastInsertId();
     }
 
-    $result = ['created' => $created, 'errors' => $rowErrors, 'header' => $parsed['header'], 'rows' => $parsed['rows'], 'raw' => $parsed['raw']];
+    $result = ['created' => $newCourseId ? 1 : 0, 'errors' => $rowErrors, 'header' => $parsed['header'], 'rows' => $parsed['rows'], 'raw' => $parsed['raw']];
 
-    if ($created > 0 && !$rowErrors) {
-        flash('success', $created . ' course(s) created! They will be reviewed by an admin before appearing publicly. Add lessons to each from your Dashboard.');
-        redirect('dashboard.php');
+    if ($newCourseId && !$rowErrors) {
+        if ($teacherId !== (int) $user['id']) {
+            logActivity($pdo, $user['id'], 'Created course #' . $newCourseId . ' via single upload on behalf of teacher #' . $teacherId);
+        }
+        flash('success', 'Course created! It will be reviewed by an admin before appearing publicly. Now add some lessons.');
+        redirect('add-lesson.php?course_id=' . $newCourseId);
     }
 }
 ?>
@@ -97,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bulk Create Courses — <?= e(SITE_NAME) ?></title>
+<title>Single Upload — <?= e(SITE_NAME) ?></title>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="assets/icon-green-180.png">
@@ -150,9 +159,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="dashboard-wrap" style="max-width:900px">
     <p style="font-size:.85rem;margin-bottom:.6rem"><a href="dashboard.php"><i data-lucide="arrow-left" class="lucide-icon"></i> Back to Dashboard</a></p>
     <div class="dashboard-header">
-        <h2><i data-lucide="upload" class="lucide-icon"></i> Bulk Create Courses</h2>
-        <p>Upload a CSV to create several courses at once, instead of filling the form one at a time.</p>
+        <h2><i data-lucide="upload" class="lucide-icon"></i> Single Upload</h2>
+        <p>Create one course from a CSV — handy when you've already got the details written out (or an AI assistant wrote them for you).</p>
     </div>
+
+    <?= renderActingAsBanner($pdo) ?>
 
     <?php if (flash('error')): ?><div class="alert alert-error"><?= e(flash('error')) ?></div><?php endif; ?>
     <?php if (flash('success')): ?><div class="alert alert-success"><?= e(flash('success')) ?></div><?php endif; ?>
@@ -173,7 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <tr><td><code>textbook</code></td><td>Optional</td><td>Reference textbook/material this course follows, if any</td></tr>
             </tbody>
         </table>
-        <p style="font-size:.82rem;color:var(--text-light);margin-top:.6rem"><i data-lucide="info" class="lucide-icon"></i> A cover photo can't be set via CSV — add one afterward from each course's Edit page. New courses are always submitted for admin review before they go live, same as creating one manually.</p>
+        <p style="font-size:.82rem;color:var(--text-light);margin-top:.6rem"><i data-lucide="info" class="lucide-icon"></i> This creates exactly one course — your CSV should have exactly one data row below the header. Need more than one? Upload them one at a time. A cover photo can't be set via CSV — add one afterward from the course's Edit page. New courses are always submitted for admin review before they go live, same as creating one manually.</p>
         <details style="margin-top:.8rem">
             <summary style="cursor:pointer;font-size:.85rem;font-weight:600;color:var(--green-deep)">Valid subject names (<?= count($subjects) ?>)</summary>
             <p style="font-size:.82rem;margin-top:.5rem;color:var(--text-mid)"><?= e(implode(', ', $subjects)) ?></p>
@@ -182,13 +193,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
         <h3 style="font-size:1rem;margin-bottom:.8rem"><i data-lucide="download" class="lucide-icon"></i> Step 1: Get the Template</h3>
-        <p style="font-size:.88rem;margin-bottom:.8rem">Download a starter CSV with the correct headers and two example rows.</p>
+        <p style="font-size:.88rem;margin-bottom:.8rem">Download a starter CSV with the correct headers and one example row.</p>
         <a href="download-template.php?type=courses" class="btn btn-outline"><i data-lucide="file-down" class="lucide-icon"></i> Download courses-template.csv</a>
     </div></div>
 
     <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
         <h3 style="font-size:1rem;margin-bottom:.8rem"><i data-lucide="sparkles" class="lucide-icon"></i> Step 2 (Optional): Let an AI Fill It In For You</h3>
-        <p style="font-size:.88rem;margin-bottom:.8rem">Copy this prompt into ChatGPT, Claude, or any AI assistant, describe the course(s) you want, and it will write the CSV for you.</p>
+        <p style="font-size:.88rem;margin-bottom:.8rem">Copy this prompt into ChatGPT, Claude, or any AI assistant, describe the course you want, and it will write the CSV for you.</p>
         <div class="ai-prompt-box">
             <pre id="coursePrompt"><?= e(renderAiPrompt($pdo, 'course_creation', ['site_name' => SITE_NAME, 'subject_list' => implode(', ', $subjects)])) ?></pre>
             <button type="button" class="btn btn-outline btn-sm copy-prompt-btn" data-target="coursePrompt"><i data-lucide="copy" class="lucide-icon"></i> Copy Prompt</button>
@@ -202,7 +213,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="form-group">
                 <input type="file" name="csv_file" class="form-control" accept=".csv,text/csv" required>
             </div>
-            <button type="submit" class="btn btn-primary">Upload &amp; Create Courses</button>
+            <button type="submit" class="btn btn-primary">Upload &amp; Create Course</button>
         </form>
     </div></div>
 

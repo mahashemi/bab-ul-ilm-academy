@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['set_role']) && $_POST['set_role'] !== '') {
         $targetId = (int) $_POST['user_id'];
         $newRole = $_POST['set_role'];
-        if ($targetId !== (int) $user['id'] && in_array($newRole, ['student','teacher','parent','institution','admin'], true)) {
+        if ($targetId !== (int) $user['id'] && in_array($newRole, ['student','teacher','parent','institution','admin','customer_service'], true)) {
             $pdo->prepare('UPDATE users SET role = ? WHERE id = ?')->execute([$newRole, $targetId]);
         }
     } elseif (isset($_POST['add_field'])) {
@@ -115,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['delete_subject'])) {
         $pdo->prepare('DELETE FROM subjects WHERE id = ?')->execute([(int) $_POST['delete_subject']]);
     } elseif (isset($_POST['save_settings'])) {
-        foreach (['SITE_NAME', 'SITE_TAGLINE', 'SITE_AFFILIATION'] as $key) {
+        foreach (['SITE_NAME', 'SITE_TAGLINE', 'SITE_AFFILIATION', 'HOME_HERO_HEADLINE'] as $key) {
             $val = trim($_POST[$key] ?? '');
             $pdo->prepare('INSERT INTO settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?')
                 ->execute([$key, $val, $val]);
@@ -283,6 +283,7 @@ $flaggedMessages = $pdo->query(
                 </div>
                 <div class="nav-menu-divider"></div>
                 <a href="chat.php"><i data-lucide="message-circle" class="lucide-icon"></i> Messages</a>
+                <a href="support-panel.php"><i data-lucide="headset" class="lucide-icon"></i> Support Panel</a>
                 <a href="edit-profile.php"><i data-lucide="user-cog" class="lucide-icon"></i> Edit Profile</a>
                 <a href="activity-log.php"><i data-lucide="shield-check" class="lucide-icon"></i> Account Activity</a>
                 <div class="nav-menu-divider"></div>
@@ -517,10 +518,16 @@ $flaggedMessages = $pdo->query(
                 <div class="form-group">
                     <label class="form-label">Tagline</label>
                     <input type="text" name="SITE_TAGLINE" class="form-control" value="<?= e($currentSettings['SITE_TAGLINE'] ?? SITE_TAGLINE) ?>">
+                    <div class="form-hint">Plain text only — used in the browser tab title and search-engine/social share previews. Not shown on the homepage itself (see Homepage Headline below for that).</div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Affiliation (shown below the site name in the header)</label>
                     <input type="text" name="SITE_AFFILIATION" class="form-control" value="<?= e($currentSettings['SITE_AFFILIATION'] ?? SITE_AFFILIATION) ?>">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Homepage Headline</label>
+                    <textarea name="HOME_HERO_HEADLINE" class="form-control" rows="3"><?= e($currentSettings['HOME_HERO_HEADLINE'] ?? HOME_HERO_HEADLINE) ?></textarea>
+                    <div class="form-hint">The large headline on the homepage. Press Enter for a line break. Basic HTML is allowed — e.g. wrap part of the text in <code>&lt;span&gt;...&lt;/span&gt;</code> to make it gold, matching the original style.</div>
                 </div>
                 <button type="submit" name="save_settings" value="1" class="btn btn-primary">Save Settings</button>
             </form>
@@ -680,7 +687,7 @@ $flaggedMessages = $pdo->query(
                 <tr>
                     <td><?= e($u['name']) ?></td>
                     <td><?= e($u['email']) ?></td>
-                    <td><span class="badge badge-<?= e($u['role']) ?>"><?= e(ucfirst($u['role'])) ?></span></td>
+                    <td><span class="badge badge-<?= e($u['role']) ?>"><?= e(roleLabel($u['role'])) ?></span></td>
                     <td><?= e($u['country'] ?: '—') ?></td>
                     <td style="max-width:220px"><?= e($u['qualification'] ?: '—') ?></td>
                     <td><span class="badge <?= $u['is_approved'] ? 'badge-free' : 'badge-paid' ?>"><?= $u['is_approved'] ? 'Active' : 'Suspended' ?></span></td>
@@ -703,6 +710,7 @@ $flaggedMessages = $pdo->query(
                                 <option value="parent" <?= $u['role']==='parent'?'selected':'' ?>>Parent</option>
                                 <option value="institution" <?= $u['role']==='institution'?'selected':'' ?>>Institution</option>
                                 <option value="admin" <?= $u['role']==='admin'?'selected':'' ?>>Admin</option>
+                                <option value="customer_service" <?= $u['role']==='customer_service'?'selected':'' ?>>Customer Service</option>
                             </select>
                         </form>
                         <?php endif; ?>

@@ -93,6 +93,8 @@ $stats = $pdo->query(
         (SELECT COUNT(*) FROM users WHERE role='student') AS students,
         (SELECT COUNT(*) FROM courses WHERE is_published=1 AND moderation_status='approved') AS courses"
 )->fetch();
+
+$heroBg = siteSetting($pdo, 'home_hero_bg');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -162,10 +164,10 @@ $stats = $pdo->query(
 
 <?= renderCategoryNav($pdo) ?>
 
-<header class="hero">
+<header class="hero" <?php if ($heroBg): ?>style="background-image:linear-gradient(135deg, rgba(10,61,31,.92) 0%, rgba(10,61,31,.75) 50%, rgba(8,51,68,.78) 100%), url('<?= e($heroBg) ?>');background-size:cover;background-position:center"<?php endif; ?>>
     <div class="hero-content">
         <div class="hero-arabic">باب العلم</div>
-        <h1>Teach and Learn Any Subject — <span>All Levels, Anywhere, Everywhere</span></h1>
+        <h1><?= nl2br(HOME_HERO_HEADLINE) ?></h1>
         <p style="font-size:1.15rem;font-weight:600;opacity:.9;margin-bottom:.8rem;letter-spacing:.3px;color:var(--gold)"><?= e(SITE_AFFILIATION) ?></p>
         <p>Islamic studies and core academics — from Quran, Hadith, and Fiqh to Mathematics, Science, and Bachelor-level streams — taught by qualified teachers, anywhere in the world. Structured courses, real progress tracking, sincere teaching, Grade 1 through university.</p>
         <div class="hero-actions">

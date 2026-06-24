@@ -15,7 +15,8 @@ if (!$course) {
 
 $isOwner = $course['teacher_id'] == $user['id'];
 $isAdmin = ($user['role'] ?? '') === 'admin';
-if (!$isOwner && !$isAdmin) {
+$isActingForThisCourse = effectiveTeacherId($user) === (int) $course['teacher_id'];
+if (!$isOwner && !$isAdmin && !$isActingForThisCourse) {
     http_response_code(403);
     die('<p style="font-family:sans-serif;padding:3rem;text-align:center">You do not have permission to edit this course. <a href="course.php?id=' . $id . '">Go back</a></p>');
 }
@@ -170,6 +171,8 @@ $previewCard = fetchPreviewCard($pdo, $id);
         <h2><i data-lucide="pencil" class="lucide-icon"></i> Edit Course</h2>
         <p><?= $isAdmin && !$isOwner ? 'You are editing this course as an admin.' : 'Update your course details below.' ?> <a href="tutorial.php" style="color:var(--gold);text-decoration:underline">View tutorial</a></p>
     </div>
+
+    <?= renderActingAsBanner($pdo) ?>
 
     <?php if (flash('success')): ?><div class="alert alert-success"><?= e(flash('success')) ?></div><?php endif; ?>
     <?php if (flash('error')): ?><div class="alert alert-error"><?= e(flash('error')) ?></div><?php endif; ?>

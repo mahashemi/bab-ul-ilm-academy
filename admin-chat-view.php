@@ -130,5 +130,6 @@ function chatTime(string $dt): string {
     if (box) box.scrollTop = box.scrollHeight;
 })();
 </script>
+<?= renderFooter($pdo) ?>
 </body>
 </html>

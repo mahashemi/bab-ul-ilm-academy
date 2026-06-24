@@ -593,6 +593,110 @@ function renderAvatar(?array $user, string $class = 'nav-avatar'): string {
     return '<span class="' . e($class) . '">' . e(mb_substr($name, 0, 1)) . '</span>';
 }
 
+// Udemy-style category nav: a row of fields-of-study, each revealing its
+// own subjects in a second bar on hover (app.js handles the show/hide).
+// All fields' subject panels are rendered up front (hidden until hovered)
+// so the hover swap is instant with no extra request. $activeFieldId/
+// $activeSubjectId just drive which links render with the "active" class
+// (e.g. when arriving via a direct ?field= link rather than hovering).
+function renderCategoryNav(PDO $pdo, int $activeFieldId = 0, int $activeSubjectId = 0): string {
+    $fields = $pdo->query('SELECT * FROM fields_of_study ORDER BY name')->fetchAll();
+    $allSubjects = $pdo->query('SELECT * FROM subjects ORDER BY name')->fetchAll();
+    $byField = [];
+    foreach ($allSubjects as $s) {
+        $byField[(int) $s['field_of_study_id']][] = $s;
+    }
+
+    ob_start();
+    ?>
+    <div class="category-nav-group" id="categoryNavGroup">
+        <nav class="category-nav">
+            <a href="courses.php" class="<?= ($activeFieldId === 0 && $activeSubjectId === 0) ? 'active' : '' ?>"><i data-lucide="library" class="lucide-icon"></i> All Fields</a>
+            <?php foreach ($fields as $f): $fid = (int) $f['id']; ?>
+                <a href="courses.php?field=<?= $fid ?>" data-field-id="<?= $fid ?>" class="<?= $activeFieldId === $fid ? 'active' : '' ?>"><?= catIcon($f['icon']) ?> <?= e($f['name']) ?></a>
+            <?php endforeach; ?>
+        </nav>
+        <div class="subcategory-nav-panel">
+            <?php foreach ($fields as $f): $fid = (int) $f['id']; if (empty($byField[$fid])) continue; ?>
+            <nav class="subcategory-nav<?= $activeFieldId === $fid ? ' active-panel' : '' ?>" data-for-field="<?= $fid ?>">
+                <?php foreach ($byField[$fid] as $s): ?>
+                    <a href="courses.php?field=<?= $fid ?>&subject=<?= (int) $s['id'] ?>" class="<?= $activeSubjectId === (int) $s['id'] ? 'active' : '' ?>"><?= catIcon($s['icon']) ?> <?= e($s['name']) ?></a>
+                <?php endforeach; ?>
+            </nav>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+
+// Shared rich footer — fields of study, popular subjects, and the real
+// account/learn/company links that actually exist (no Privacy/Terms links
+// since those pages don't exist yet, rather than linking to a 404).
+function renderFooter(PDO $pdo): string {
+    $fields = $pdo->query('SELECT * FROM fields_of_study ORDER BY name')->fetchAll();
+    $popularSubjects = $pdo->query(
+        "SELECT s.*, (SELECT COUNT(*) FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.subject_id = s.id) AS enrollment_count
+         FROM subjects s ORDER BY enrollment_count DESC, s.name ASC LIMIT 8"
+    )->fetchAll();
+
+    ob_start();
+    ?>
+    <footer>
+        <div class="footer-grid">
+            <div>
+                <img src="assets/seal-curved-gold.svg" alt="<?= e(SITE_NAME) ?>" class="footer-seal">
+                <div class="footer-brand"><?= e(SITE_NAME) ?></div>
+                <p>Seek Knowledge — From the Cradle to the Grave.</p>
+            </div>
+            <div>
+                <div class="footer-heading">Browse by Field</div>
+                <ul class="footer-links">
+                    <?php foreach ($fields as $f): ?>
+                        <li><a href="courses.php?field=<?= (int) $f['id'] ?>"><?= e($f['name']) ?></a></li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+            <div>
+                <div class="footer-heading">Popular Subjects</div>
+                <ul class="footer-links">
+                    <?php foreach ($popularSubjects as $s): ?>
+                        <li><a href="courses.php?subject=<?= (int) $s['id'] ?>"><?= e($s['name']) ?></a></li>
+                    <?php endforeach; ?>
+                    <li><a href="courses.php"><strong>View All Courses →</strong></a></li>
+                </ul>
+            </div>
+            <div>
+                <div class="footer-heading">Learn</div>
+                <ul class="footer-links">
+                    <li><a href="courses.php">All Courses</a></li>
+                    <li><a href="register.php">Join Free</a></li>
+                    <li><a href="register.php">Become a Teacher</a></li>
+                </ul>
+            </div>
+            <div>
+                <div class="footer-heading">Account</div>
+                <ul class="footer-links">
+                    <li><a href="login.php">Login</a></li>
+                    <li><a href="dashboard.php">Dashboard</a></li>
+                    <li><a href="edit-profile.php">Edit Profile</a></li>
+                    <li><a href="activity-log.php">Account Activity</a></li>
+                </ul>
+            </div>
+            <div>
+                <div class="footer-heading">Company</div>
+                <ul class="footer-links">
+                    <li><a href="about.php">About Us</a></li>
+                    <li><a href="feedback.php">Send Feedback</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">&copy; <?= date('Y') ?> <?= e(SITE_NAME) ?>. Built with <i data-lucide="heart" class="lucide-icon"></i> for the Ummah.</div>
+    </footer>
+    <?php
+    return ob_get_clean();
+}
+
 // Pops and renders the points-celebration popup (see awardPoints() /
 // popPointsCelebration()) — call once near the top of <body> on any page
 // reached right after a point-earning action. Returns '' when there's

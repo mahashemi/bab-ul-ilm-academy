@@ -47,6 +47,7 @@ if (!$u) {
 </div>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <script src="app.js" defer></script>
+<?= renderFooter($pdo) ?>
 <script>if (window.lucide) lucide.createIcons();</script>
 </body>
 </html>

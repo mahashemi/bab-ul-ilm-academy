@@ -37,7 +37,7 @@ img { max-width: 100%; height: auto; display: block; }
     background: var(--green-deep);
     padding: 0 1.5rem;
     display: flex; align-items: center; gap: 1.5rem;
-    height: 64px; position: sticky; top: 0; z-index: 100;
+    height: 76px; position: sticky; top: 0; z-index: 100;
     box-shadow: 0 2px 12px rgba(0,0,0,.25);
 }
 .nav-brand { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
@@ -53,7 +53,7 @@ img { max-width: 100%; height: auto; display: block; }
     font-size: .88rem; flex: 1; min-width: 0; font-family: inherit;
 }
 .nav-search input::placeholder { color: rgba(255,255,255,.55); }
-.nav-logo { height: 40px; width: auto; display: block; }
+.nav-logo { height: 58px; width: auto; display: block; }
 .nav-brand small { display: block; font-size: .85rem; color: rgba(255,255,255,.75); font-weight: 500; letter-spacing: .5px; }
 .nav-links { display: flex; align-items: center; gap: 1.2rem; margin-left: auto; flex-shrink: 0; }
 .nav-links a { color: rgba(255,255,255,.8); font-size: .9rem; font-weight: 500; padding: .4rem .8rem; border-radius: 6px; transition: var(--transition); }
@@ -372,13 +372,15 @@ img { max-width: 100%; height: auto; display: block; }
     border-color: var(--teal-deep);
 }
 
-/* ── Udemy-style category nav strip (fields-of-study row + active field's
-   subjects in a second, darker row) — full width, sits directly under the
-   main navbar on browse-oriented pages. ── */
+/* ── Udemy-style category nav strip (fields-of-study row) with a
+   subjects bar that only appears for whichever field is being hovered
+   (app.js), instead of always showing one field's subjects. The panel is
+   absolutely positioned so it overlays rather than pushing page content
+   down when it opens. ── */
+.category-nav-group { background: var(--white); border-bottom: 1px solid var(--border); position: sticky; top: 76px; z-index: 90; }
 .category-nav {
-    background: var(--white); border-bottom: 1px solid var(--border);
-    display: flex; overflow-x: auto; scrollbar-width: none;
-    padding: 0 1.5rem; position: sticky; top: 64px; z-index: 90;
+    display: flex; justify-content: center; overflow-x: auto; scrollbar-width: none;
+    padding: 0 1.5rem;
 }
 .category-nav::-webkit-scrollbar { display: none; }
 .category-nav a {
@@ -388,10 +390,16 @@ img { max-width: 100%; height: auto; display: block; }
 }
 .category-nav a:hover { color: var(--green-deep); }
 .category-nav a.active { color: var(--green-deep); border-bottom-color: var(--gold); }
-.subcategory-nav {
-    background: var(--green-deep); display: flex; overflow-x: auto; scrollbar-width: none;
-    padding: 0 1.5rem; position: sticky; top: calc(64px + 49px); z-index: 89;
+.subcategory-nav-panel {
+    position: absolute; top: 100%; left: 0; right: 0;
+    opacity: 0; visibility: hidden; transition: opacity .15s ease;
 }
+.category-nav-group.open .subcategory-nav-panel { opacity: 1; visibility: visible; }
+.subcategory-nav {
+    display: none; background: var(--green-deep); justify-content: center;
+    overflow-x: auto; scrollbar-width: none; padding: 0 1.5rem;
+}
+.subcategory-nav.active-panel { display: flex; }
 .subcategory-nav::-webkit-scrollbar { display: none; }
 .subcategory-nav a {
     display: flex; align-items: center; gap: .35rem; flex-shrink: 0;
@@ -400,7 +408,10 @@ img { max-width: 100%; height: auto; display: block; }
 }
 .subcategory-nav a:hover, .subcategory-nav a.active { color: var(--gold); background: rgba(255,255,255,.06); }
 @media (max-width: 768px) {
-    .category-nav, .subcategory-nav { position: static; }
+    .category-nav-group { position: static; }
+    .category-nav { justify-content: flex-start; }
+    .subcategory-nav-panel { position: static; opacity: 1; visibility: visible; }
+    .subcategory-nav.active-panel { display: flex; justify-content: flex-start; }
 }
 .chip-view-all {
     display: inline-flex; align-items: center; gap: .3rem; flex-shrink: 0;

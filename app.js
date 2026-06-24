@@ -16,6 +16,33 @@ document.addEventListener('click', function (e) {
 });
 
 document.addEventListener('DOMContentLoaded', function () {
+    // Category nav: subcategory bar only appears for the field being
+    // hovered (Udemy-style), not always-on. A short hide delay lets the
+    // mouse travel from the category link down into the subcategory bar
+    // without it disappearing first.
+    var categoryGroup = document.getElementById('categoryNavGroup');
+    if (categoryGroup) {
+        var fieldLinks = categoryGroup.querySelectorAll('.category-nav a[data-field-id]');
+        var panels = categoryGroup.querySelectorAll('.subcategory-nav');
+        var hideTimer = null;
+        fieldLinks.forEach(function (link) {
+            link.addEventListener('mouseenter', function () {
+                clearTimeout(hideTimer);
+                var fid = link.getAttribute('data-field-id');
+                var hasPanel = false;
+                panels.forEach(function (p) {
+                    var match = p.getAttribute('data-for-field') === fid;
+                    p.classList.toggle('active-panel', match);
+                    if (match) hasPanel = true;
+                });
+                categoryGroup.classList.toggle('open', hasPanel);
+            });
+        });
+        categoryGroup.addEventListener('mouseleave', function () {
+            hideTimer = setTimeout(function () { categoryGroup.classList.remove('open'); }, 200);
+        });
+    }
+
     document.querySelectorAll('table.table').forEach(function (table) {
         var headers = Array.prototype.map.call(table.querySelectorAll('thead th'), function (th) {
             return th.textContent.trim();

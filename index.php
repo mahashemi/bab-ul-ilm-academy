@@ -106,6 +106,7 @@ $stats = $pdo->query(
         <input type="text" name="q" placeholder="Search for courses, teachers, subjects...">
     </form>
     <div class="nav-links">
+        <a href="index.php">Home</a>
         <a href="courses.php">Courses</a>
         <a href="about.php">About</a>
         <a href="feedback.php">Feedback</a>
@@ -143,12 +144,7 @@ $stats = $pdo->query(
     </div>
 </nav>
 
-<nav class="category-nav">
-    <a href="courses.php" class="active"><i data-lucide="library" class="lucide-icon"></i> All Fields</a>
-    <?php foreach ($fieldsOfStudy as $f): ?>
-        <a href="courses.php?field=<?= (int) $f['id'] ?>"><?= catIcon($f['icon']) ?> <?= e($f['name']) ?></a>
-    <?php endforeach; ?>
-</nav>
+<?= renderCategoryNav($pdo) ?>
 
 <header class="hero">
     <div class="hero-content">
@@ -249,47 +245,7 @@ $stats = $pdo->query(
     <div><div class="num"><?= e(SITE_AFFILIATION) ?></div><div class="lbl">Academic Affiliation</div></div>
 </div>
 
-<footer>
-    <div class="footer-grid">
-        <div>
-            <img src="assets/seal-curved-gold.svg" alt="<?= e(SITE_NAME) ?>" class="footer-seal">
-            <div class="footer-brand"><?= e(SITE_NAME) ?></div>
-            <p>Seek Knowledge — From the Cradle to the Grave.</p>
-        </div>
-        <div>
-            <div class="footer-heading">Subjects</div>
-            <ul class="footer-links">
-                <?php foreach (array_slice($fieldsOfStudy, 0, 5) as $f): ?>
-                    <li><a href="courses.php?field=<?= (int) $f['id'] ?>"><?= e($f['name']) ?></a></li>
-                <?php endforeach; ?>
-            </ul>
-        </div>
-        <div>
-            <div class="footer-heading">Learn</div>
-            <ul class="footer-links">
-                <li><a href="courses.php">All Courses</a></li>
-                <li><a href="register.php">Join Free</a></li>
-                <li><a href="about.php">About Us</a></li>
-            </ul>
-        </div>
-        <div>
-            <div class="footer-heading">Account</div>
-            <ul class="footer-links">
-                <li><a href="login.php">Login</a></li>
-                <li><a href="dashboard.php">Dashboard</a></li>
-                <li><a href="edit-profile.php">Become a Teacher</a></li>
-            </ul>
-        </div>
-        <div>
-            <div class="footer-heading">Support</div>
-            <ul class="footer-links">
-                <li><a href="feedback.php">Send Feedback</a></li>
-                <li><a href="about.php">Contact</a></li>
-            </ul>
-        </div>
-    </div>
-    <div class="footer-bottom">&copy; <?= date('Y') ?> <?= e(SITE_NAME) ?>. Built with <i data-lucide="heart" class="lucide-icon"></i> for the Ummah.</div>
-</footer>
+<?= renderFooter($pdo) ?>
 
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <script src="app.js" defer></script>

@@ -189,6 +189,7 @@ document.addEventListener('DOMContentLoaded', function () {
         <input type="text" name="q" placeholder="Search for courses, teachers, subjects...">
     </form>
     <div class="nav-links">
+        <a href="index.php">Home</a>
         <a href="courses.php">Courses</a>
         <a href="about.php">About</a>
         <a href="feedback.php">Feedback</a>
@@ -380,6 +381,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </div>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <script src="app.js" defer></script>
+<?= renderFooter($pdo) ?>
 <script>if (window.lucide) lucide.createIcons();</script>
 </body>
 </html>

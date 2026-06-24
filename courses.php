@@ -5,12 +5,6 @@ $user = auth();
 $subjectId = (int) ($_GET['subject'] ?? 0);
 $fieldId   = (int) ($_GET['field'] ?? 0);
 $q = trim($_GET['q'] ?? '');
-$fieldsOfStudy = $pdo->query('SELECT * FROM fields_of_study ORDER BY name')->fetchAll();
-$subjects = $pdo->query(
-    $fieldId > 0
-        ? 'SELECT * FROM subjects WHERE field_of_study_id = ' . (int) $fieldId . ' ORDER BY name'
-        : 'SELECT * FROM subjects ORDER BY name'
-)->fetchAll();
 
 $courseSelect = "c.*, COALESCE(u.display_name, u.name) AS teacher_name, s.name AS subject_name, s.icon AS subject_icon,
             (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) AS student_count,
@@ -62,6 +56,7 @@ $bestsellerIds = array_column(array_filter(array_slice($rankedByStudents, 0, 3),
         <input type="text" name="q" placeholder="Search for courses, teachers, subjects..." value="<?= e($q) ?>">
     </form>
     <div class="nav-links">
+        <a href="index.php">Home</a>
         <a href="courses.php">Courses</a>
         <a href="about.php">About</a>
         <a href="feedback.php">Feedback</a>
@@ -99,19 +94,7 @@ $bestsellerIds = array_column(array_filter(array_slice($rankedByStudents, 0, 3),
     </div>
 </nav>
 
-<nav class="category-nav">
-    <a href="courses.php" class="<?= ($fieldId === 0 && $subjectId === 0) ? 'active' : '' ?>"><i data-lucide="library" class="lucide-icon"></i> All Fields</a>
-    <?php foreach ($fieldsOfStudy as $f): ?>
-        <a href="?field=<?= (int) $f['id'] ?>" class="<?= $fieldId === (int) $f['id'] ? 'active' : '' ?>"><?= catIcon($f['icon']) ?> <?= e($f['name']) ?></a>
-    <?php endforeach; ?>
-</nav>
-<?php if ($subjects): ?>
-<nav class="subcategory-nav">
-    <?php foreach ($subjects as $s): ?>
-        <a href="?<?= $fieldId ? 'field=' . (int) $fieldId . '&' : '' ?>subject=<?= (int) $s['id'] ?>" class="<?= $subjectId === (int) $s['id'] ? 'active' : '' ?>"><?= catIcon($s['icon']) ?> <?= e($s['name']) ?></a>
-    <?php endforeach; ?>
-</nav>
-<?php endif; ?>
+<?= renderCategoryNav($pdo, $fieldId, $subjectId) ?>
 
 <div class="container section">
     <h2 class="section-title">All <span>Courses</span></h2>
@@ -133,6 +116,7 @@ $bestsellerIds = array_column(array_filter(array_slice($rankedByStudents, 0, 3),
 </div>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <script src="app.js" defer></script>
+<?= renderFooter($pdo) ?>
 <script>if (window.lucide) lucide.createIcons();</script>
 </body>
 </html>

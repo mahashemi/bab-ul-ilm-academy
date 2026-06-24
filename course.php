@@ -45,26 +45,28 @@ foreach ($lessons as $l) {
 $quizzes = $pdo->prepare('SELECT * FROM quizzes WHERE course_id = ? ORDER BY sort_order ASC');
 $quizzes->execute([$id]);
 $quizzes = $quizzes->fetchAll();
-if ($quizzes && $user) {
-    foreach ($quizzes as &$qz) {
+foreach ($quizzes as &$qz) {
+    $qz['best_attempt'] = null;
+    if ($user) {
         $best = $pdo->prepare('SELECT *, (score / total * 100) AS percent FROM quiz_attempts WHERE quiz_id = ? AND student_id = ? ORDER BY percent DESC LIMIT 1');
         $best->execute([$qz['id'], $user['id']]);
         $qz['best_attempt'] = $best->fetch() ?: null;
     }
-    unset($qz);
 }
+unset($qz);
 
 $assignmentsList = $pdo->prepare('SELECT * FROM assignments WHERE course_id = ? ORDER BY created_at ASC');
 $assignmentsList->execute([$id]);
 $assignmentsList = $assignmentsList->fetchAll();
-if ($assignmentsList && $user) {
-    foreach ($assignmentsList as &$asn) {
+foreach ($assignmentsList as &$asn) {
+    $asn['my_submission'] = null;
+    if ($user) {
         $sub = $pdo->prepare('SELECT * FROM assignment_submissions WHERE assignment_id = ? AND student_id = ?');
         $sub->execute([$asn['id'], $user['id']]);
         $asn['my_submission'] = $sub->fetch() ?: null;
     }
-    unset($asn);
 }
+unset($asn);
 
 $studentCount = $pdo->prepare('SELECT COUNT(*) c FROM enrollments WHERE course_id = ?');
 $studentCount->execute([$id]);

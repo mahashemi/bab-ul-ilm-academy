@@ -110,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </nav>
 
 <div class="dashboard-wrap">
-    <div class="dashboard-header"><h2><i data-lucide="book-open" class="lucide-icon"></i> Create a New Course</h2><p>Fill in the details below to publish your course.</p></div>
+    <div class="dashboard-header"><h2><i data-lucide="book-open" class="lucide-icon"></i> Create a New Course</h2><p>Fill in the details below to publish your course. New to this? <a href="tutorial.php" style="color:var(--gold);text-decoration:underline">See the step-by-step tutorial</a>.</p></div>
 
     <?php if ($errors): ?>
         <div class="alert alert-error"><?php foreach ($errors as $err): ?><div><?= e($err) ?></div><?php endforeach; ?></div>

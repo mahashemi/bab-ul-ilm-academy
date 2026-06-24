@@ -73,6 +73,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ];
             });
         }
+    } elseif (isset($_POST['remind_teacher'])) {
+        $cid = (int) $_POST['remind_teacher'];
+        $courseRow = $pdo->prepare(
+            'SELECT c.title, u.id AS teacher_id, u.name AS teacher_name, u.email AS teacher_email FROM courses c JOIN users u ON u.id = c.teacher_id WHERE c.id = ?'
+        );
+        $courseRow->execute([$cid]);
+        $courseRow = $courseRow->fetch();
+        if ($courseRow) {
+            sendCourseReminderEmail($pdo, $courseRow['teacher_email'], $courseRow['teacher_name'], $courseRow['title'], $cid, (int) $user['id']);
+            flash('success', 'Reminder email sent to ' . $courseRow['teacher_name'] . '.');
+        }
     } elseif (isset($_POST['set_role']) && $_POST['set_role'] !== '') {
         $targetId = (int) $_POST['user_id'];
         $newRole = $_POST['set_role'];
@@ -156,8 +167,9 @@ $stats = $pdo->query(
 
 $users = $pdo->query("SELECT * FROM users WHERE role != 'admin' ORDER BY created_at DESC")->fetchAll();
 $courses = $pdo->query(
-    "SELECT c.*, COALESCE(u.display_name, u.name) AS teacher_name, s.name AS subject_name,
-            (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) AS student_count
+    "SELECT c.*, COALESCE(u.display_name, u.name) AS teacher_name, u.name AS teacher_legal_name, u.email AS teacher_email, s.name AS subject_name,
+            (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) AS student_count,
+            (SELECT COUNT(*) FROM lessons l WHERE l.course_id = c.id) AS lesson_count
      FROM courses c JOIN users u ON u.id = c.teacher_id LEFT JOIN subjects s ON s.id = c.subject_id
      ORDER BY c.created_at DESC"
 )->fetchAll();
@@ -291,10 +303,14 @@ $flaggedMessages = $pdo->query(
             <div class="card"><div class="card-body">
                 <h3 style="font-size:1.05rem;margin-bottom:.3rem"><a href="course.php?id=<?= (int) $c['id'] ?>" target="_blank"><?= e($c['title']) ?></a></h3>
                 <p style="font-size:.85rem;color:var(--text-mid);margin-bottom:.6rem">By <?= e($c['teacher_name']) ?> · <?= e($c['subject_name'] ?? 'No subject') ?></p>
-                <div style="display:flex;gap:.5rem;margin-bottom:1rem">
+                <div style="display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap">
                     <span class="badge badge-<?= e($c['level']) ?>"><?= e(ucfirst($c['level'])) ?></span>
                     <span class="badge <?= $c['price'] == 0 ? 'badge-free' : 'badge-paid' ?>"><?= $c['price'] > 0 ? '$' . number_format((float) $c['price']) : 'Free' ?></span>
+                    <span class="badge <?= (int) $c['lesson_count'] === 0 ? 'badge-paid' : 'badge-free' ?>"><i data-lucide="clipboard-list" class="lucide-icon"></i> <?= (int) $c['lesson_count'] ?> lesson<?= $c['lesson_count'] == 1 ? '' : 's' ?></span>
                 </div>
+                <?php if ((int) $c['lesson_count'] === 0): ?>
+                <form method="post" style="margin-bottom:.6rem"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="remind_teacher" value="<?= (int) $c['id'] ?>" class="btn btn-outline btn-full btn-sm"><i data-lucide="mail" class="lucide-icon"></i> Remind Teacher to Add Lessons</button></form>
+                <?php endif; ?>
                 <div style="display:flex;gap:.5rem">
                     <form method="post" style="flex:1"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="approve_course" value="<?= (int) $c['id'] ?>" class="btn btn-green btn-full btn-sm"><i data-lucide="check-circle-2" class="lucide-icon"></i> Approve</button></form>
                     <form method="post" style="flex:1" onsubmit="return confirm('Reject this course? It will not be visible to students.')"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="reject_course" value="<?= (int) $c['id'] ?>" class="btn btn-outline btn-full btn-sm" style="color:#c00;border-color:#c00"><i data-lucide="x" class="lucide-icon"></i> Reject</button></form>
@@ -309,7 +325,7 @@ $flaggedMessages = $pdo->query(
             <a href="?export=courses" class="btn btn-outline btn-sm"><i data-lucide="download" class="lucide-icon"></i> Download CSV</a>
         </div>
         <table class="table">
-            <thead><tr><th>Title</th><th>Teacher</th><th>Subject</th><th>Level</th><th>Price</th><th>Students</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Title</th><th>Teacher</th><th>Subject</th><th>Level</th><th>Price</th><th>Lessons</th><th>Students</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
                 <?php foreach ($courses as $c): ?>
                 <tr>
@@ -318,6 +334,7 @@ $flaggedMessages = $pdo->query(
                     <td><?= e($c['subject_name'] ?? '—') ?></td>
                     <td><span class="badge badge-<?= e($c['level']) ?>"><?= e(ucfirst($c['level'])) ?></span></td>
                     <td><?= $c['price'] > 0 ? '$' . number_format((float) $c['price']) : 'Free' ?></td>
+                    <td><span class="badge <?= (int) $c['lesson_count'] === 0 ? 'badge-paid' : 'badge-free' ?>"><?= (int) $c['lesson_count'] ?></span></td>
                     <td><?= (int) $c['student_count'] ?></td>
                     <td>
                         <span class="badge <?= $c['moderation_status'] === 'approved' ? 'badge-free' : ($c['moderation_status'] === 'rejected' ? 'badge-paid' : 'badge-pending') ?>"><?= e(ucfirst($c['moderation_status'])) ?></span>
@@ -329,6 +346,9 @@ $flaggedMessages = $pdo->query(
                             <i data-lucide="users" class="lucide-icon"></i><?php if ((int) $c['student_count'] > 0): ?><span class="count-badge"><?= (int) $c['student_count'] ?></span><?php endif; ?>
                         </a>
                         <a href="chat.php?with=<?= (int) $c['teacher_id'] ?>&course=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="Message teacher" aria-label="Message teacher"><i data-lucide="message-circle" class="lucide-icon"></i></a>
+                        <?php if ((int) $c['lesson_count'] === 0): ?>
+                        <form method="post" style="display:inline" onsubmit="return confirm('Send a setup reminder email to this teacher?')"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="remind_teacher" value="<?= (int) $c['id'] ?>" class="icon-btn" data-tip="Remind teacher to add lessons" aria-label="Remind teacher to add lessons"><i data-lucide="mail" class="lucide-icon"></i></button></form>
+                        <?php endif; ?>
                         <?php if ($c['moderation_status'] === 'approved'): ?>
                         <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_published" value="<?= (int) $c['id'] ?>" class="icon-btn" data-tip="<?= $c['is_published'] ? 'Unpublish' : 'Publish' ?>" aria-label="<?= $c['is_published'] ? 'Unpublish' : 'Publish' ?>"><?= $c['is_published'] ? '<i data-lucide="ban" class="lucide-icon"></i>' : '<i data-lucide="check-circle-2" class="lucide-icon"></i>' ?></button></form>
                         <?php endif; ?>

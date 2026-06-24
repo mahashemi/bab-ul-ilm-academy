@@ -167,7 +167,7 @@ $previewCard = fetchPreviewCard($pdo, $id);
 <div class="dashboard-wrap">
     <div class="dashboard-header">
         <h2><i data-lucide="pencil" class="lucide-icon"></i> Edit Course</h2>
-        <p><?= $isAdmin && !$isOwner ? 'You are editing this course as an admin.' : 'Update your course details below.' ?></p>
+        <p><?= $isAdmin && !$isOwner ? 'You are editing this course as an admin.' : 'Update your course details below.' ?> <a href="tutorial.php" style="color:var(--gold);text-decoration:underline">View tutorial</a></p>
     </div>
 
     <div class="card" style="margin-bottom:1.5rem"><div class="card-body">

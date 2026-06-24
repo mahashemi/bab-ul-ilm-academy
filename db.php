@@ -502,6 +502,53 @@ function sendPasswordResetEmail(string $toEmail, string $name, string $token): b
     );
 }
 
+// Admin-triggered nudge for teachers whose course has few/no lessons —
+// English, Persian, and Urdu, since teachers on this platform come from
+// all three language backgrounds. Not auto-sent on a schedule; an admin
+// clicks a button per course (admin.php), so it can't become spam.
+function sendCourseReminderEmail(PDO $pdo, string $toEmail, string $name, string $courseTitle, int $courseId, int $adminId): bool {
+    $nameSafe = e($name);
+    $titleSafe = e($courseTitle);
+    $link = siteBaseUrl() . '/edit-course.php?id=' . $courseId;
+
+    $body = '<p style="margin:0 0 18px">Your course <strong>"' . $titleSafe . '"</strong> could use a bit more content before students get the most out of it:</p>'
+        . '<ul style="margin:0 0 22px;padding-left:20px">'
+        . '<li style="margin-bottom:6px">Add lessons with clear titles and content</li>'
+        . '<li style="margin-bottom:6px">Add video links to your lessons (YouTube/Vimeo embed links)</li>'
+        . '<li style="margin-bottom:6px">Consider adding a quiz to check student understanding</li>'
+        . '<li>Need help? Reply to this email or message us through the platform</li>'
+        . '</ul>'
+        . '<p style="margin:0 0 22px"><a href="' . e(siteBaseUrl()) . '/tutorial.php">View the step-by-step tutorial (English / Persian / Urdu)</a></p>'
+        . '<hr style="border:none;border-top:1px solid #e0dbd2;margin:0 0 18px">'
+        . '<div dir="rtl" style="text-align:right;margin:0 0 22px">'
+        . '<p style="margin:0 0 12px;font-weight:bold">' . $nameSafe . ' عزیز،</p>'
+        . '<p style="margin:0 0 12px">دوره شما «' . $titleSafe . '» برای استفاده بهتر دانش‌آموزان به محتوای بیشتری نیاز دارد:</p>'
+        . '<ul style="margin:0 0 12px;padding-right:20px;padding-left:0">'
+        . '<li style="margin-bottom:6px">درس‌های خود را با عناوین و محتوای واضح اضافه کنید</li>'
+        . '<li style="margin-bottom:6px">لینک‌های ویدیو به درس‌های خود اضافه کنید (لینک‌های یوتیوب/ویمیو)</li>'
+        . '<li style="margin-bottom:6px">می‌توانید یک آزمون برای بررسی درک دانش‌آموزان اضافه کنید</li>'
+        . '<li>به کمک نیاز دارید؟ به این ایمیل پاسخ دهید یا از طریق پلتفرم با ما پیام دهید</li>'
+        . '</ul>'
+        . '</div>'
+        . '<hr style="border:none;border-top:1px solid #e0dbd2;margin:0 0 18px">'
+        . '<div dir="rtl" style="text-align:right">'
+        . '<p style="margin:0 0 12px;font-weight:bold">پیارے ' . $nameSafe . '،</p>'
+        . '<p style="margin:0 0 12px">آپ کے کورس "' . $titleSafe . '" کو طلباء کے لیے زیادہ فائدہ مند بنانے کے لیے مزید مواد کی ضرورت ہے:</p>'
+        . '<ul style="margin:0;padding-right:20px;padding-left:0">'
+        . '<li style="margin-bottom:6px">اپنے اسباق کو واضح عنوانات اور مواد کے ساتھ شامل کریں</li>'
+        . '<li style="margin-bottom:6px">اپنے اسباق میں ویڈیو لنکس شامل کریں (یوٹیوب/ویمیو ایمبیڈ لنکس)</li>'
+        . '<li style="margin-bottom:6px">طلباء کی سمجھ جانچنے کے لیے ایک کوئز شامل کرنے پر غور کریں</li>'
+        . '<li>مدد کی ضرورت ہے؟ اس ای میل کا جواب دیں یا پلیٹ فارم کے ذریعے ہمیں پیغام بھیجیں</li>'
+        . '</ul>'
+        . '</div>';
+
+    $sent = sendNotificationEmail($toEmail, $name, 'Let\'s finish setting up "' . $courseTitle . '"', $body, 'Edit Your Course', $link);
+    if ($sent) {
+        logActivity($pdo, $adminId, 'Sent course-setup reminder email for course #' . $courseId);
+    }
+    return $sent;
+}
+
 // ── Engagement notification emails ──────────────────────────────────────
 // Shared branded template for every "something happened" email (new
 // message, course approved, badge earned, etc.) so each call site only

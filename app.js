@@ -70,4 +70,46 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
     });
+
+    // Mobile search: the same .nav-search form on every page collapses to a
+    // round icon button under 768px (see style.css) and expands in place
+    // into a full-screen overlay on tap, instead of a separate dedicated
+    // page or duplicated markup. Desktop is untouched -- the bar there is
+    // already a normal always-visible search box.
+    document.querySelectorAll('.nav-search').forEach(function (form) {
+        var input = form.querySelector('input');
+        if (!input) return;
+
+        function openSearch() {
+            form.classList.add('search-open');
+            if (!form.querySelector('.nav-search-close')) {
+                var closeBtn = document.createElement('button');
+                closeBtn.type = 'button';
+                closeBtn.className = 'nav-search-close';
+                closeBtn.setAttribute('aria-label', 'Close search');
+                closeBtn.innerHTML = '<i data-lucide="x" class="lucide-icon"></i>';
+                closeBtn.addEventListener('click', function (e) { e.stopPropagation(); closeSearch(); });
+                form.appendChild(closeBtn);
+                if (window.lucide) lucide.createIcons();
+            }
+            setTimeout(function () { input.focus(); }, 60);
+        }
+        function closeSearch() {
+            form.classList.remove('search-open');
+        }
+
+        form.addEventListener('click', function (e) {
+            if (window.innerWidth > 768) return;
+            if (!form.classList.contains('search-open')) {
+                e.preventDefault();
+                openSearch();
+            } else if (e.target === form) {
+                // tapped the overlay's own background, not the input/icon/close button
+                closeSearch();
+            }
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && form.classList.contains('search-open')) closeSearch();
+        });
+    });
 });

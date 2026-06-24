@@ -431,10 +431,32 @@ img { max-width: 100%; height: auto; display: block; }
 }
 .subcategory-nav a:hover, .subcategory-nav a.active { color: var(--gold); background: rgba(255,255,255,.06); }
 @media (max-width: 768px) {
-    .category-nav-group { position: static; }
-    .category-nav { justify-content: flex-start; }
-    .subcategory-nav-panel { position: static; opacity: 1; visibility: visible; }
-    .subcategory-nav.active-panel { display: flex; justify-content: flex-start; }
+    /* The hover-driven desktop strip is replaced by .category-nav-mobile
+       (a <details>-based accordion living inside the hamburger drawer)
+       on small screens -- showing both would mean two separate category
+       navigation UIs stacked on the page. */
+    .category-nav-group { display: none; }
+}
+/* ── Mobile category accordion (lives inside .nav-links) ── */
+.category-nav-mobile { display: none; }
+@media (max-width: 768px) {
+    .category-nav-mobile { display: block; margin: .4rem 0; border-top: 1px solid rgba(255,255,255,.1); border-bottom: 1px solid rgba(255,255,255,.1); }
+    .category-nav-mobile .nav-links-label { color: rgba(255,255,255,.45); font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; padding: .7rem 1rem .3rem; }
+    .category-nav-mobile > a { display: flex; align-items: center; gap: .6rem; padding: .7rem 1rem; font-size: .92rem; color: rgba(255,255,255,.8); border-radius: 12px; }
+    .category-nav-mobile > a:hover, .category-nav-mobile > a.active { background: rgba(255,255,255,.1); color: var(--gold); }
+    .category-nav-mobile details { border-top: 1px solid rgba(255,255,255,.08); }
+    .category-nav-mobile summary {
+        padding: .7rem 1rem; font-size: .92rem; color: rgba(255,255,255,.85);
+        cursor: pointer; display: flex; align-items: center; gap: .6rem; list-style: none;
+    }
+    .category-nav-mobile summary::-webkit-details-marker { display: none; }
+    .category-nav-mobile summary::after { content: '+'; margin-left: auto; opacity: .6; font-size: 1.1rem; }
+    .category-nav-mobile details[open] summary::after { content: '\2212'; }
+    .category-nav-mobile details a {
+        display: block; padding: .6rem 1rem .6rem 2.6rem; font-size: .85rem;
+        color: rgba(255,255,255,.6); border-radius: 12px;
+    }
+    .category-nav-mobile details a:hover, .category-nav-mobile details a.active { color: var(--gold); background: rgba(255,255,255,.06); }
 }
 .chip-view-all {
     display: inline-flex; align-items: center; gap: .3rem; flex-shrink: 0;
@@ -672,13 +694,20 @@ footer { background: var(--green-deep); color: rgba(255,255,255,.75); padding: 3
 }
 
 @media (max-width: 768px) {
-    .navbar { padding: 0 1rem; height: 60px; flex-direction: row; align-items: center; gap: .6rem; }
-    .nav-brand { font-size: 1.05rem; max-width: 38vw; }
+    /* Logo and hamburger share a top row (logo left, hamburger right);
+       search gets its own full-width row underneath instead of being
+       squeezed between them -- three items competing for ~340px of
+       width left almost no room to actually type a search. */
+    .navbar {
+        padding: .55rem 1rem; height: auto; flex-direction: row; flex-wrap: wrap;
+        align-items: center; justify-content: space-between; gap: .5rem;
+    }
+    .nav-brand { font-size: 1.05rem; max-width: 55vw; }
     .nav-logo { height: 30px; }
     .nav-brand small { font-size: .68rem; }
-    .nav-search { padding: .4rem .7rem; gap: .4rem; max-width: none; }
+    .nav-toggle { order: 2; display: block; }
+    .nav-search { order: 3; flex-basis: 100%; max-width: none; padding: .45rem .8rem; gap: .4rem; margin-top: .15rem; }
     .nav-search input { font-size: .82rem; }
-    .nav-toggle { display: block; }
     .nav-links {
         position: fixed; top: 0; left: 0; height: 100vh; width: 80%; max-width: 300px;
         background: var(--green-deep); flex-direction: column; align-items: stretch;
@@ -695,6 +724,16 @@ footer { background: var(--green-deep); color: rgba(255,255,255,.75); padding: 3
         opacity: 0; pointer-events: none; transition: opacity .28s ease;
     }
     .nav-scrim.show { opacity: 1; pointer-events: auto; }
+
+    /* Admin panel tabs: flex:1 across 9 tabs squeezed each to ~40px on a
+       phone, illegible. Scroll horizontally instead, like the category
+       nav already does. */
+    .tabs { overflow-x: auto; scrollbar-width: none; }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab-btn { flex: 0 0 auto; white-space: nowrap; padding: .75rem 1.1rem; }
+
+    /* Keeps the account dropdown from overflowing the smallest phones. */
+    .nav-account-menu { max-width: calc(100vw - 2rem); }
 
     .hero { padding: 2.5rem 1rem; }
     .hero h1 { font-size: 1.6rem; }
@@ -733,7 +772,10 @@ footer { background: var(--green-deep); color: rgba(255,255,255,.75); padding: 3
     .role-switch { flex-direction: column; }
     /* Chat: show one pane at a time (list OR thread), like a real messaging app */
     .chat-page { padding: 0; }
-    .chat-wrap { height: calc(100vh - 60px); max-height: none; border-radius: 0; border: none; }
+    /* 96px estimates the new two-row mobile navbar (logo/hamburger row +
+       full-width search row below it) -- was 60px for the old single-row
+       navbar before search moved to its own line. */
+    .chat-wrap { height: calc(100vh - 96px); max-height: none; border-radius: 0; border: none; }
     .chat-list { width: 100%; display: flex; }
     .chat-main { display: none; }
     .chat-wrap.thread-open .chat-list { display: none; }
@@ -749,7 +791,7 @@ footer { background: var(--green-deep); color: rgba(255,255,255,.75); padding: 3
 }
 @media (max-width: 420px) {
     .hero h1 { font-size: 1.4rem; }
-    .nav-brand { font-size: 1rem; max-width: 30vw; }
+    .nav-brand { font-size: 1rem; max-width: 50vw; }
     .nav-logo { height: 26px; }
     .nav-search { padding: .35rem .55rem; }
     .nav-search input::placeholder { font-size: .76rem; }

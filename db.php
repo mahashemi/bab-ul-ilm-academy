@@ -1029,7 +1029,15 @@ function renderAvatar(?array $user, string $class = 'nav-avatar'): string {
 // list on courses.php. Whichever subject the user currently has selected
 // is always kept visible even if it didn't rank, so the active state is
 // never silently dropped.
-function renderCategoryNav(PDO $pdo, int $activeFieldId = 0, int $activeSubjectId = 0, int $topN = 3): string {
+//
+// Returns ['desktop' => ..., 'mobile' => ...] rather than one string: the
+// desktop version is a hover strip rendered as its own full-width section
+// right after </nav>, but on mobile it needs to live INSIDE the hamburger
+// drawer (.nav-links) instead of as a second, always-visible bar -- two
+// different DOM locations, so the caller echoes each piece where it
+// belongs. The mobile version uses native <details>/<summary> for the
+// expand/collapse so no JS is needed for the accordion itself.
+function renderCategoryNav(PDO $pdo, int $activeFieldId = 0, int $activeSubjectId = 0, int $topN = 3): array {
     $fields = $pdo->query('SELECT * FROM fields_of_study ORDER BY name')->fetchAll();
     $allSubjects = $pdo->query(
         "SELECT s.*, (SELECT COUNT(*) FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.subject_id = s.id) AS enrollment_count
@@ -1074,7 +1082,29 @@ function renderCategoryNav(PDO $pdo, int $activeFieldId = 0, int $activeSubjectI
         </div>
     </div>
     <?php
-    return ob_get_clean();
+    $desktop = ob_get_clean();
+
+    ob_start();
+    ?>
+    <div class="category-nav-mobile">
+        <div class="nav-links-label">Browse by Category</div>
+        <a href="courses.php" class="<?= ($activeFieldId === 0 && $activeSubjectId === 0) ? 'active' : '' ?>"><i data-lucide="library" class="lucide-icon"></i> All Fields</a>
+        <?php foreach ($fields as $f): $fid = (int) $f['id']; if (empty($topByField[$fid]['shown'])) continue; ?>
+        <details<?= $activeFieldId === $fid ? ' open' : '' ?>>
+            <summary><?= catIcon($f['icon']) ?> <?= e($f['name']) ?></summary>
+            <?php foreach ($topByField[$fid]['shown'] as $s): ?>
+                <a href="courses.php?field=<?= $fid ?>&subject=<?= (int) $s['id'] ?>" class="<?= $activeSubjectId === (int) $s['id'] ? 'active' : '' ?>"><?= catIcon($s['icon']) ?> <?= e($s['name']) ?></a>
+            <?php endforeach; ?>
+            <?php if ($topByField[$fid]['total'] > count($topByField[$fid]['shown'])): ?>
+                <a href="courses.php?field=<?= $fid ?>" style="opacity:.7"><i data-lucide="ellipsis" class="lucide-icon"></i> More in <?= e($f['name']) ?></a>
+            <?php endif; ?>
+        </details>
+        <?php endforeach; ?>
+    </div>
+    <?php
+    $mobile = ob_get_clean();
+
+    return ['desktop' => $desktop, 'mobile' => $mobile];
 }
 
 // Shared rich footer — fields of study, popular subjects, and the real

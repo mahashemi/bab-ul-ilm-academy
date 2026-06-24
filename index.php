@@ -95,6 +95,7 @@ $stats = $pdo->query(
 )->fetch();
 
 $heroBg = siteSetting($pdo, 'home_hero_bg');
+$categoryNav = renderCategoryNav($pdo);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -126,6 +127,7 @@ $heroBg = siteSetting($pdo, 'home_hero_bg');
     <div class="nav-links">
         <a href="index.php">Home</a>
         <a href="courses.php">Courses</a>
+        <?= $categoryNav['mobile'] ?>
         <a href="about.php">About</a>
         <a href="feedback.php">Feedback</a>
         <?php if ($user): ?>
@@ -162,7 +164,7 @@ $heroBg = siteSetting($pdo, 'home_hero_bg');
     </div>
 </nav>
 
-<?= renderCategoryNav($pdo) ?>
+<?= $categoryNav['desktop'] ?>
 
 <header class="hero" <?php if ($heroBg): ?>style="background-image:linear-gradient(135deg, rgba(10,61,31,.92) 0%, rgba(10,61,31,.75) 50%, rgba(8,51,68,.78) 100%), url('<?= e($heroBg) ?>');background-size:cover;background-position:center"<?php endif; ?>>
     <div class="hero-content">

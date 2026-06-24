@@ -53,6 +53,8 @@ $courses = $stmt->fetchAll();
 $rankedByStudents = $courses;
 usort($rankedByStudents, fn($a, $b) => (int) $b['student_count'] - (int) $a['student_count']);
 $bestsellerIds = array_column(array_filter(array_slice($rankedByStudents, 0, 3), fn($c) => (int) $c['student_count'] > 0), 'id');
+
+$categoryNav = renderCategoryNav($pdo, $fieldId, $subjectId);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -79,6 +81,7 @@ $bestsellerIds = array_column(array_filter(array_slice($rankedByStudents, 0, 3),
     <div class="nav-links">
         <a href="index.php">Home</a>
         <a href="courses.php">Courses</a>
+        <?= $categoryNav['mobile'] ?>
         <a href="about.php">About</a>
         <a href="feedback.php">Feedback</a>
         <?php if ($user): ?>
@@ -115,7 +118,7 @@ $bestsellerIds = array_column(array_filter(array_slice($rankedByStudents, 0, 3),
     </div>
 </nav>
 
-<?= renderCategoryNav($pdo, $fieldId, $subjectId) ?>
+<?= $categoryNav['desktop'] ?>
 
 <div class="container section">
     <h2 class="section-title">All <span>Courses</span></h2>

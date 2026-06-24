@@ -497,9 +497,13 @@ function starString(float $rating): string {
                             <div style="display:flex;gap:.5rem;margin-top:.6rem;flex-wrap:wrap">
                                 <a href="chat.php?with=<?= (int) $course['teacher_id'] ?>&course=<?= (int) $course['id'] ?>" class="btn btn-sm btn-outline"><i data-lucide="message-circle" class="lucide-icon"></i> Message Teacher</a>
                                 <a href="class-chat.php?course_id=<?= (int) $course['id'] ?>" class="btn btn-sm btn-outline"><i data-lucide="users" class="lucide-icon"></i> Class Discussion</a>
+                                <a href="course-qa.php?course_id=<?= (int) $course['id'] ?>" class="btn btn-sm btn-outline"><i data-lucide="circle-help" class="lucide-icon"></i> Q&amp;A</a>
                             </div>
                         <?php elseif ($isOwnerOrAdmin): ?>
-                            <a href="class-chat.php?course_id=<?= (int) $course['id'] ?>" class="btn btn-sm btn-outline" style="margin-top:.6rem"><i data-lucide="users" class="lucide-icon"></i> Class Discussion</a>
+                            <div style="display:flex;gap:.5rem;margin-top:.6rem;flex-wrap:wrap">
+                                <a href="class-chat.php?course_id=<?= (int) $course['id'] ?>" class="btn btn-sm btn-outline"><i data-lucide="users" class="lucide-icon"></i> Class Discussion</a>
+                                <a href="course-qa.php?course_id=<?= (int) $course['id'] ?>" class="btn btn-sm btn-outline"><i data-lucide="circle-help" class="lucide-icon"></i> Q&amp;A</a>
+                            </div>
                         <?php endif; ?>
                     </div>
                 </div>

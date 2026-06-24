@@ -517,6 +517,24 @@ CREATE TABLE IF NOT EXISTS certificates (
     FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ── Phase E: per-course Q&A (distinct from live class chat — persistent,
+-- structured reference material tied to one question each, not a chat
+-- stream) ──
+CREATE TABLE IF NOT EXISTS course_questions (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    course_id   INT UNSIGNED NOT NULL,
+    student_id  INT UNSIGNED NOT NULL,
+    question    TEXT NOT NULL,
+    answer      TEXT NULL,
+    answered_by INT UNSIGNED NULL,
+    answered_at TIMESTAMP NULL,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (answered_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_course (course_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ── Initial Admin Account ───────────────────────────────────────────────
 -- Default password: Admin@123
 -- IMPORTANT: Log in immediately and change this password via your profile.

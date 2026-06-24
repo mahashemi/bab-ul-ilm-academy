@@ -535,6 +535,28 @@ CREATE TABLE IF NOT EXISTS course_questions (
     INDEX idx_course (course_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ── AI-assisted course authoring ──
+-- Optional reference textbook, used to ground the AI lesson-generation
+-- prompt in real source material instead of the AI's general knowledge.
+ALTER TABLE courses ADD COLUMN textbook VARCHAR(255) NULL AFTER requirements;
+
+-- Prompt text lives in the DB (not hardcoded in PHP) specifically so an
+-- admin can tune wording without a code deploy. template_text uses
+-- {{placeholder}} tokens substituted at render time -- see
+-- renderAiPrompt() in db.php. Seed rows are inserted by a one-time PHP
+-- script (not raw SQL here) since the prompt text is long and contains
+-- quotes/braces that are error-prone to hand-escape in SQL.
+CREATE TABLE IF NOT EXISTS ai_prompt_templates (
+    id                 INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    template_key       VARCHAR(50) NOT NULL UNIQUE,
+    label              VARCHAR(150) NOT NULL,
+    template_text      TEXT NOT NULL,
+    placeholders_help  TEXT NULL,
+    updated_by         INT UNSIGNED NULL,
+    updated_at         TIMESTAMP NULL DEFAULT NULL,
+    FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ── Initial Admin Account ───────────────────────────────────────────────
 -- Default password: Admin@123
 -- IMPORTANT: Log in immediately and change this password via your profile.

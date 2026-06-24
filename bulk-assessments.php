@@ -16,6 +16,7 @@ if (!$course) {
 $lessonCount = $pdo->prepare('SELECT COUNT(*) FROM lessons WHERE course_id = ?');
 $lessonCount->execute([$courseId]);
 $lessonCount = (int) $lessonCount->fetchColumn();
+$lessonSummary = $lessonCount > 0 ? buildLessonSummaryForPrompt($pdo, $courseId) : '';
 
 $quizResult = null;
 $assignmentResult = null;
@@ -261,24 +262,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $lessonCount > 0) {
     <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
         <a href="download-template.php?type=quizzes" class="btn btn-outline" style="margin-bottom:1rem"><i data-lucide="file-down" class="lucide-icon"></i> Download quiz-template.csv</a>
         <div class="ai-prompt-box">
-            <p style="font-size:.85rem;margin-bottom:.5rem"><strong>Let an AI write it:</strong></p>
-            <pre id="quizPrompt">I'm creating a quiz for my course "<?= e($course['title']) ?>" on <?= e(SITE_NAME) ?>. Generate a CSV file I can upload directly.
-
-Quiz topic / what it should test: [FILL IN]
-Number of questions: [FILL IN — e.g. 10]
-Passing score (percent): [FILL IN — e.g. 70]
-
-Output ONLY raw CSV text (no explanation, no markdown code fences) with EXACTLY these column headers, in this order:
-quiz_title,passing_score,question,option_1,option_2,option_3,option_4,correct_option
-
-Rules:
-- quiz_title: the exact same text on every row (this is what groups questions into one quiz)
-- passing_score: the same number on every row
-- question: the question text
-- option_1, option_2: required answer choices; option_3, option_4 optional (2-4 total per question)
-- correct_option: which option is correct — just the number 1, 2, 3, or 4
-
-Generate one row per question.</pre>
+            <p style="font-size:.85rem;margin-bottom:.5rem"><strong>Let an AI write it</strong> — grounded in this course's actual lessons, so questions test what was really taught:</p>
+            <pre id="quizPrompt"><?= e(renderAiPrompt($pdo, 'quiz_questions', [
+                'site_name' => SITE_NAME,
+                'course_title' => $course['title'],
+                'lesson_summary' => $lessonSummary,
+            ])) ?></pre>
             <button type="button" class="btn btn-outline btn-sm copy-prompt-btn" data-target="quizPrompt"><i data-lucide="copy" class="lucide-icon"></i> Copy Prompt</button>
         </div>
         <form method="post" enctype="multipart/form-data" style="margin-top:1rem">
@@ -342,20 +331,12 @@ Generate one row per question.</pre>
     <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
         <a href="download-template.php?type=assignments" class="btn btn-outline" style="margin-bottom:1rem"><i data-lucide="file-down" class="lucide-icon"></i> Download assignments-template.csv</a>
         <div class="ai-prompt-box">
-            <p style="font-size:.85rem;margin-bottom:.5rem"><strong>Let an AI write it:</strong></p>
-            <pre id="assignmentPrompt">I'm creating assignment(s) for my course "<?= e($course['title']) ?>" on <?= e(SITE_NAME) ?>. Generate a CSV file I can upload directly.
-
-Assignment topic(s): [FILL IN]
-
-Output ONLY raw CSV text (no explanation, no markdown code fences) with EXACTLY these column headers, in this order:
-title,description,due_date
-
-Rules:
-- title: short, specific (3-80 characters)
-- description: clear instructions for what the student must submit
-- due_date: a date in YYYY-MM-DD format, or leave blank for no deadline
-
-Generate one row per assignment.</pre>
+            <p style="font-size:.85rem;margin-bottom:.5rem"><strong>Let an AI write it</strong> — grounded in this course's actual lessons:</p>
+            <pre id="assignmentPrompt"><?= e(renderAiPrompt($pdo, 'assignments', [
+                'site_name' => SITE_NAME,
+                'course_title' => $course['title'],
+                'lesson_summary' => $lessonSummary,
+            ])) ?></pre>
             <button type="button" class="btn btn-outline btn-sm copy-prompt-btn" data-target="assignmentPrompt"><i data-lucide="copy" class="lucide-icon"></i> Copy Prompt</button>
         </div>
         <form method="post" enctype="multipart/form-data" style="margin-top:1rem">
@@ -408,19 +389,6 @@ Generate one row per assignment.</pre>
 <?= renderFooter($pdo) ?>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <script src="app.js" defer></script>
-<script>
-document.querySelectorAll('.copy-prompt-btn').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-        var text = document.getElementById(btn.dataset.target).textContent;
-        navigator.clipboard.writeText(text).then(function () {
-            var original = btn.innerHTML;
-            btn.innerHTML = '<i data-lucide="check" class="lucide-icon"></i> Copied!';
-            if (window.lucide) lucide.createIcons();
-            setTimeout(function () { btn.innerHTML = original; if (window.lucide) lucide.createIcons(); }, 1800);
-        });
-    });
-});
-if (window.lucide) lucide.createIcons();
-</script>
+<script>if (window.lucide) lucide.createIcons();</script>
 </body>
 </html>

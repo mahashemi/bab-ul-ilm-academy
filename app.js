@@ -55,4 +55,19 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
     });
+
+    // Shared "Copy Prompt" button for the AI-prompt boxes on the bulk-CSV-upload
+    // and lesson/quiz/assignment helper pages (data-target points at the <pre> id).
+    document.querySelectorAll('.copy-prompt-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var target = document.getElementById(btn.dataset.target);
+            if (!target) return;
+            navigator.clipboard.writeText(target.textContent).then(function () {
+                var original = btn.innerHTML;
+                btn.innerHTML = '<i data-lucide="check" class="lucide-icon"></i> Copied!';
+                if (window.lucide) lucide.createIcons();
+                setTimeout(function () { btn.innerHTML = original; if (window.lucide) lucide.createIcons(); }, 1800);
+            });
+        });
+    });
 });

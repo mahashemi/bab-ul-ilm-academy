@@ -139,6 +139,23 @@ $suggestedSection = 'Week ' . (count($existingSections) + 1);
     <?php if (flash('success')): ?><div class="alert alert-success"><?= e(flash('success')) ?></div><?php endif; ?>
     <?php if ($errors): ?><div class="alert alert-error"><?php foreach ($errors as $err): ?><div><?= e($err) ?></div><?php endforeach; ?></div><?php endif; ?>
 
+    <?php if (!$lessons): ?>
+    <div class="card" style="margin-bottom:1.5rem;border-color:var(--gold)"><div class="card-body">
+        <h3 style="font-size:1rem;margin-bottom:.6rem"><i data-lucide="sparkles" class="lucide-icon"></i> Don't want to type out every lesson by hand?</h3>
+        <p style="font-size:.88rem;margin-bottom:.8rem">Copy this prompt into ChatGPT, Claude, DeepSeek, or any AI assistant. It already knows this course's title and description — just tell it how many lessons you want, and it'll write a complete lesson plan as a CSV you can upload directly below.</p>
+        <div class="ai-prompt-box">
+            <pre id="lessonHelperPrompt"><?= e(renderAiPrompt($pdo, 'course_lessons', [
+                'site_name' => SITE_NAME,
+                'course_title' => $course['title'],
+                'course_description' => $course['description'],
+                'textbook' => $course['textbook'] ?: 'None specified — use your general knowledge of the subject.',
+            ])) ?></pre>
+            <button type="button" class="btn btn-outline btn-sm copy-prompt-btn" data-target="lessonHelperPrompt"><i data-lucide="copy" class="lucide-icon"></i> Copy Prompt</button>
+        </div>
+        <a href="bulk-lessons.php?course_id=<?= (int) $courseId ?>" class="btn btn-primary btn-sm" style="margin-top:1rem"><i data-lucide="upload" class="lucide-icon"></i> Upload the Resulting CSV</a>
+    </div></div>
+    <?php endif; ?>
+
     <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
         <form method="post">
             <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">

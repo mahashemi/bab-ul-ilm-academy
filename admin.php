@@ -151,6 +151,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare('UPDATE class_messages SET is_deleted=1 WHERE id=?')->execute([$msgId]);
         $pdo->prepare("UPDATE message_flags SET status='deleted', reviewed_by=?, reviewed_at=NOW() WHERE id=?")
             ->execute([$user['id'], $fid]);
+    } elseif (isset($_POST['save_ai_prompt'])) {
+        $key = $_POST['save_ai_prompt'];
+        $text = trim($_POST['template_text'] ?? '');
+        if (array_key_exists($key, aiPromptDefaults()) && $text !== '') {
+            $pdo->prepare('UPDATE ai_prompt_templates SET template_text = ?, updated_by = ?, updated_at = NOW() WHERE template_key = ?')
+                ->execute([$text, $user['id'], $key]);
+            flash('success', 'Prompt updated.');
+        }
+    } elseif (isset($_POST['reset_ai_prompt'])) {
+        $key = $_POST['reset_ai_prompt'];
+        $defaults = aiPromptDefaults();
+        if (isset($defaults[$key])) {
+            $pdo->prepare('UPDATE ai_prompt_templates SET template_text = ?, updated_by = ?, updated_at = NOW() WHERE template_key = ?')
+                ->execute([$defaults[$key]['template_text'], $user['id'], $key]);
+            flash('success', 'Prompt reset to default.');
+        }
     }
     redirect('admin.php?tab=' . ($_GET['tab'] ?? 'users'));
 }
@@ -312,6 +328,7 @@ $flaggedMessages = $pdo->query(
         <a href="?tab=feedback" class="tab-btn <?= $tab === 'feedback' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="message-circle" class="lucide-icon"></i> Feedback (<?= count($feedback) ?>)</a>
         <a href="?tab=messages" class="tab-btn <?= $tab === 'messages' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="eye" class="lucide-icon"></i> All Chats (<?= count($allConvos) ?>)</a>
         <a href="?tab=flags" class="tab-btn <?= $tab === 'flags' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="triangle-alert" class="lucide-icon"></i> Flagged Messages (<?= count($flaggedMessages) ?>)</a>
+        <a href="?tab=ai_prompts" class="tab-btn <?= $tab === 'ai_prompts' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="sparkles" class="lucide-icon"></i> AI Prompts</a>
     </div>
 
     <?php if ($tab === 'pending'): ?>
@@ -633,6 +650,25 @@ $flaggedMessages = $pdo->query(
             </tbody>
         </table>
         <?php endif; ?>
+    <?php elseif ($tab === 'ai_prompts'): ?>
+        <?php if (flash('success')): ?><div class="alert alert-success"><?= e(flash('success')) ?></div><?php endif; ?>
+        <p class="section-sub">These prompts are shown to teachers throughout the course-authoring flow so they can ask an AI assistant (ChatGPT, Claude, DeepSeek, etc.) to write course content as a ready-to-upload CSV. Editing the wording here updates it everywhere immediately — no code deploy needed. Available placeholders for each prompt are listed below its box and are substituted automatically; don't remove the <code>{{double-brace}}</code> tokens unless you mean to.</p>
+        <?php foreach (aiPromptDefaults() as $key => $default): $tpl = getAiPromptTemplate($pdo, $key); ?>
+        <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
+            <h3 style="font-size:1rem;margin-bottom:.6rem"><?= e($tpl['label']) ?></h3>
+            <form method="post">
+                <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+                <div class="form-group">
+                    <textarea name="template_text" class="form-control" rows="14" style="font-family:ui-monospace,'SF Mono',Consolas,monospace;font-size:.82rem" required><?= e($tpl['template_text']) ?></textarea>
+                </div>
+                <p style="font-size:.78rem;color:var(--text-light);margin-bottom:1rem"><i data-lucide="info" class="lucide-icon"></i> <?= e($tpl['placeholders_help']) ?></p>
+                <div style="display:flex;gap:.6rem">
+                    <button type="submit" name="save_ai_prompt" value="<?= e($key) ?>" class="btn btn-primary btn-sm">Save</button>
+                    <button type="submit" name="reset_ai_prompt" value="<?= e($key) ?>" class="btn btn-outline btn-sm" onclick="return confirm('Reset this prompt to the original default? Your edits will be lost.')">Reset to Default</button>
+                </div>
+            </form>
+        </div></div>
+        <?php endforeach; ?>
     <?php else: ?>
         <div style="display:flex;justify-content:flex-end;margin-bottom:1rem">
             <a href="?export=users" class="btn btn-outline btn-sm"><i data-lucide="download" class="lucide-icon"></i> Download CSV</a>

@@ -171,23 +171,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <h3 style="font-size:1rem;margin-bottom:.8rem"><i data-lucide="sparkles" class="lucide-icon"></i> Step 2 (Optional): Let an AI Fill It In For You</h3>
         <p style="font-size:.88rem;margin-bottom:.8rem">Copy this prompt, tell the AI your topic and how many lessons you want, and it will write the full lesson plan as a CSV.</p>
         <div class="ai-prompt-box">
-            <pre id="lessonPrompt">I'm building the lesson plan for my course "<?= e($course['title']) ?>" on <?= e(SITE_NAME) ?>. Generate a CSV file I can upload directly.
-
-Course description: <?= e($course['description']) ?>
-Number of lessons wanted: [FILL IN — e.g. 12]
-Any specific topics/order you want covered: [FILL IN, OR DELETE THIS LINE]
-
-Output ONLY raw CSV text (no explanation, no markdown code fences) with EXACTLY these column headers, in this order:
-section_title,title,content,video_url,duration_minutes
-
-Rules for each column:
-- section_title: group lessons logically, e.g. "Week 1", "Week 2" — repeat the exact same text across lessons in the same group
-- title: short, specific lesson title (3-80 characters)
-- content: real educational content a student will read, 150-400 words — not a placeholder
-- video_url: leave this blank (I'll add real video links myself later) — do NOT invent a fake link
-- duration_minutes: a realistic whole number, e.g. 10-30
-
-Generate one row per lesson, in teaching order.</pre>
+            <pre id="lessonPrompt"><?= e(renderAiPrompt($pdo, 'course_lessons', [
+                'site_name' => SITE_NAME,
+                'course_title' => $course['title'],
+                'course_description' => $course['description'],
+                'textbook' => $course['textbook'] ?: 'None specified — use your general knowledge of the subject.',
+            ])) ?></pre>
             <button type="button" class="btn btn-outline btn-sm copy-prompt-btn" data-target="lessonPrompt"><i data-lucide="copy" class="lucide-icon"></i> Copy Prompt</button>
         </div>
     </div></div>
@@ -246,19 +235,6 @@ Generate one row per lesson, in teaching order.</pre>
 <?= renderFooter($pdo) ?>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <script src="app.js" defer></script>
-<script>
-document.querySelectorAll('.copy-prompt-btn').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-        var text = document.getElementById(btn.dataset.target).textContent;
-        navigator.clipboard.writeText(text).then(function () {
-            var original = btn.innerHTML;
-            btn.innerHTML = '<i data-lucide="check" class="lucide-icon"></i> Copied!';
-            if (window.lucide) lucide.createIcons();
-            setTimeout(function () { btn.innerHTML = original; if (window.lucide) lucide.createIcons(); }, 1800);
-        });
-    });
-});
-if (window.lucide) lucide.createIcons();
-</script>
+<script>if (window.lucide) lucide.createIcons();</script>
 </body>
 </html>

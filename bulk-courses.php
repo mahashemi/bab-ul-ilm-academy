@@ -40,6 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $priceRaw    = trim($row['price'] ?? '');
         $objectives  = trim($row['learning_objectives'] ?? '');
         $requirements = trim($row['requirements'] ?? '');
+        $textbook    = trim($row['textbook'] ?? '');
 
         if (mb_strlen($title) < 5) $errors[] = 'title must be at least 5 characters';
         if (mb_strlen($description) < 20) $errors[] = 'description must be at least 20 characters';
@@ -77,9 +78,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $pdo->prepare(
-            "INSERT INTO courses (teacher_id, subject_id, title, description, learning_objectives, requirements, level, language, price, is_published, moderation_status)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'pending')"
-        )->execute([$user['id'], $realSubjectId, $title, $description, $objectives ?: null, $requirements ?: null, $level, $language, $price]);
+            "INSERT INTO courses (teacher_id, subject_id, title, description, learning_objectives, requirements, textbook, level, language, price, is_published, moderation_status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'pending')"
+        )->execute([$user['id'], $realSubjectId, $title, $description, $objectives ?: null, $requirements ?: null, $textbook ?: null, $level, $language, $price]);
         $created++;
     }
 
@@ -169,6 +170,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <tr><td><code>price</code></td><td>Optional</td><td>A number, 0 or higher (0 = free), defaults to 0</td></tr>
                 <tr><td><code>learning_objectives</code></td><td>Optional</td><td>Free text, separate points with semicolons</td></tr>
                 <tr><td><code>requirements</code></td><td>Optional</td><td>Free text</td></tr>
+                <tr><td><code>textbook</code></td><td>Optional</td><td>Reference textbook/material this course follows, if any</td></tr>
             </tbody>
         </table>
         <p style="font-size:.82rem;color:var(--text-light);margin-top:.6rem"><i data-lucide="info" class="lucide-icon"></i> A cover photo can't be set via CSV — add one afterward from each course's Edit page. New courses are always submitted for admin review before they go live, same as creating one manually.</p>
@@ -188,24 +190,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <h3 style="font-size:1rem;margin-bottom:.8rem"><i data-lucide="sparkles" class="lucide-icon"></i> Step 2 (Optional): Let an AI Fill It In For You</h3>
         <p style="font-size:.88rem;margin-bottom:.8rem">Copy this prompt into ChatGPT, Claude, or any AI assistant, describe the course(s) you want, and it will write the CSV for you.</p>
         <div class="ai-prompt-box">
-            <pre id="coursePrompt">I'm creating course(s) for an online learning platform called <?= e(SITE_NAME) ?>. Generate a CSV file I can upload directly.
-
-My course topic(s): [DESCRIBE YOUR COURSE(S) HERE — e.g. "A beginner course on Tajweed rules for Quran recitation"]
-
-Output ONLY raw CSV text (no explanation, no markdown code fences) with EXACTLY these column headers, in this order:
-title,description,subject,level,language,price,learning_objectives,requirements
-
-Rules for each column:
-- title: 5-80 characters, clear and specific
-- description: at least 20 characters (aim for 100-300), explain what students will learn
-- subject: pick the closest match from this exact list, copied exactly: <?= e(implode(', ', $subjects)) ?>
-- level: must be exactly one of: beginner, intermediate, advanced
-- language: the language the course is taught in (e.g. English, Urdu, Persian, Arabic)
-- price: a plain number, use 0 for a free course
-- learning_objectives: 3-5 short points separated by semicolons
-- requirements: prerequisites, or "None" if there aren't any
-
-Generate one row per course.</pre>
+            <pre id="coursePrompt"><?= e(renderAiPrompt($pdo, 'course_creation', ['site_name' => SITE_NAME, 'subject_list' => implode(', ', $subjects)])) ?></pre>
             <button type="button" class="btn btn-outline btn-sm copy-prompt-btn" data-target="coursePrompt"><i data-lucide="copy" class="lucide-icon"></i> Copy Prompt</button>
         </div>
     </div></div>
@@ -263,19 +248,6 @@ Generate one row per course.</pre>
 <?= renderFooter($pdo) ?>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <script src="app.js" defer></script>
-<script>
-document.querySelectorAll('.copy-prompt-btn').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-        var text = document.getElementById(btn.dataset.target).textContent;
-        navigator.clipboard.writeText(text).then(function () {
-            var original = btn.innerHTML;
-            btn.innerHTML = '<i data-lucide="check" class="lucide-icon"></i> Copied!';
-            if (window.lucide) lucide.createIcons();
-            setTimeout(function () { btn.innerHTML = original; if (window.lucide) lucide.createIcons(); }, 1800);
-        });
-    });
-});
-if (window.lucide) lucide.createIcons();
-</script>
+<script>if (window.lucide) lucide.createIcons();</script>
 </body>
 </html>

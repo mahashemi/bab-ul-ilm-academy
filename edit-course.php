@@ -56,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $description = trim($_POST['description'] ?? '');
     $objectives  = trim($_POST['learning_objectives'] ?? '');
     $requirements = trim($_POST['requirements'] ?? '');
+    $textbook    = trim($_POST['textbook'] ?? '');
     $subjectId   = (int) ($_POST['subject_id'] ?? 0);
     $level       = $_POST['level'] ?? 'beginner';
     $language    = trim($_POST['language'] ?? 'English');
@@ -69,10 +70,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$errors) {
         $imagePath = handleImageUpload('cover', 'courses') ?? $course['cover_url'];
         $stmt = $pdo->prepare(
-            'UPDATE courses SET title=?, description=?, learning_objectives=?, requirements=?, subject_id=?, level=?, language=?, price=?, cover_url=?, is_published=?, updated_by=?, updated_at=NOW()
+            'UPDATE courses SET title=?, description=?, learning_objectives=?, requirements=?, textbook=?, subject_id=?, level=?, language=?, price=?, cover_url=?, is_published=?, updated_by=?, updated_at=NOW()
              WHERE id=?'
         );
-        $stmt->execute([$title, $description, $objectives ?: null, $requirements ?: null, $subjectId ?: null, $level, $language, $price, $imagePath, $isPublished, $user['id'], $id]);
+        $stmt->execute([$title, $description, $objectives ?: null, $requirements ?: null, $textbook ?: null, $subjectId ?: null, $level, $language, $price, $imagePath, $isPublished, $user['id'], $id]);
         flash('success', 'Course updated.');
         redirect('course.php?id=' . $id);
     }
@@ -251,6 +252,12 @@ $previewCard = fetchPreviewCard($pdo, $id);
             <div class="form-group">
                 <label class="form-label">Requirements (one per line)</label>
                 <textarea name="requirements" class="form-control"><?= e($_POST['requirements'] ?? $course['requirements'] ?? '') ?></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Textbook / Reference Material (optional)</label>
+                <input type="text" name="textbook" class="form-control" placeholder="e.g. Nurani Qaida, 1st Edition" value="<?= e($_POST['textbook'] ?? $course['textbook'] ?? '') ?>">
+                <div class="form-hint">Used to ground the AI lesson-writing helper in the right material.</div>
             </div>
 
             <div class="form-row">

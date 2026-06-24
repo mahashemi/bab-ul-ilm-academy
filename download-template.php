@@ -20,10 +20,10 @@ $arabicSubject  = $findSubject('arabic', $allSubjects, $allSubjects[1] ?? ($allS
 $templates = [
     'courses' => [
         'filename' => 'bab-ul-ilm-courses-template.csv',
-        'header' => ['title', 'description', 'subject', 'level', 'language', 'price', 'learning_objectives', 'requirements'],
+        'header' => ['title', 'description', 'subject', 'level', 'language', 'price', 'learning_objectives', 'requirements', 'textbook'],
         'rows' => [
-            ['Introduction to Python Programming', 'A beginner-friendly course covering Python syntax, data types, loops, functions, and simple projects.', $compSciSubject, 'beginner', 'English', '0', 'Write basic Python scripts; Understand variables, loops, and functions; Build a small command-line project', 'A computer with internet access. No prior programming experience needed.'],
-            ['Advanced Arabic Grammar (Nahw)', 'An in-depth study of Arabic sentence structure for students who have completed basic Arabic.', $arabicSubject, 'advanced', 'English', '25', 'Parse complex Arabic sentences; Identify case endings; Read classical texts with confidence', 'Completion of a beginner Arabic course'],
+            ['Introduction to Python Programming', 'A beginner-friendly course covering Python syntax, data types, loops, functions, and simple projects.', $compSciSubject, 'beginner', 'English', '0', 'Write basic Python scripts; Understand variables, loops, and functions; Build a small command-line project', 'A computer with internet access. No prior programming experience needed.', ''],
+            ['Advanced Arabic Grammar (Nahw)', 'An in-depth study of Arabic sentence structure for students who have completed basic Arabic.', $arabicSubject, 'advanced', 'English', '25', 'Parse complex Arabic sentences; Identify case endings; Read classical texts with confidence', 'Completion of a beginner Arabic course', 'Al-Nahw Al-Wadih, Part 1'],
         ],
     ],
     'lessons' => [

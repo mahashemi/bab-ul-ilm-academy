@@ -772,6 +772,149 @@ function buildAnnotatedCsv(array $header, array $rows, array $rowErrors): string
     return $csv;
 }
 
+// ── AI-Assisted Course Authoring ────────────────────────────────────────
+// Prompt wording lives in the ai_prompt_templates table (editable by an
+// admin from admin.php) rather than hardcoded in each page, so tuning the
+// AI instructions never requires a code deploy. This array is the
+// fallback/seed source of truth -- used if a template row is ever missing
+// (fresh install before the seed script runs) and by admin's "Reset to
+// Default" button, so both paths can never drift from each other.
+function aiPromptDefaults(): array {
+    return [
+        'course_creation' => [
+            'label' => 'Course Creation (course shells, no specific course yet)',
+            'placeholders_help' => '{{site_name}} -- platform name. {{subject_list}} -- comma-separated list of every valid subject name, generated live from the subjects table.',
+            'template_text' => <<<'TXT'
+I'm creating course(s) for an online learning platform called {{site_name}}. Generate a CSV file I can upload directly.
+
+My course topic(s): [DESCRIBE YOUR COURSE(S) HERE — e.g. "A beginner course on Tajweed rules for Quran recitation"]
+
+Output ONLY raw CSV text (no explanation, no markdown code fences) with EXACTLY these column headers, in this order:
+title,description,subject,level,language,price,learning_objectives,requirements,textbook
+
+Rules for each column:
+- title: 5-80 characters, clear and specific
+- description: at least 20 characters (aim for 100-300), explain what students will learn
+- subject: pick the closest match from this exact list, copied exactly: {{subject_list}}
+- level: must be exactly one of: beginner, intermediate, advanced
+- language: the language the course is taught in (e.g. English, Urdu, Persian, Arabic)
+- price: a plain number, use 0 for a free course
+- learning_objectives: 3-5 short points separated by semicolons
+- requirements: prerequisites, or "None" if there aren't any
+- textbook: a real reference textbook/material this course is based on, or leave blank if none
+
+Generate one row per course.
+TXT,
+        ],
+        'course_lessons' => [
+            'label' => 'Lesson Plan Generation (for one already-created course)',
+            'placeholders_help' => '{{site_name}} -- platform name. {{course_title}} -- the course\'s title. {{course_description}} -- the course\'s description. {{textbook}} -- the optional reference textbook the teacher entered, or "None specified" if left blank.',
+            'template_text' => <<<'TXT'
+I'm building the full lesson plan for a course on an online learning platform called {{site_name}}.
+
+Course title: {{course_title}}
+Course description: {{course_description}}
+Reference textbook / material: {{textbook}}
+
+Please act as an experienced curriculum designer and write a complete, well-structured set of lessons for this course. Output ONLY raw CSV text (no explanation, no markdown code fences, no extra commentary) with EXACTLY these column headers, in this order:
+section_title,title,content,video_url,duration_minutes
+
+Rules for each column:
+- section_title: group lessons logically into sections, e.g. "Week 1", "Week 2", or named modules that fit the subject. Use the exact same text on every lesson row within the same section.
+- title: a short, specific lesson title (3-80 characters)
+- content: REAL educational content the student will actually read and learn from — not a placeholder or outline. Write 150-400 words of substantive, accurate teaching material: explain concepts clearly, define key terms, and include a short example where useful. If a reference textbook was given above, align the content and terminology with it.
+- video_url: leave this blank — do not invent a fake video link
+- duration_minutes: a realistic whole number (typically 10-30)
+
+Plan a complete course: decide how many lessons and sections fit the topic and description above (use your judgment — a typical course has 8-20 lessons), and order them so each lesson builds on the previous one.
+
+Generate one row per lesson, in teaching order.
+TXT,
+        ],
+        'quiz_questions' => [
+            'label' => 'Quiz Question Generation (based on a course\'s actual lessons)',
+            'placeholders_help' => '{{site_name}} -- platform name. {{course_title}} -- the course\'s title. {{lesson_summary}} -- auto-generated numbered list of the course\'s lesson titles plus short content snippets.',
+            'template_text' => <<<'TXT'
+I'm creating a quiz for a course on {{site_name}} called "{{course_title}}".
+
+Here are the lessons this quiz should test (in order):
+{{lesson_summary}}
+
+Please act as an experienced instructor and write quiz questions that genuinely test understanding of the material above — base each question on actual content from the lessons listed, not generic trivia. Output ONLY raw CSV text (no explanation, no markdown code fences) with EXACTLY these column headers, in this order:
+quiz_title,passing_score,question,option_1,option_2,option_3,option_4,correct_option
+
+Rules:
+- quiz_title: the exact same text on every row (this groups questions into one quiz) — name it after the section/topic it covers
+- passing_score: the same number on every row (a reasonable value, e.g. 70)
+- question: a clear question that tests a real concept from the lessons above
+- option_1, option_2: required answer choices; option_3, option_4 optional (2-4 total per question). Make incorrect options plausible, not obviously wrong.
+- correct_option: which option is correct — just the number 1, 2, 3, or 4
+
+Write one question per important concept covered in the lessons above (a typical quiz has 5-10 questions).
+TXT,
+        ],
+        'assignments' => [
+            'label' => 'Assignment Generation (based on a course\'s actual lessons)',
+            'placeholders_help' => '{{site_name}} -- platform name. {{course_title}} -- the course\'s title. {{lesson_summary}} -- auto-generated numbered list of the course\'s lesson titles plus short content snippets.',
+            'template_text' => <<<'TXT'
+I'm creating assignment(s) for a course on {{site_name}} called "{{course_title}}".
+
+Here are the lessons this assignment should be based on (in order):
+{{lesson_summary}}
+
+Please act as an experienced instructor and design a practical assignment that has students apply what's covered in the lessons above — not a generic task unrelated to the material. Output ONLY raw CSV text (no explanation, no markdown code fences) with EXACTLY these column headers, in this order:
+title,description,due_date
+
+Rules:
+- title: short, specific (3-80 characters)
+- description: clear, complete instructions for what the student must do and submit, referencing the actual concepts/skills from the lessons above
+- due_date: a date in YYYY-MM-DD format, or leave blank for no deadline
+
+Generate one row per assignment.
+TXT,
+        ],
+    ];
+}
+
+function getAiPromptTemplate(PDO $pdo, string $key): array {
+    $stmt = $pdo->prepare('SELECT * FROM ai_prompt_templates WHERE template_key = ?');
+    $stmt->execute([$key]);
+    $row = $stmt->fetch();
+    if ($row) return $row;
+
+    $defaults = aiPromptDefaults();
+    $d = $defaults[$key] ?? ['label' => $key, 'placeholders_help' => '', 'template_text' => ''];
+    return ['template_key' => $key, 'label' => $d['label'], 'template_text' => $d['template_text'], 'placeholders_help' => $d['placeholders_help']];
+}
+
+function renderAiPrompt(PDO $pdo, string $key, array $vars): string {
+    $tpl = getAiPromptTemplate($pdo, $key);
+    $text = $tpl['template_text'];
+    foreach ($vars as $k => $v) {
+        $text = str_replace('{{' . $k . '}}', (string) $v, $text);
+    }
+    return $text;
+}
+
+// Compiles a course's lessons into a numbered list (title + short content
+// snippet) so the quiz/assignment AI prompts are grounded in what was
+// actually taught, not just the course's top-level title/description.
+function buildLessonSummaryForPrompt(PDO $pdo, int $courseId): string {
+    $stmt = $pdo->prepare('SELECT section_title, title, content FROM lessons WHERE course_id = ? ORDER BY sort_order ASC');
+    $stmt->execute([$courseId]);
+    $lessons = $stmt->fetchAll();
+
+    $lines = [];
+    foreach ($lessons as $i => $l) {
+        $section = $l['section_title'] ? '[' . $l['section_title'] . '] ' : '';
+        $content = trim($l['content']);
+        $snippet = mb_substr($content, 0, 220);
+        if (mb_strlen($content) > 220) $snippet .= '...';
+        $lines[] = ($i + 1) . '. ' . $section . $l['title'] . ' — ' . $snippet;
+    }
+    return implode("\n", $lines);
+}
+
 function catIcon(?string $iconName): string {
     return '<i data-lucide="' . e($iconName ?: 'book-open') . '" class="lucide-icon"></i>';
 }

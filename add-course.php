@@ -24,6 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $description = trim($_POST['description'] ?? '');
     $objectives  = trim($_POST['learning_objectives'] ?? '');
     $requirements = trim($_POST['requirements'] ?? '');
+    $textbook    = trim($_POST['textbook'] ?? '');
     $subjectId   = (int) ($_POST['subject_id'] ?? 0);
     $level       = $_POST['level'] ?? 'beginner';
     $language    = trim($_POST['language'] ?? 'English');
@@ -38,10 +39,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // New courses always start as 'pending' — they're not visible to students until
         // an admin reviews and approves them, regardless of the teacher's publish intent.
         $stmt = $pdo->prepare(
-            "INSERT INTO courses (teacher_id, subject_id, title, description, learning_objectives, requirements, level, language, price, cover_url, is_published, moderation_status)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'pending')"
+            "INSERT INTO courses (teacher_id, subject_id, title, description, learning_objectives, requirements, textbook, level, language, price, cover_url, is_published, moderation_status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'pending')"
         );
-        $stmt->execute([$user['id'], $subjectId ?: null, $title, $description, $objectives ?: null, $requirements ?: null, $level, $language, $price, $imagePath]);
+        $stmt->execute([$user['id'], $subjectId ?: null, $title, $description, $objectives ?: null, $requirements ?: null, $textbook ?: null, $level, $language, $price, $imagePath]);
         $newId = (int) $pdo->lastInsertId();
         flash('success', 'Course created! It will be reviewed by an admin before it appears publicly. Now add some lessons.');
         redirect('add-lesson.php?course_id=' . $newId);
@@ -145,6 +146,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="form-group">
                 <label class="form-label">Requirements (one per line)</label>
                 <textarea name="requirements" class="form-control" placeholder="e.g.&#10;No prior knowledge needed&#10;A Quran copy (any edition)"><?= e($_POST['requirements'] ?? '') ?></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Textbook / Reference Material (optional)</label>
+                <input type="text" name="textbook" class="form-control" placeholder="e.g. Nurani Qaida, 1st Edition" value="<?= e($_POST['textbook'] ?? '') ?>">
+                <div class="form-hint">If your course follows a specific book, mention it here — it'll be used to ground the AI lesson-writing helper in the right material.</div>
             </div>
 
             <div class="form-row">

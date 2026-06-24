@@ -416,6 +416,107 @@ ALTER TABLE messages ADD COLUMN IF NOT EXISTS attachment_path VARCHAR(300) NULL;
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS attachment_type VARCHAR(10) NULL;
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS attachment_name VARCHAR(255) NULL;
 
+-- ── Phase D: quizzes ───────────────────────────────────────────────────────
+-- Course-level (not per-lesson) so a teacher can have e.g. "Week 1 Quiz",
+-- "Final Quiz" without needing to attach each to one specific lesson.
+CREATE TABLE IF NOT EXISTS quizzes (
+    id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    course_id  INT UNSIGNED NOT NULL,
+    title      VARCHAR(200) NOT NULL,
+    passing_score TINYINT UNSIGNED NOT NULL DEFAULT 60,
+    sort_order SMALLINT UNSIGNED DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+    INDEX idx_course (course_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS quiz_questions (
+    id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    quiz_id    INT UNSIGNED NOT NULL,
+    question_text TEXT NOT NULL,
+    sort_order SMALLINT UNSIGNED DEFAULT 0,
+    FOREIGN KEY (quiz_id) REFERENCES quizzes(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS quiz_options (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    question_id INT UNSIGNED NOT NULL,
+    option_text VARCHAR(500) NOT NULL,
+    is_correct  TINYINT(1) NOT NULL DEFAULT 0,
+    sort_order  SMALLINT UNSIGNED DEFAULT 0,
+    FOREIGN KEY (question_id) REFERENCES quiz_questions(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Retakes are allowed (each attempt is its own row) -- the dashboard/quiz
+-- page shows the BEST attempt, not just the latest.
+CREATE TABLE IF NOT EXISTS quiz_attempts (
+    id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    quiz_id    INT UNSIGNED NOT NULL,
+    student_id INT UNSIGNED NOT NULL,
+    score      TINYINT UNSIGNED NOT NULL,
+    total      TINYINT UNSIGNED NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (quiz_id) REFERENCES quizzes(id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_quiz_student (quiz_id, student_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS quiz_attempt_answers (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    attempt_id  INT UNSIGNED NOT NULL,
+    question_id INT UNSIGNED NOT NULL,
+    option_id   INT UNSIGNED NULL,
+    is_correct  TINYINT(1) NOT NULL DEFAULT 0,
+    FOREIGN KEY (attempt_id) REFERENCES quiz_attempts(id) ON DELETE CASCADE,
+    FOREIGN KEY (question_id) REFERENCES quiz_questions(id) ON DELETE CASCADE,
+    FOREIGN KEY (option_id) REFERENCES quiz_options(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── Phase D: assignments ────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS assignments (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    course_id   INT UNSIGNED NOT NULL,
+    title       VARCHAR(200) NOT NULL,
+    description TEXT,
+    due_date    DATE NULL,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+    INDEX idx_course (course_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS assignment_submissions (
+    id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    assignment_id INT UNSIGNED NOT NULL,
+    student_id    INT UNSIGNED NOT NULL,
+    content       TEXT,
+    file_path     VARCHAR(300) NULL,
+    file_name     VARCHAR(255) NULL,
+    grade         TINYINT UNSIGNED NULL,
+    feedback      TEXT NULL,
+    submitted_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    graded_at     TIMESTAMP NULL,
+    UNIQUE KEY one_submission (assignment_id, student_id),
+    FOREIGN KEY (assignment_id) REFERENCES assignments(id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── Phase D: certificates ───────────────────────────────────────────────────
+-- Issued automatically on 100% lesson completion (same definition already
+-- used for the "Course Graduate" badge). certificate_code is the public
+-- verification handle -- printed on the certificate, looked up by anyone
+-- via verify-certificate.php with no login required, so a certificate
+-- can't be faked by just making up a code.
+CREATE TABLE IF NOT EXISTS certificates (
+    id               INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    student_id       INT UNSIGNED NOT NULL,
+    course_id        INT UNSIGNED NOT NULL,
+    certificate_code VARCHAR(32) NOT NULL UNIQUE,
+    issued_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY one_certificate (student_id, course_id),
+    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ── Initial Admin Account ───────────────────────────────────────────────
 -- Default password: Admin@123
 -- IMPORTANT: Log in immediately and change this password via your profile.

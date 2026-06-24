@@ -389,6 +389,37 @@ function generateVerificationToken(): string {
     return bin2hex(random_bytes(32));
 }
 
+// Issues a certificate the first time a student reaches 100% lesson
+// completion in a course (same definition already used for the "Course
+// Graduate" badge) — idempotent, safe to call on every lesson completion.
+// Returns the certificate row (new or existing) so callers can show a
+// "Certificate earned!" notice only when it's genuinely new.
+function issueCertificateIfEligible(PDO $pdo, int $studentId, int $courseId): ?array {
+    $existing = $pdo->prepare('SELECT * FROM certificates WHERE student_id = ? AND course_id = ?');
+    $existing->execute([$studentId, $courseId]);
+    if ($existing0 = $existing->fetch()) return ['row' => $existing0, 'isNew' => false];
+
+    $totalStmt = $pdo->prepare('SELECT COUNT(*) FROM lessons WHERE course_id = ?');
+    $totalStmt->execute([$courseId]);
+    $total = (int) $totalStmt->fetchColumn();
+    if ($total === 0) return null;
+
+    $doneStmt = $pdo->prepare(
+        'SELECT COUNT(*) FROM lesson_progress lp JOIN lessons l ON l.id = lp.lesson_id
+         WHERE lp.student_id = ? AND l.course_id = ?'
+    );
+    $doneStmt->execute([$studentId, $courseId]);
+    if ((int) $doneStmt->fetchColumn() < $total) return null;
+
+    $code = strtoupper(bin2hex(random_bytes(6)));
+    $pdo->prepare('INSERT IGNORE INTO certificates (student_id, course_id, certificate_code) VALUES (?, ?, ?)')
+        ->execute([$studentId, $courseId, $code]);
+
+    $row = $pdo->prepare('SELECT * FROM certificates WHERE student_id = ? AND course_id = ?');
+    $row->execute([$studentId, $courseId]);
+    return ['row' => $row->fetch(), 'isNew' => true];
+}
+
 function siteBaseUrl(): string {
     if (SITE_URL !== '') return rtrim(SITE_URL, '/');
     $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';

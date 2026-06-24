@@ -42,6 +42,30 @@ foreach ($lessons as $l) {
     $curriculum[$sec][] = $l;
 }
 
+$quizzes = $pdo->prepare('SELECT * FROM quizzes WHERE course_id = ? ORDER BY sort_order ASC');
+$quizzes->execute([$id]);
+$quizzes = $quizzes->fetchAll();
+if ($quizzes && $user) {
+    foreach ($quizzes as &$qz) {
+        $best = $pdo->prepare('SELECT *, (score / total * 100) AS percent FROM quiz_attempts WHERE quiz_id = ? AND student_id = ? ORDER BY percent DESC LIMIT 1');
+        $best->execute([$qz['id'], $user['id']]);
+        $qz['best_attempt'] = $best->fetch() ?: null;
+    }
+    unset($qz);
+}
+
+$assignmentsList = $pdo->prepare('SELECT * FROM assignments WHERE course_id = ? ORDER BY created_at ASC');
+$assignmentsList->execute([$id]);
+$assignmentsList = $assignmentsList->fetchAll();
+if ($assignmentsList && $user) {
+    foreach ($assignmentsList as &$asn) {
+        $sub = $pdo->prepare('SELECT * FROM assignment_submissions WHERE assignment_id = ? AND student_id = ?');
+        $sub->execute([$asn['id'], $user['id']]);
+        $asn['my_submission'] = $sub->fetch() ?: null;
+    }
+    unset($asn);
+}
+
 $studentCount = $pdo->prepare('SELECT COUNT(*) c FROM enrollments WHERE course_id = ?');
 $studentCount->execute([$id]);
 $studentCount = $studentCount->fetch()['c'];
@@ -171,6 +195,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_lesson'])) {
             $doneCount = count($completedLessons) + 1;
             if ($totalLessons > 0 && $doneCount >= $totalLessons) {
                 awardPoints($pdo, $user['id'], 50, 'Completed the course "' . $course['title'] . '"');
+                issueCertificateIfEligible($pdo, $user['id'], $id);
             }
         }
         redirect('course.php?id=' . $id);
@@ -381,6 +406,55 @@ function starString(float $rating): string {
                 </details>
                 <?php endforeach; ?>
             </div></div>
+
+            <?php if ($quizzes): ?>
+            <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
+                <h3 style="font-size:1.1rem;margin-bottom:1rem;color:var(--green-deep)"><i data-lucide="list-checks" class="lucide-icon"></i> Quizzes</h3>
+                <ul class="lesson-list" style="margin:0 -1.2rem">
+                    <?php foreach ($quizzes as $qz): ?>
+                    <li class="lesson-item">
+                        <i data-lucide="list-checks" class="lucide-icon"></i>
+                        <div style="flex:1"><?= e($qz['title']) ?></div>
+                        <?php if ($qz['best_attempt']): ?>
+                            <span class="badge <?= $qz['best_attempt']['percent'] >= $qz['passing_score'] ? 'badge-free' : 'badge-pending' ?>">
+                                <?= round((float) $qz['best_attempt']['percent']) ?>% <?= $qz['best_attempt']['percent'] >= $qz['passing_score'] ? '· Passed' : '' ?>
+                            </span>
+                        <?php endif; ?>
+                        <?php if ($isEnrolled): ?>
+                            <a href="take-quiz.php?id=<?= (int) $qz['id'] ?>" class="btn btn-outline btn-sm"><?= $qz['best_attempt'] ? 'Retake' : 'Take Quiz' ?></a>
+                        <?php endif; ?>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+            </div></div>
+            <?php endif; ?>
+
+            <?php if ($assignmentsList): ?>
+            <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
+                <h3 style="font-size:1.1rem;margin-bottom:1rem;color:var(--green-deep)"><i data-lucide="file-edit" class="lucide-icon"></i> Assignments</h3>
+                <ul class="lesson-list" style="margin:0 -1.2rem">
+                    <?php foreach ($assignmentsList as $asn): ?>
+                    <li class="lesson-item">
+                        <i data-lucide="file-edit" class="lucide-icon"></i>
+                        <div style="flex:1">
+                            <?= e($asn['title']) ?>
+                            <?php if ($asn['due_date']): ?><span style="font-size:.78rem;color:var(--text-light)"> · Due <?= e(date('M j', strtotime($asn['due_date']))) ?></span><?php endif; ?>
+                        </div>
+                        <?php if ($asn['my_submission']): ?>
+                            <?php if ($asn['my_submission']['grade'] !== null): ?>
+                                <span class="badge badge-free">Grade: <?= (int) $asn['my_submission']['grade'] ?>/100</span>
+                            <?php else: ?>
+                                <span class="badge badge-pending">Submitted</span>
+                            <?php endif; ?>
+                        <?php endif; ?>
+                        <?php if ($isEnrolled): ?>
+                            <a href="assignment.php?id=<?= (int) $asn['id'] ?>" class="btn btn-outline btn-sm"><?= $asn['my_submission'] ? 'View' : 'Submit' ?></a>
+                        <?php endif; ?>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+            </div></div>
+            <?php endif; ?>
 
             <?php if ($requirements): ?>
             <div class="card" style="margin-bottom:1.5rem"><div class="card-body">

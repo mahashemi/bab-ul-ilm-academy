@@ -89,6 +89,14 @@ $lessons = $pdo->prepare('SELECT * FROM lessons WHERE course_id = ? ORDER BY sor
 $lessons->execute([$id]);
 $lessons = $lessons->fetchAll();
 
+$quizCount = $pdo->prepare('SELECT COUNT(*) FROM quizzes WHERE course_id = ?');
+$quizCount->execute([$id]);
+$quizCount = (int) $quizCount->fetchColumn();
+
+$assignmentCount = $pdo->prepare('SELECT COUNT(*) FROM assignments WHERE course_id = ?');
+$assignmentCount->execute([$id]);
+$assignmentCount = (int) $assignmentCount->fetchColumn();
+
 $enrollmentCount = $pdo->prepare('SELECT COUNT(*) FROM enrollments WHERE course_id = ?');
 $enrollmentCount->execute([$id]);
 $enrollmentCount = (int) $enrollmentCount->fetchColumn();
@@ -181,6 +189,13 @@ $previewCard = fetchPreviewCard($pdo, $id);
         <?php else: ?>
             <p style="font-size:.88rem;color:var(--text-light)">No lessons yet — students can't take this course until you add at least one.</p>
         <?php endif; ?>
+    </div></div>
+
+    <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
+        <div style="display:flex;gap:1rem;flex-wrap:wrap">
+            <a href="manage-quizzes.php?course_id=<?= $id ?>" class="btn btn-outline btn-sm"><i data-lucide="list-checks" class="lucide-icon"></i> Quizzes (<?= $quizCount ?>)</a>
+            <a href="manage-assignments.php?course_id=<?= $id ?>" class="btn btn-outline btn-sm"><i data-lucide="file-edit" class="lucide-icon"></i> Assignments (<?= $assignmentCount ?>)</a>
+        </div>
     </div></div>
 
     <?php if ($previewCard): ?>

@@ -753,3 +753,25 @@ footer { background: var(--green-deep); color: rgba(255,255,255,.75); padding: 3
     padding: .35rem .8rem; font-size: .78rem; font-weight: 600; color: var(--green-deep);
 }
 .points-celebration-actions { display: flex; gap: .6rem; justify-content: center; flex-wrap: wrap; }
+
+/* ── Certificate of completion ── */
+.cert-card {
+    background: var(--white); border: 8px double var(--gold); border-radius: var(--radius);
+    padding: 3rem 2.5rem; text-align: center; box-shadow: var(--shadow-lg); margin: 1.5rem 0;
+}
+.cert-seal img { width: 72px; height: 72px; margin: 0 auto 1rem; }
+.cert-eyebrow { font-size: .85rem; letter-spacing: 2px; text-transform: uppercase; color: var(--gold-dark); font-weight: 700; margin-bottom: 1.2rem; }
+.cert-name { font-family: 'Marcellus', serif; font-size: 2.2rem; color: var(--green-deep); margin-bottom: .8rem; }
+.cert-line { font-size: .95rem; color: var(--text-mid); margin-bottom: .6rem; }
+.cert-course { font-size: 1.4rem; font-weight: 700; color: var(--text); margin-bottom: 1rem; }
+.cert-footer-row { display: flex; justify-content: center; gap: 3rem; margin: 1.8rem 0 1.2rem; flex-wrap: wrap; }
+.cert-footer-label { font-size: .72rem; text-transform: uppercase; letter-spacing: .5px; color: var(--text-light); margin-bottom: .2rem; }
+.cert-footer-value { font-size: .9rem; font-weight: 700; color: var(--text); }
+.cert-verify-note { font-size: .78rem; color: var(--text-light); display: flex; align-items: center; justify-content: center; gap: .4rem; margin-top: 1rem; }
+.cert-page-actions { display: flex; justify-content: center; gap: .8rem; margin-bottom: 2rem; flex-wrap: wrap; }
+@media (max-width: 600px) {
+    .cert-card { padding: 1.8rem 1.2rem; }
+    .cert-name { font-size: 1.5rem; }
+    .cert-course { font-size: 1.1rem; }
+    .cert-footer-row { gap: 1.5rem; }
+}

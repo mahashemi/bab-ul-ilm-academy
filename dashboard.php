@@ -26,6 +26,14 @@ $myBadges = $pdo->prepare(
 $myBadges->execute([$user['id']]);
 $myBadges = $myBadges->fetchAll();
 
+$myCertificates = $pdo->prepare(
+    'SELECT cert.certificate_code, cert.issued_at, c.title AS course_title
+     FROM certificates cert JOIN courses c ON c.id = cert.course_id
+     WHERE cert.student_id = ? ORDER BY cert.issued_at DESC'
+);
+$myCertificates->execute([$user['id']]);
+$myCertificates = $myCertificates->fetchAll();
+
 $recommended = [];
 if (($user['role'] ?? '') !== 'teacher' && $myFieldIds) {
     $placeholders = implode(',', array_fill(0, count($myFieldIds), '?'));
@@ -147,6 +155,24 @@ $dashBg = siteSetting($pdo, 'dashboard_banner_bg');
             <p style="font-size:.85rem;color:var(--text-light)">No badges yet — enroll in a course, complete lessons, or join a class discussion to start earning points and badges.</p>
         <?php endif; ?>
     </div></div>
+
+    <?php if ($myCertificates): ?>
+    <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
+        <strong style="font-size:.92rem;display:block;margin-bottom:1rem"><i data-lucide="award" class="lucide-icon"></i> My Certificates</strong>
+        <div style="display:flex;flex-direction:column;gap:.6rem">
+            <?php foreach ($myCertificates as $cert): ?>
+            <a href="certificate.php?code=<?= e($cert['certificate_code']) ?>" class="lesson-item" style="text-decoration:none;color:inherit">
+                <div class="step-num"><i data-lucide="award" class="lucide-icon"></i></div>
+                <div style="flex:1">
+                    <div style="font-weight:600;font-size:.9rem"><?= e($cert['course_title']) ?></div>
+                    <div style="font-size:.78rem;color:var(--text-light)">Issued <?= e(date('M j, Y', strtotime($cert['issued_at']))) ?></div>
+                </div>
+                <i data-lucide="arrow-right" class="lucide-icon"></i>
+            </a>
+            <?php endforeach; ?>
+        </div>
+    </div></div>
+    <?php endif; ?>
 
     <?php if (flash('success')): ?><div class="alert alert-success"><?= e(flash('success')) ?></div><?php endif; ?>
 

@@ -57,6 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_lesson'])) {
             $doneStmt->execute([$user['id'], $lesson['course_id']]);
             if ($totalCount > 0 && $totalCount === (int) $doneStmt->fetchColumn()) {
                 awardPoints($pdo, $user['id'], 50, 'Completed the course "' . $lesson['course_title'] . '"');
+                issueCertificateIfEligible($pdo, $user['id'], (int) $lesson['course_id']);
             }
         }
         redirect('lesson.php?id=' . $id);

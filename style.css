@@ -355,6 +355,11 @@ img { max-width: 100%; height: auto; display: block; }
    on mobile. Chips use M3's "small" 8px shape (not a pill) so they read as
    filters, distinct from pill-shaped call-to-action buttons. */
 .filter-bar { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; margin-bottom: 1.5rem; }
+/* Copyable AI-prompt blocks on the bulk-CSV-upload pages -- a monospace,
+   pre-wrapped box so long generated prompts/CSV stay readable without
+   overflowing the card on mobile. */
+.ai-prompt-box { background: var(--cream); border-radius: var(--radius-sm); padding: 1rem; border: 1.5px solid var(--border); }
+.ai-prompt-box pre { font-family: ui-monospace, 'SF Mono', Consolas, monospace; font-size: .78rem; white-space: pre-wrap; word-break: break-word; max-height: 260px; overflow-y: auto; margin: 0 0 .8rem; color: var(--text-dark); }
 .chip-row {
     display: flex; gap: .6rem; flex-wrap: nowrap;
     overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;

@@ -710,6 +710,68 @@ function handleAttachmentUpload(string $fieldName, string $subDir): ?array {
     return ['path' => 'uploads/' . $subDir . '/' . $filename, 'type' => $type, 'name' => $originalName];
 }
 
+/**
+ * Parses an uploaded CSV into a lowercase header row + associative data rows.
+ * Reads via fgetcsv() on a memory stream (not a manual newline split) so that
+ * quoted multi-line fields -- e.g. a lesson's paragraph-long "content" column
+ * -- survive intact instead of being torn apart at an embedded newline.
+ * Tolerates a UTF-8 BOM and blank trailing lines, both common artifacts of
+ * Excel exports and AI-generated CSV text.
+ */
+function parseCsvUploadFile(string $fieldName): ?array {
+    if (empty($_FILES[$fieldName]['name']) || $_FILES[$fieldName]['error'] === UPLOAD_ERR_NO_FILE) {
+        return null;
+    }
+    if ($_FILES[$fieldName]['error'] !== UPLOAD_ERR_OK) {
+        return ['error' => 'Upload failed. Please try again.'];
+    }
+    $raw = file_get_contents($_FILES[$fieldName]['tmp_name']);
+    if ($raw === false || trim($raw) === '') {
+        return ['error' => 'The file is empty.'];
+    }
+    $raw = preg_replace('/^\xEF\xBB\xBF/', '', $raw);
+
+    $stream = fopen('php://temp', 'r+');
+    fwrite($stream, $raw);
+    rewind($stream);
+
+    $header = fgetcsv($stream);
+    if (!$header) {
+        fclose($stream);
+        return ['error' => 'No header row found in the file.'];
+    }
+    $header = array_map(fn($h) => strtolower(trim((string) $h)), $header);
+
+    $rows = [];
+    while (($line = fgetcsv($stream)) !== false) {
+        if (count($line) === 1 && trim((string) ($line[0] ?? '')) === '') continue;
+        $assoc = [];
+        foreach ($header as $i => $key) {
+            $assoc[$key] = trim((string) ($line[$i] ?? ''));
+        }
+        $rows[] = $assoc;
+    }
+    fclose($stream);
+
+    return ['header' => $header, 'rows' => $rows, 'raw' => $raw];
+}
+
+/** Re-serializes CSV rows with an extra import_errors column, for "download and hand to an AI to fix" reports. */
+function buildAnnotatedCsv(array $header, array $rows, array $rowErrors): string {
+    $out = fopen('php://temp', 'r+');
+    fputcsv($out, array_merge($header, ['import_errors']));
+    foreach ($rows as $i => $row) {
+        $line = [];
+        foreach ($header as $key) $line[] = $row[$key] ?? '';
+        $line[] = $rowErrors[$i] ?? '' ? implode('; ', $rowErrors[$i]) : '';
+        fputcsv($out, $line);
+    }
+    rewind($out);
+    $csv = stream_get_contents($out);
+    fclose($out);
+    return $csv;
+}
+
 function catIcon(?string $iconName): string {
     return '<i data-lucide="' . e($iconName ?: 'book-open') . '" class="lucide-icon"></i>';
 }

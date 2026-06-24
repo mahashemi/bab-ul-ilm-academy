@@ -201,9 +201,12 @@ $dashBg = siteSetting($pdo, 'dashboard_banner_bg');
         $stmt->execute([$user['id']]);
         $myCourses = $stmt->fetchAll();
         ?>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
             <h3 style="font-size:1.1rem;color:var(--green-deep)">My Courses (<?= count($myCourses) ?>)</h3>
-            <a href="add-course.php" class="btn btn-primary btn-sm">+ New Course</a>
+            <div style="display:flex;gap:.5rem">
+                <a href="bulk-courses.php" class="btn btn-outline btn-sm"><i data-lucide="upload" class="lucide-icon"></i> Bulk Upload</a>
+                <a href="add-course.php" class="btn btn-primary btn-sm">+ New Course</a>
+            </div>
         </div>
 
         <?php if (!$myCourses): ?>

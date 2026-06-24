@@ -170,10 +170,16 @@ $previewCard = fetchPreviewCard($pdo, $id);
         <p><?= $isAdmin && !$isOwner ? 'You are editing this course as an admin.' : 'Update your course details below.' ?> <a href="tutorial.php" style="color:var(--gold);text-decoration:underline">View tutorial</a></p>
     </div>
 
+    <?php if (flash('success')): ?><div class="alert alert-success"><?= e(flash('success')) ?></div><?php endif; ?>
+    <?php if (flash('error')): ?><div class="alert alert-error"><?= e(flash('error')) ?></div><?php endif; ?>
+
     <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.6rem;margin-bottom:<?= $lessons ? '1rem' : '0' ?>">
             <h3 style="font-size:1.05rem;color:var(--green-deep)"><i data-lucide="clipboard-list" class="lucide-icon"></i> Lessons (<?= count($lessons) ?>)</h3>
-            <a href="add-lesson.php?course_id=<?= $id ?>" class="btn btn-primary btn-sm"><i data-lucide="plus" class="lucide-icon"></i> Add / Manage Lessons</a>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+                <a href="bulk-lessons.php?course_id=<?= $id ?>" class="btn btn-outline btn-sm"><i data-lucide="upload" class="lucide-icon"></i> Bulk Upload</a>
+                <a href="add-lesson.php?course_id=<?= $id ?>" class="btn btn-primary btn-sm"><i data-lucide="plus" class="lucide-icon"></i> Add / Manage Lessons</a>
+            </div>
         </div>
         <?php if ($lessons): ?>
         <ul class="lesson-list" style="margin:0 -1.2rem">
@@ -195,6 +201,7 @@ $previewCard = fetchPreviewCard($pdo, $id);
         <div style="display:flex;gap:1rem;flex-wrap:wrap">
             <a href="manage-quizzes.php?course_id=<?= $id ?>" class="btn btn-outline btn-sm"><i data-lucide="list-checks" class="lucide-icon"></i> Quizzes (<?= $quizCount ?>)</a>
             <a href="manage-assignments.php?course_id=<?= $id ?>" class="btn btn-outline btn-sm"><i data-lucide="file-edit" class="lucide-icon"></i> Assignments (<?= $assignmentCount ?>)</a>
+            <a href="bulk-assessments.php?course_id=<?= $id ?>" class="btn btn-outline btn-sm"><i data-lucide="upload" class="lucide-icon"></i> Bulk Upload Quizzes/Assignments</a>
         </div>
     </div></div>
 

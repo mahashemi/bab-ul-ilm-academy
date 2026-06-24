@@ -9,9 +9,14 @@ $courseId = (int) ($_GET['course'] ?? 0) ?: null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['body'])) {
     verifyCsrf();
     $body = trim($_POST['body']);
-    if ($body !== '' && $withId > 0) {
-        $pdo->prepare('INSERT INTO messages (sender_id, receiver_id, course_id, body) VALUES (?, ?, ?, ?)')
-            ->execute([$user['id'], $withId, $courseId, $body]);
+    $attachment = handleAttachmentUpload('attachment', 'chat-attachments');
+    if (($body !== '' || $attachment) && $withId > 0) {
+        $pdo->prepare(
+            'INSERT INTO messages (sender_id, receiver_id, course_id, body, attachment_path, attachment_type, attachment_name) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        )->execute([
+            $user['id'], $withId, $courseId, $body,
+            $attachment['path'] ?? null, $attachment['type'] ?? null, $attachment['name'] ?? null,
+        ]);
 
         // Cooldown per (recipient, sender) so a back-and-forth conversation
         // emails once per 30 minutes, not once per message.
@@ -48,7 +53,7 @@ $conversations = $convos->fetchAll();
 $activeMessages = [];
 $activeUser = null;
 if ($withId > 0) {
-    $stmt = $pdo->prepare('SELECT id, name, display_name, avatar FROM users WHERE id = ?');
+    $stmt = $pdo->prepare('SELECT id, name, display_name, avatar, last_active_at FROM users WHERE id = ?');
     $stmt->execute([$withId]);
     $activeUser = $stmt->fetch();
 
@@ -138,11 +143,18 @@ foreach ($activeMessages as $m) {
     <div class="chat-wrap <?= $withId ? 'thread-open' : '' ?>">
         <div class="chat-list">
             <div class="chat-list-header">Messages</div>
+            <?php if ($conversations): ?>
+            <div class="chat-search-wrap">
+                <i data-lucide="search" class="lucide-icon"></i>
+                <input type="text" id="chatSearch" placeholder="Search conversations..." oninput="filterChatList(this.value)">
+            </div>
+            <?php endif; ?>
             <?php if (!$conversations): ?>
                 <div class="chat-empty-list"><i data-lucide="message-circle" class="lucide-icon"></i><br>No conversations yet.<br>Teachers can message students from their course's student list; students can message a teacher from the course page.</div>
             <?php endif; ?>
+            <div id="chatListItems">
             <?php foreach ($conversations as $c): ?>
-                <a href="chat.php?with=<?= (int) $c['id'] ?>" class="chat-list-item <?= $c['id'] == $withId ? 'active' : '' ?>">
+                <a href="chat.php?with=<?= (int) $c['id'] ?>" class="chat-list-item <?= $c['id'] == $withId ? 'active' : '' ?>" data-name="<?= e(mb_strtolower(displayNameOf($c))) ?>">
                     <?= renderAvatar($c, 'chat-avatar') ?>
                     <div style="overflow:hidden;flex:1;min-width:0">
                         <div class="chat-preview-top">
@@ -156,6 +168,7 @@ foreach ($activeMessages as $m) {
                     </div>
                 </a>
             <?php endforeach; ?>
+            </div>
         </div>
 
         <div class="chat-main">
@@ -177,17 +190,51 @@ foreach ($activeMessages as $m) {
                         <?= renderAvatar($isSent ? $user : $activeUser, 'msg-group-avatar') ?>
                         <div class="msg-bubbles">
                             <?php foreach ($g['messages'] as $m): ?>
-                                <div class="msg <?= $isSent ? 'msg-sent' : 'msg-recv' ?>"><?= e($m['body']) ?></div>
+                                <div class="msg <?= $isSent ? 'msg-sent' : 'msg-recv' ?>">
+                                    <?php if ($m['body'] !== ''): ?><div><?= nl2br(e($m['body'])) ?></div><?php endif; ?>
+                                    <?php if ($m['attachment_path']): ?>
+                                        <?php if ($m['attachment_type'] === 'image'): ?>
+                                            <a href="<?= e($m['attachment_path']) ?>" target="_blank" rel="noopener"><img src="<?= e($m['attachment_path']) ?>" alt="" class="msg-attachment-img"></a>
+                                        <?php else: ?>
+                                            <a href="<?= e($m['attachment_path']) ?>" target="_blank" rel="noopener" class="msg-attachment-file"><i data-lucide="file-text" class="lucide-icon"></i> <?= e($m['attachment_name'] ?: 'Download file') ?></a>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+                                </div>
                             <?php endforeach; ?>
-                            <div class="msg-time"><?= chatTime(end($g['messages'])['created_at']) ?></div>
+                            <div class="msg-time">
+                                <?= chatTime(end($g['messages'])['created_at']) ?>
+                                <?php if ($isSent):
+                                    $lastMsg = end($g['messages']);
+                                    if ((int) $lastMsg['is_read'] === 1) {
+                                        $tickIcon = 'check-check'; $tickClass = 'msg-tick-seen'; $tickTitle = 'Seen';
+                                    } elseif ($activeUser['last_active_at'] && strtotime($activeUser['last_active_at']) > strtotime($lastMsg['created_at'])) {
+                                        $tickIcon = 'check-check'; $tickClass = 'msg-tick-delivered'; $tickTitle = 'Delivered';
+                                    } else {
+                                        $tickIcon = 'check'; $tickClass = 'msg-tick-sent'; $tickTitle = 'Sent';
+                                    }
+                                ?>
+                                <i data-lucide="<?= $tickIcon ?>" class="lucide-icon <?= $tickClass ?>" data-tip="<?= $tickTitle ?>"></i>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     </div>
                     <?php endforeach; ?>
                 </div>
-                <form method="post" class="chat-input-bar" id="chatForm">
+                <form method="post" id="chatForm" enctype="multipart/form-data">
                     <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
-                    <textarea name="body" id="chatBody" class="chat-input" rows="1" placeholder="Type a message..." required autocomplete="off"></textarea>
-                    <button type="submit" class="chat-send-btn" aria-label="Send"><i data-lucide="send" class="lucide-icon"></i></button>
+                    <div id="chatAttachmentPreview" style="display:none;align-items:center;gap:.5rem;padding:.4rem 1rem;font-size:.78rem;color:var(--text-light)">
+                        <i data-lucide="paperclip" class="lucide-icon"></i>
+                        <span id="chatAttachmentName"></span>
+                        <button type="button" onclick="document.getElementById('chatAttachment').value='';document.getElementById('chatAttachmentPreview').style.display='none';" style="background:none;border:none;color:var(--text-light);cursor:pointer;font-weight:700">&times;</button>
+                    </div>
+                    <div class="chat-input-bar">
+                        <label class="icon-btn" data-tip="Attach a file or image" style="flex-shrink:0">
+                            <input type="file" name="attachment" id="chatAttachment" accept="image/jpeg,image/png,image/webp,application/pdf" style="display:none" onchange="var f=this.files[0]; document.getElementById('chatAttachmentName').textContent = f ? f.name : ''; document.getElementById('chatAttachmentPreview').style.display = f ? 'flex' : 'none';">
+                            <i data-lucide="paperclip" class="lucide-icon"></i>
+                        </label>
+                        <textarea name="body" id="chatBody" class="chat-input" rows="1" placeholder="Type a message..." autocomplete="off"></textarea>
+                        <button type="submit" class="chat-send-btn" aria-label="Send"><i data-lucide="send" class="lucide-icon"></i></button>
+                    </div>
                 </form>
             <?php endif; ?>
         </div>
@@ -195,6 +242,13 @@ foreach ($activeMessages as $m) {
 </div>
 
 <script>
+function filterChatList(query) {
+    var q = query.trim().toLowerCase();
+    document.querySelectorAll('#chatListItems .chat-list-item').forEach(function (item) {
+        var name = item.getAttribute('data-name') || '';
+        item.style.display = name.indexOf(q) !== -1 ? '' : 'none';
+    });
+}
 (function () {
     var box = document.getElementById('chatMessages');
     if (box) box.scrollTop = box.scrollHeight;
@@ -209,7 +263,14 @@ foreach ($activeMessages as $m) {
         textarea.addEventListener('keydown', function (e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                if (textarea.value.trim() !== '') form.submit();
+                var fileInput = document.getElementById('chatAttachment');
+                if (textarea.value.trim() !== '' || (fileInput && fileInput.files.length > 0)) form.submit();
+            }
+        });
+        form.addEventListener('submit', function (e) {
+            var fileInput = document.getElementById('chatAttachment');
+            if (textarea.value.trim() === '' && !(fileInput && fileInput.files.length > 0)) {
+                e.preventDefault();
             }
         });
     }

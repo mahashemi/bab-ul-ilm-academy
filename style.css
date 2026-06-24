@@ -328,7 +328,18 @@ img { max-width: 100%; height: auto; display: block; }
 .msg { padding: .6rem .9rem; border-radius: 16px; font-size: .9rem; line-height: 1.45; word-wrap: break-word; }
 .msg-sent { background: var(--teal-mid); color: var(--white); border-bottom-right-radius: 4px; }
 .msg-recv { background: var(--white); color: var(--text); border-bottom-left-radius: 4px; box-shadow: var(--shadow); }
-.msg-time { font-size: .68rem; color: var(--text-light); padding: 0 .3rem; }
+.msg-time { font-size: .68rem; color: var(--text-light); padding: 0 .3rem; display: flex; align-items: center; gap: .25rem; }
+.msg-time .lucide-icon { width: .9em; height: .9em; }
+.msg-tick-sent { color: var(--text-light); }
+.msg-tick-delivered { color: var(--text-light); }
+.msg-tick-seen { color: var(--teal-mid); }
+.msg-attachment-img { max-width: 220px; max-height: 220px; border-radius: 10px; object-fit: cover; display: block; }
+.msg-attachment-file { display: inline-flex; align-items: center; gap: .4rem; font-size: .82rem; text-decoration: underline; }
+.msg-sent .msg-attachment-file { color: var(--white); }
+.msg-recv .msg-attachment-file { color: var(--teal-mid); }
+.chat-search-wrap { display: flex; align-items: center; gap: .5rem; padding: .6rem 1rem; border-bottom: 1px solid var(--border); }
+.chat-search-wrap .lucide-icon { color: var(--text-light); flex-shrink: 0; }
+.chat-search-wrap input { border: none; outline: none; font-size: .85rem; width: 100%; background: none; }
 .chat-empty-thread { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text-light); text-align: center; padding: 2rem; }
 .chat-empty-thread .icon { font-size: 2.8rem; margin-bottom: .6rem; opacity: .6; }
 

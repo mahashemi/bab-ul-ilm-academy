@@ -406,6 +406,16 @@ CREATE TABLE IF NOT EXISTS notification_log (
     INDEX idx_lookup (user_id, type, related_id, sent_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ── Phase B: messaging upgrades ───────────────────────────────────────────
+-- last_active_at drives the honest "Delivered" state for 1:1 messages
+-- (recipient has been active on the site since the message was sent, even
+-- if they haven't opened this specific conversation) — updated at most
+-- once a minute per user from db.php, not a per-message ping.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_at DATETIME NULL;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS attachment_path VARCHAR(300) NULL;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS attachment_type VARCHAR(10) NULL;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS attachment_name VARCHAR(255) NULL;
+
 -- ── Initial Admin Account ───────────────────────────────────────────────
 -- Default password: Admin@123
 -- IMPORTANT: Log in immediately and change this password via your profile.

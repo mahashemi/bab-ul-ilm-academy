@@ -47,6 +47,21 @@ loadSiteSettings($pdo, [
     'SITE_AFFILIATION'  => SITE_AFFILIATION_DEFAULT,
 ]);
 
+// Drives the "Delivered" message state (recipient has been active on the
+// site since the message was sent, even without opening that specific
+// conversation) — runs on every page load since db.php is required
+// everywhere, but the WHERE clause means it only ever writes once a
+// minute per user, not on every single request.
+if (isset($_SESSION['user']['id'])) {
+    try {
+        $pdo->prepare(
+            'UPDATE users SET last_active_at = NOW() WHERE id = ? AND (last_active_at IS NULL OR last_active_at < DATE_SUB(NOW(), INTERVAL 1 MINUTE))'
+        )->execute([(int) $_SESSION['user']['id']]);
+    } catch (Exception $e) {
+        // best-effort — never let this break page rendering
+    }
+}
+
 function e(string $s): string {
     return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
 }
@@ -567,6 +582,54 @@ function handleImageUpload(string $fieldName, string $subDir): ?string {
     }
 
     return 'uploads/' . $subDir . '/' . $filename;
+}
+
+// Broader than handleImageUpload() — accepts images OR PDFs (chat
+// attachments/assignment submissions need PDFs too, not just photos).
+// Never trusts the client-supplied MIME type; verifies via getimagesize()
+// for images and the actual file signature for PDFs. Returns
+// ['path' => ..., 'type' => 'image'|'file', 'name' => original filename]
+// or null if nothing was uploaded / it failed validation.
+function handleAttachmentUpload(string $fieldName, string $subDir): ?array {
+    if (empty($_FILES[$fieldName]['name']) || $_FILES[$fieldName]['error'] === UPLOAD_ERR_NO_FILE) {
+        return null;
+    }
+    if ($_FILES[$fieldName]['error'] !== UPLOAD_ERR_OK) {
+        return null;
+    }
+    $tmpPath = $_FILES[$fieldName]['tmp_name'];
+    if ($_FILES[$fieldName]['size'] > 10 * 1024 * 1024) {
+        return null; // 10MB limit
+    }
+
+    $originalName = $_FILES[$fieldName]['name'];
+    $imageInfo = @getimagesize($tmpPath);
+    $allowedImageTypes = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_WEBP => 'webp'];
+
+    if ($imageInfo && isset($allowedImageTypes[$imageInfo[2]])) {
+        $ext = $allowedImageTypes[$imageInfo[2]];
+        $type = 'image';
+    } else {
+        $handle = fopen($tmpPath, 'rb');
+        $header = $handle ? fread($handle, 5) : '';
+        if ($handle) fclose($handle);
+        if ($header !== '%PDF-') {
+            return null; // not an image we accept, not a real PDF
+        }
+        $ext = 'pdf';
+        $type = 'file';
+    }
+
+    $filename = bin2hex(random_bytes(16)) . '.' . $ext;
+    $destDir = __DIR__ . '/uploads/' . $subDir;
+    if (!is_dir($destDir)) {
+        mkdir($destDir, 0755, true);
+    }
+    if (!move_uploaded_file($tmpPath, $destDir . '/' . $filename)) {
+        return null;
+    }
+
+    return ['path' => 'uploads/' . $subDir . '/' . $filename, 'type' => $type, 'name' => $originalName];
 }
 
 function catIcon(?string $iconName): string {

@@ -539,9 +539,33 @@ img { max-width: 100%; height: auto; display: block; }
 
 /* ── Dashboard ── */
 .dashboard-wrap { max-width: 1000px; margin: 2rem auto; padding: 0 1.5rem; }
-.dashboard-header { background: linear-gradient(135deg, var(--green-deep), var(--teal-deep)); color: var(--white); border-radius: var(--radius); padding: 1.8rem 2rem; margin-bottom: 1.5rem; }
-.dashboard-header h2 { font-size: 1.5rem; font-weight: 700; }
-.dashboard-header p  { opacity: .8; font-size: .9rem; margin-top: .3rem; }
+/* Full-bleed banner, not a rounded "island" card -- breaks out of
+   .dashboard-wrap's max-width via the 100vw/negative-margin trick so
+   every one of the ~20 pages using this class gets the wide banner
+   look with zero HTML changes. Side padding uses max() instead of a
+   fixed value so content still lines up in a readable ~1180px column
+   on wide screens instead of hugging the literal viewport edge. */
+.dashboard-header {
+    background: linear-gradient(135deg, var(--green-deep) 0%, var(--teal-deep) 65%, var(--teal-light) 100%);
+    color: var(--white);
+    border-radius: 0;
+    padding: 2.2rem max(1.5rem, calc(50vw - 590px)) 2.4rem;
+    margin: 0 calc(-50vw + 50%) 1.8rem;
+    width: 100vw;
+    position: relative;
+}
+.dashboard-header::before {
+    content: '';
+    position: absolute; inset: 0; pointer-events: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cpath d='M40 0 L80 40 L40 80 L0 40 Z' fill='none' stroke='rgba(212,175,90,0.08)' stroke-width='1'/%3E%3C/svg%3E") repeat;
+}
+.dashboard-header > * { position: relative; z-index: 1; }
+.dashboard-header h2 { font-size: 1.6rem; font-weight: 800; }
+.dashboard-header p  { opacity: .85; font-size: .92rem; margin-top: .4rem; }
+@media (max-width: 768px) {
+    .dashboard-header { padding: 1.6rem 1.2rem 1.8rem; margin-bottom: 1.4rem; }
+    .dashboard-header h2 { font-size: 1.3rem; }
+}
 .dashboard-header-link { opacity: 1; color: var(--gold); font-weight: 600; text-decoration: underline; }
 .dashboard-header-link:hover { color: var(--gold-light, #f0d78a); }
 .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; }

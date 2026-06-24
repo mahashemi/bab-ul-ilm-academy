@@ -945,12 +945,34 @@ function renderAvatar(?array $user, string $class = 'nav-avatar'): string {
 // so the hover swap is instant with no extra request. $activeFieldId/
 // $activeSubjectId just drive which links render with the "active" class
 // (e.g. when arriving via a direct ?field= link rather than hovering).
-function renderCategoryNav(PDO $pdo, int $activeFieldId = 0, int $activeSubjectId = 0): string {
+// The subcategory hover panel only has room for a handful of items before
+// it turns into a horizontally-scrolling row a quick hover will never
+// think to scroll (Islamic Studies alone has 13 subjects) -- so each
+// field shows only its top-ranked subjects here, by real enrollment
+// count, with a "More in [field]" link as the escape hatch to the full
+// list on courses.php. Whichever subject the user currently has selected
+// is always kept visible even if it didn't rank, so the active state is
+// never silently dropped.
+function renderCategoryNav(PDO $pdo, int $activeFieldId = 0, int $activeSubjectId = 0, int $topN = 3): string {
     $fields = $pdo->query('SELECT * FROM fields_of_study ORDER BY name')->fetchAll();
-    $allSubjects = $pdo->query('SELECT * FROM subjects ORDER BY name')->fetchAll();
+    $allSubjects = $pdo->query(
+        "SELECT s.*, (SELECT COUNT(*) FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.subject_id = s.id) AS enrollment_count
+         FROM subjects s ORDER BY enrollment_count DESC, s.name ASC"
+    )->fetchAll();
     $byField = [];
     foreach ($allSubjects as $s) {
         $byField[(int) $s['field_of_study_id']][] = $s;
+    }
+
+    $topByField = [];
+    foreach ($byField as $fid => $subjects) {
+        $top = array_slice($subjects, 0, $topN);
+        if ($activeSubjectId && !in_array($activeSubjectId, array_column($top, 'id'), true)) {
+            foreach ($subjects as $s) {
+                if ((int) $s['id'] === $activeSubjectId) { $top[] = $s; break; }
+            }
+        }
+        $topByField[$fid] = ['shown' => $top, 'total' => count($subjects)];
     }
 
     ob_start();
@@ -963,11 +985,14 @@ function renderCategoryNav(PDO $pdo, int $activeFieldId = 0, int $activeSubjectI
             <?php endforeach; ?>
         </nav>
         <div class="subcategory-nav-panel">
-            <?php foreach ($fields as $f): $fid = (int) $f['id']; if (empty($byField[$fid])) continue; ?>
+            <?php foreach ($fields as $f): $fid = (int) $f['id']; if (empty($topByField[$fid]['shown'])) continue; ?>
             <nav class="subcategory-nav<?= $activeFieldId === $fid ? ' active-panel' : '' ?>" data-for-field="<?= $fid ?>">
-                <?php foreach ($byField[$fid] as $s): ?>
+                <?php foreach ($topByField[$fid]['shown'] as $s): ?>
                     <a href="courses.php?field=<?= $fid ?>&subject=<?= (int) $s['id'] ?>" class="<?= $activeSubjectId === (int) $s['id'] ? 'active' : '' ?>"><?= catIcon($s['icon']) ?> <?= e($s['name']) ?></a>
                 <?php endforeach; ?>
+                <?php if ($topByField[$fid]['total'] > count($topByField[$fid]['shown'])): ?>
+                    <a href="courses.php?field=<?= $fid ?>" style="opacity:.7"><i data-lucide="ellipsis" class="lucide-icon"></i> More in <?= e($f['name']) ?></a>
+                <?php endif; ?>
             </nav>
             <?php endforeach; ?>
         </div>

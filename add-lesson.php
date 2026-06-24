@@ -67,6 +67,10 @@ $lessons = $lessons->fetchAll();
 $existingSections = $pdo->prepare('SELECT DISTINCT section_title FROM lessons WHERE course_id = ? AND section_title IS NOT NULL AND section_title != \'\' ORDER BY sort_order ASC');
 $existingSections->execute([$courseId]);
 $existingSections = $existingSections->fetchAll(PDO::FETCH_COLUMN);
+// Nudge teachers toward a Week-by-Week curriculum structure (Udemy-style)
+// by pre-filling the next logical week number — still just a suggestion,
+// editable/clearable like any other field.
+$suggestedSection = 'Week ' . (count($existingSections) + 1);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -141,8 +145,8 @@ $existingSections = $existingSections->fetchAll(PDO::FETCH_COLUMN);
             <input type="hidden" name="course_id" value="<?= (int) $courseId ?>">
 
             <div class="form-group">
-                <label class="form-label">Section (optional — groups lessons into a curriculum section)</label>
-                <input type="text" name="section_title" class="form-control" list="sectionSuggestions" placeholder="e.g. Getting Started">
+                <label class="form-label">Section <span style="font-weight:400;font-size:.78rem;color:var(--text-light)">(groups lessons into a curriculum section — Week 1, Week 2... works well)</span></label>
+                <input type="text" name="section_title" class="form-control" list="sectionSuggestions" placeholder="e.g. Week 1: Introduction" value="<?= e($suggestedSection) ?>">
                 <datalist id="sectionSuggestions">
                     <?php foreach ($existingSections as $s): ?><option value="<?= e($s) ?>"><?php endforeach; ?>
                 </datalist>

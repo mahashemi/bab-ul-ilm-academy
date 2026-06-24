@@ -443,11 +443,31 @@ img { max-width: 100%; height: auto; display: block; }
 .course-layout { display: grid; grid-template-columns: 1fr 340px; gap: 2rem; align-items: start; }
 @media (max-width: 900px) { .course-layout { grid-template-columns: 1fr; } }
 .course-main-col { min-width: 0; }
-.enroll-card { position: sticky; top: 84px; }
+.enroll-card { position: sticky; top: 92px; }
 .enroll-card .course-cover { height: 180px; }
-.course-rating-row { display: flex; align-items: center; gap: .5rem; font-size: .9rem; color: var(--text-mid); margin-bottom: .6rem; }
+.course-rating-row { display: flex; align-items: center; gap: .5rem; font-size: .9rem; color: var(--text-mid); margin-bottom: .6rem; flex-wrap: wrap; }
 .course-rating-row .stars { color: var(--gold-dark); letter-spacing: 1px; }
 .course-rating-row .score { font-weight: 700; color: var(--text); }
+
+/* ── Course detail page hero banner (Udemy-style dark band) ── */
+.course-hero-band {
+    background: linear-gradient(135deg, var(--green-deep) 0%, var(--teal-deep) 100%);
+    padding: 2.2rem 1.5rem 2.4rem;
+}
+.course-hero-inner { max-width: 1180px; margin: 0 auto; }
+.course-hero-breadcrumb { font-size: .82rem; color: rgba(255,255,255,.65); margin-bottom: .8rem; }
+.course-hero-breadcrumb a { color: rgba(255,255,255,.85); }
+.course-hero-breadcrumb a:hover { color: var(--gold); }
+.course-hero-title { font-size: 1.9rem; font-weight: 800; color: var(--white); margin-bottom: .6rem; line-height: 1.25; max-width: 760px; }
+.course-hero-desc { font-size: .95rem; color: rgba(255,255,255,.8); margin-bottom: .9rem; max-width: 700px; line-height: 1.55; }
+.course-hero-band .course-rating-row { color: rgba(255,255,255,.85); }
+.course-hero-band .course-rating-row .score { color: var(--gold); }
+.course-hero-band .course-rating-row .stars { color: var(--gold); }
+.course-hero-meta { font-size: .85rem; color: rgba(255,255,255,.65); margin-bottom: 0; }
+@media (max-width: 768px) {
+    .course-hero-band { padding: 1.6rem 1rem 1.8rem; }
+    .course-hero-title { font-size: 1.4rem; }
+}
 .objectives-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: .6rem 1.5rem; margin: 1rem 0; }
 .objective-item { display: flex; align-items: flex-start; gap: .6rem; font-size: .88rem; color: var(--text-mid); }
 .objective-item .lucide-icon { color: #2e7d32; margin-top: .15rem; flex-shrink: 0; }
@@ -603,10 +623,12 @@ footer { background: var(--green-deep); color: rgba(255,255,255,.75); padding: 3
 }
 
 @media (max-width: 768px) {
-    .navbar { padding: 0 1rem; height: 60px; flex-direction: row; align-items: center; }
-    .nav-brand { font-size: 1.05rem; max-width: 65vw; }
+    .navbar { padding: 0 1rem; height: 60px; flex-direction: row; align-items: center; gap: .6rem; }
+    .nav-brand { font-size: 1.05rem; max-width: 38vw; }
     .nav-logo { height: 30px; }
     .nav-brand small { font-size: .68rem; }
+    .nav-search { padding: .4rem .7rem; gap: .4rem; max-width: none; }
+    .nav-search input { font-size: .82rem; }
     .nav-toggle { display: block; }
     .nav-links {
         position: fixed; top: 0; left: 0; height: 100vh; width: 80%; max-width: 300px;
@@ -679,7 +701,10 @@ footer { background: var(--green-deep); color: rgba(255,255,255,.75); padding: 3
 }
 @media (max-width: 420px) {
     .hero h1 { font-size: 1.4rem; }
-    .nav-brand { font-size: 1rem; }
+    .nav-brand { font-size: 1rem; max-width: 30vw; }
+    .nav-logo { height: 26px; }
+    .nav-search { padding: .35rem .55rem; }
+    .nav-search input::placeholder { font-size: .76rem; }
     .btn { padding: .6rem 1.2rem; font-size: .88rem; }
 }
 

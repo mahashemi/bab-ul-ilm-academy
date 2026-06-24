@@ -71,6 +71,22 @@ if ($user && ($user['role'] ?? '') !== 'teacher') {
 
 $fieldsOfStudy = $pdo->query('SELECT * FROM fields_of_study ORDER BY name')->fetchAll();
 
+// "Top courses in [Field]" rows (Udemy-style) — one row per field that
+// actually has published courses, ranked by real enrollment+rating, capped
+// at 3 fields so the homepage doesn't turn into an endless scroll.
+$topByField = [];
+foreach ($fieldsOfStudy as $f) {
+    $stmt = $pdo->prepare(
+        "SELECT $courseSelect FROM courses c JOIN users u ON u.id = c.teacher_id LEFT JOIN subjects s ON s.id = c.subject_id
+         WHERE c.is_published = 1 AND c.moderation_status = 'approved' AND s.field_of_study_id = ?
+         ORDER BY student_count DESC, avg_rating DESC LIMIT 12"
+    );
+    $stmt->execute([(int) $f['id']]);
+    $rows = $stmt->fetchAll();
+    if ($rows) $topByField[] = ['name' => $f['name'], 'courses' => $rows];
+    if (count($topByField) >= 3) break;
+}
+
 $stats = $pdo->query(
     "SELECT
         (SELECT COUNT(*) FROM users WHERE role='teacher') AS teachers,
@@ -199,6 +215,14 @@ $stats = $pdo->query(
         <a href="courses.php" class="chip-view-all">View All Subjects <i data-lucide="arrow-right" class="lucide-icon"></i></a>
     </div>
 
+    <?php if ($trendingCourses): ?>
+    <h2 class="section-title">What to <span>Explore Next</span></h2>
+    <p class="section-sub">Trending across the whole platform right now<?= $user ? ' — personalized recommendations are coming soon' : '' ?></p>
+    <div class="carousel-row" style="margin-bottom:2.5rem">
+        <?php foreach ($trendingCourses as $c): ?><?= renderCourseCard($c, $bestsellerIds) ?><?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+
     <?php if ($recommendedCourses): ?>
     <div class="carousel-head">
         <h2 class="section-title">Recommended for <span><?= e(implode(', ', $myFieldNames)) ?></span></h2>
@@ -209,13 +233,12 @@ $stats = $pdo->query(
     </div>
     <?php endif; ?>
 
-    <?php if ($trendingCourses): ?>
-    <h2 class="section-title">Trending <span>Courses</span></h2>
-    <p class="section-sub">Most enrolled across the whole platform</p>
+    <?php foreach ($topByField as $row): ?>
+    <h2 class="section-title">Top Courses in <span><?= e($row['name']) ?></span></h2>
     <div class="carousel-row" style="margin-bottom:2.5rem">
-        <?php foreach ($trendingCourses as $c): ?><?= renderCourseCard($c, $bestsellerIds) ?><?php endforeach; ?>
+        <?php foreach ($row['courses'] as $c): ?><?= renderCourseCard($c, $bestsellerIds) ?><?php endforeach; ?>
     </div>
-    <?php endif; ?>
+    <?php endforeach; ?>
 
     <h2 class="section-title">Newest <span>Courses</span></h2>
     <p class="section-sub">Taught by qualified Islamic scholars and educators</p>

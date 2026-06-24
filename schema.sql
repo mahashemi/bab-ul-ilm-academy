@@ -98,6 +98,37 @@ INSERT INTO subjects (field_of_study_id, name, icon) VALUES
 (4, 'GED',                          'graduation-cap'),
 (4, 'SAT',                          'pencil');
 
+ALTER TABLE subjects ADD UNIQUE KEY IF NOT EXISTS uniq_subject_name (name);
+
+-- Taxonomy expansion (2026-06-25) — richer subject coverage per field,
+-- and subjects for Postgraduate/PhD which previously had none at all.
+INSERT IGNORE INTO subjects (field_of_study_id, name, icon) VALUES
+(1, 'Tafsir (Quranic Exegesis)', 'book-open-text'),
+(1, 'Seerah (Life of the Prophet)', 'footprints'),
+(1, 'Islamic Finance', 'landmark'),
+(1, 'Comparative Religion', 'globe-2'),
+(1, 'Dawah & Islamic Communication', 'megaphone'),
+(2, 'Physics', 'orbit'),
+(2, 'Chemistry', 'flask-conical'),
+(2, 'Biology', 'leaf'),
+(2, 'Geography', 'map'),
+(2, 'Foreign Languages', 'languages'),
+(3, 'Computer Science & IT', 'laptop'),
+(3, 'Law', 'gavel'),
+(3, 'Education & Teaching', 'school'),
+(3, 'Psychology', 'brain'),
+(3, 'Agriculture', 'sprout'),
+(4, 'IELTS / TOEFL', 'languages'),
+(4, 'O-Levels', 'file-text'),
+(4, 'A-Levels', 'file-text'),
+(4, 'University Entrance Tests', 'target'),
+(5, 'Research Methodology', 'search'),
+(5, 'MBA / Business Administration', 'briefcase'),
+(5, 'Master''s in Islamic Studies', 'moon-star'),
+(5, 'Master''s in Education', 'school'),
+(5, 'PhD Dissertation Writing', 'file-pen'),
+(5, 'Academic Publishing', 'book-marked');
+
 -- ── Courses ───────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS courses (
     id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

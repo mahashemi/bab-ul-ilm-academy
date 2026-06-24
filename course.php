@@ -52,6 +52,15 @@ $ratingRow = $ratingStmt->fetch();
 $reviewCount = (int) $ratingRow['c'];
 $avgRating = round((float) $ratingRow['avg_rating'], 1);
 
+// Same "Bestseller" definition used on the homepage/browse cards (top 3
+// most-enrolled platform-wide, only if they actually have students) — so
+// a course shows the badge consistently whether viewed as a card or here.
+$bestsellerIds = $pdo->query(
+    "SELECT c.id FROM courses c WHERE c.is_published = 1 AND c.moderation_status = 'approved'
+     AND (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) > 0
+     ORDER BY (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) DESC LIMIT 3"
+)->fetchAll(PDO::FETCH_COLUMN);
+
 $ratingBreakdown = [5 => 0, 4 => 0, 3 => 0, 2 => 0, 1 => 0];
 if ($reviewCount > 0) {
     $bd = $pdo->prepare('SELECT rating, COUNT(*) c FROM course_reviews WHERE course_id = ? GROUP BY rating');
@@ -260,50 +269,60 @@ function starString(float $rating): string {
     </div>
 </nav>
 
-<div class="dashboard-wrap" style="max-width:1180px">
-    <?php if (flash('success')): ?><div class="alert alert-success"><?= e(flash('success')) ?></div><?php endif; ?>
+<?php if (flash('success')): ?>
+<div class="dashboard-wrap" style="max-width:1180px;margin-bottom:0;padding-bottom:0">
+    <div class="alert alert-success"><?= e(flash('success')) ?></div>
+</div>
+<?php endif; ?>
 
-    <?php if ($course['field_name'] || $course['subject_name']): ?>
-    <p style="font-size:.82rem;color:var(--text-light);margin-bottom:.6rem">
-        <?php if ($course['field_name']): ?><a href="courses.php?field=<?= (int) $course['field_id'] ?>"><?= e($course['field_name']) ?></a><?php endif; ?>
-        <?php if ($course['field_name'] && $course['subject_name']): ?> <i data-lucide="chevron-right" class="lucide-icon" style="width:.8em;height:.8em"></i> <?php endif; ?>
-        <?php if ($course['subject_name']): ?><a href="courses.php?subject=<?= (int) $course['subject_id_full'] ?>"><?= e($course['subject_name']) ?></a><?php endif; ?>
-    </p>
-    <?php endif; ?>
-
-    <div style="display:flex;gap:.6rem;margin-bottom:.6rem;flex-wrap:wrap">
-        <span class="badge badge-<?= e($course['level']) ?>"><?= e(ucfirst($course['level'])) ?></span>
-        <span class="badge" style="background:#f5f5f5;color:#555"><?= e($course['language']) ?></span>
-        <?php if ($course['subject_name']): ?><span class="badge" style="background:#f5f5f5;color:#555"><?= e($course['subject_name']) ?></span><?php endif; ?>
-    </div>
-    <div style="display:flex;align-items:center;gap:.7rem;flex-wrap:wrap">
-        <h1 style="font-size:1.7rem;margin-bottom:.4rem"><?= e($course['title']) ?></h1>
-        <?php if ($isOwnerOrAdmin): ?>
-            <a href="edit-course.php?id=<?= $id ?>" class="btn btn-sm btn-outline"><i data-lucide="pencil" class="lucide-icon"></i> Edit</a>
+<section class="course-hero-band">
+    <div class="course-hero-inner">
+        <?php if ($course['field_name'] || $course['subject_name']): ?>
+        <p class="course-hero-breadcrumb">
+            <?php if ($course['field_name']): ?><a href="courses.php?field=<?= (int) $course['field_id'] ?>"><?= e($course['field_name']) ?></a><?php endif; ?>
+            <?php if ($course['field_name'] && $course['subject_name']): ?> <i data-lucide="chevron-right" class="lucide-icon" style="width:.8em;height:.8em"></i> <?php endif; ?>
+            <?php if ($course['subject_name']): ?><a href="courses.php?subject=<?= (int) $course['subject_id_full'] ?>"><?= e($course['subject_name']) ?></a><?php endif; ?>
+        </p>
         <?php endif; ?>
-    </div>
-    <?php if ($isOwnerOrAdmin && $course['moderation_status'] !== 'approved'): ?>
-        <div class="alert <?= $course['moderation_status'] === 'rejected' ? 'alert-error' : 'alert-info' ?>" style="margin-bottom:1rem">
-            <?= $course['moderation_status'] === 'rejected' ? '<i data-lucide="ban" class="lucide-icon"></i> This course was rejected by an admin and is not visible to students.' : '<i data-lucide="clock" class="lucide-icon"></i> This course is awaiting admin review and is not yet visible to students.' ?>
+
+        <div style="display:flex;gap:.6rem;margin-bottom:.7rem;flex-wrap:wrap">
+            <?php if (in_array($course['id'], $bestsellerIds ?? [], true)): ?><span class="course-bestseller" style="position:static">Bestseller</span><?php endif; ?>
+            <span class="badge badge-<?= e($course['level']) ?>"><?= e(ucfirst($course['level'])) ?></span>
+            <span class="badge" style="background:#f5f5f5;color:#555"><?= e($course['language']) ?></span>
+            <?php if ($course['subject_name']): ?><span class="badge" style="background:#f5f5f5;color:#555"><?= e($course['subject_name']) ?></span><?php endif; ?>
         </div>
-    <?php endif; ?>
-
-    <div class="course-rating-row">
-        <?php if ($reviewCount > 0): ?>
-            <span class="score"><?= number_format($avgRating, 1) ?></span>
-            <span class="stars"><?= starString($avgRating) ?></span>
-            <span>(<?= $reviewCount ?> rating<?= $reviewCount === 1 ? '' : 's' ?>)</span>
-        <?php else: ?>
-            <span>No ratings yet</span>
+        <div style="display:flex;align-items:center;gap:.7rem;flex-wrap:wrap">
+            <h1 class="course-hero-title"><?= e($course['title']) ?></h1>
+            <?php if ($isOwnerOrAdmin): ?>
+                <a href="edit-course.php?id=<?= $id ?>" class="btn btn-sm btn-outline" style="border-color:rgba(255,255,255,.4);color:var(--white)"><i data-lucide="pencil" class="lucide-icon"></i> Edit</a>
+            <?php endif; ?>
+        </div>
+        <?php if ($course['description']): ?><p class="course-hero-desc"><?= e($course['description']) ?></p><?php endif; ?>
+        <?php if ($isOwnerOrAdmin && $course['moderation_status'] !== 'approved'): ?>
+            <div class="alert <?= $course['moderation_status'] === 'rejected' ? 'alert-error' : 'alert-info' ?>" style="margin-bottom:1rem">
+                <?= $course['moderation_status'] === 'rejected' ? '<i data-lucide="ban" class="lucide-icon"></i> This course was rejected by an admin and is not visible to students.' : '<i data-lucide="clock" class="lucide-icon"></i> This course is awaiting admin review and is not yet visible to students.' ?>
+            </div>
         <?php endif; ?>
-        <span>·</span>
-        <span><i data-lucide="users" class="lucide-icon"></i> <?= (int) $studentCount ?> student<?= $studentCount == 1 ? '' : 's' ?></span>
-        <?php if ($totalMinutes > 0): ?><span>·</span><span><i data-lucide="clock" class="lucide-icon"></i> <?= round($totalMinutes / 60, 1) ?> hours total</span><?php endif; ?>
-        <span>·</span>
-        <span><?= count($lessons) ?> lesson<?= count($lessons) == 1 ? '' : 's' ?></span>
-    </div>
-    <p style="font-size:.85rem;color:var(--text-light);margin-bottom:1.5rem">Created by <?= e($course['teacher_name']) ?> · Last updated <?= date('M Y', strtotime($course['updated_at'] ?: $course['created_at'])) ?></p>
 
+        <div class="course-rating-row">
+            <?php if ($reviewCount > 0): ?>
+                <span class="score"><?= number_format($avgRating, 1) ?></span>
+                <span class="stars"><?= starString($avgRating) ?></span>
+                <span>(<?= $reviewCount ?> rating<?= $reviewCount === 1 ? '' : 's' ?>)</span>
+            <?php else: ?>
+                <span>No ratings yet</span>
+            <?php endif; ?>
+            <span>·</span>
+            <span><i data-lucide="users" class="lucide-icon"></i> <?= (int) $studentCount ?> student<?= $studentCount == 1 ? '' : 's' ?></span>
+            <?php if ($totalMinutes > 0): ?><span>·</span><span><i data-lucide="clock" class="lucide-icon"></i> <?= round($totalMinutes / 60, 1) ?> hours total</span><?php endif; ?>
+            <span>·</span>
+            <span><?= count($lessons) ?> lesson<?= count($lessons) == 1 ? '' : 's' ?></span>
+        </div>
+        <p class="course-hero-meta">Created by <?= e($course['teacher_name']) ?> · Last updated <?= date('M Y', strtotime($course['updated_at'] ?: $course['created_at'])) ?></p>
+    </div>
+</section>
+
+<div class="dashboard-wrap" style="max-width:1180px">
     <div class="course-layout">
         <div class="course-main-col">
 
@@ -471,7 +490,7 @@ function starString(float $rating): string {
             <div style="margin-bottom:1.5rem">
                 <h3 style="font-size:1.05rem;margin-bottom:1rem;color:var(--green-deep)">More courses by <?= e($course['teacher_name']) ?></h3>
                 <div class="carousel-row">
-                    <?php foreach ($moreByInstructor as $c): ?><?= renderCourseCard($c) ?><?php endforeach; ?>
+                    <?php foreach ($moreByInstructor as $c): ?><?= renderCourseCard($c, $bestsellerIds) ?><?php endforeach; ?>
                 </div>
             </div>
             <?php endif; ?>
@@ -480,7 +499,7 @@ function starString(float $rating): string {
             <div style="margin-bottom:1.5rem">
                 <h3 style="font-size:1.05rem;margin-bottom:1rem;color:var(--green-deep)">More <?= e($course['subject_name']) ?> Courses</h3>
                 <div class="carousel-row">
-                    <?php foreach ($relatedCourses as $c): ?><?= renderCourseCard($c) ?><?php endforeach; ?>
+                    <?php foreach ($relatedCourses as $c): ?><?= renderCourseCard($c, $bestsellerIds) ?><?php endforeach; ?>
                 </div>
             </div>
             <?php endif; ?>

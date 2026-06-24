@@ -120,8 +120,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
 
             <div class="form-group">
-                <label class="form-label">Section (optional — groups lessons into a curriculum section)</label>
-                <input type="text" name="section_title" class="form-control" list="sectionSuggestions" value="<?= e($lesson['section_title'] ?? '') ?>">
+                <label class="form-label">Section <span style="font-weight:400;font-size:.78rem;color:var(--text-light)">(groups lessons into a curriculum section — Week 1, Week 2... works well)</span></label>
+                <input type="text" name="section_title" class="form-control" list="sectionSuggestions" placeholder="e.g. Week 1: Introduction" value="<?= e($lesson['section_title'] ?? '') ?>">
                 <datalist id="sectionSuggestions">
                     <?php foreach ($existingSections as $s): ?><option value="<?= e($s) ?>"><?php endforeach; ?>
                 </datalist>

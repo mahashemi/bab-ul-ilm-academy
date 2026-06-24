@@ -45,7 +45,12 @@ loadSiteSettings($pdo, [
     'SITE_NAME'           => SITE_NAME_DEFAULT,
     'SITE_TAGLINE'        => SITE_TAGLINE_DEFAULT,
     'SITE_AFFILIATION'    => SITE_AFFILIATION_DEFAULT,
-    'HOME_HERO_HEADLINE'  => HOME_HERO_HEADLINE_DEFAULT,
+    // defined() guard: config.php is skip-worktree'd on production, so a
+    // brand-new *_DEFAULT constant added here can land in this file via
+    // git pull before that server's actual config.php has been manually
+    // updated to define it -- referencing it unconditionally would be a
+    // fatal "undefined constant" error on every single page load.
+    'HOME_HERO_HEADLINE'  => defined('HOME_HERO_HEADLINE_DEFAULT') ? HOME_HERO_HEADLINE_DEFAULT : 'Teach and Learn Any Subject — <span>All Levels, Anywhere, Everywhere</span>',
 ]);
 
 // Drives the "Delivered" message state (recipient has been active on the

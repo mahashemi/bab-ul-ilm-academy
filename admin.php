@@ -73,6 +73,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ];
             });
         }
+    } elseif (isset($_POST['approve_instructor'])) {
+        $uid = (int) $_POST['approve_instructor'];
+        $pdo->prepare("UPDATE users SET teacher_status = 'approved' WHERE id = ? AND teacher_status = 'pending'")->execute([$uid]);
+        notifyUser($pdo, $uid, 'instructor_approved', $uid, 1, function ($u) {
+            return [
+                'You\'re approved to teach on ' . SITE_NAME . '!',
+                '<p style="margin:0 0 16px">Great news — your instructor application has been reviewed and approved. You can now create and publish courses.</p>',
+                'Create Your First Course',
+                siteBaseUrl() . '/add-course.php',
+            ];
+        });
+    } elseif (isset($_POST['reject_instructor'])) {
+        $uid = (int) $_POST['reject_instructor'];
+        $pdo->prepare("UPDATE users SET teacher_status = 'rejected' WHERE id = ? AND teacher_status = 'pending'")->execute([$uid]);
+        notifyUser($pdo, $uid, 'instructor_rejected', $uid, 1, function ($u) {
+            return [
+                'Your instructor application needs another look',
+                '<p style="margin:0 0 16px">Your application to teach on ' . SITE_NAME . ' wasn\'t approved this time. You\'re welcome to update your details and apply again.</p>',
+                'Apply Again',
+                siteBaseUrl() . '/become-instructor.php',
+            ];
+        });
     } elseif (isset($_POST['remind_teacher'])) {
         $cid = (int) $_POST['remind_teacher'];
         $courseRow = $pdo->prepare(
@@ -87,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['set_role']) && $_POST['set_role'] !== '') {
         $targetId = (int) $_POST['user_id'];
         $newRole = $_POST['set_role'];
-        if ($targetId !== (int) $user['id'] && in_array($newRole, ['student','teacher','parent','institution','admin','customer_service'], true)) {
+        if ($targetId !== (int) $user['id'] && in_array($newRole, ['student','admin','customer_service'], true)) {
             $pdo->prepare('UPDATE users SET role = ? WHERE id = ?')->execute([$newRole, $targetId]);
         }
     } elseif (isset($_POST['add_field'])) {
@@ -174,7 +196,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $tab = $_GET['tab'] ?? 'users';
 
 $stats = $pdo->query(
-    "SELECT (SELECT COUNT(*) FROM users WHERE role='teacher') AS teachers,
+    "SELECT (SELECT COUNT(*) FROM users WHERE teacher_status='approved') AS teachers,
             (SELECT COUNT(*) FROM users WHERE role='student') AS students,
             (SELECT COUNT(*) FROM courses) AS total_courses,
             (SELECT COUNT(*) FROM courses WHERE is_published=1) AS published_courses,
@@ -190,6 +212,7 @@ $courses = $pdo->query(
      ORDER BY c.created_at DESC"
 )->fetchAll();
 $pendingCourses = array_values(array_filter($courses, fn($c) => $c['moderation_status'] === 'pending'));
+$pendingInstructors = $pdo->query("SELECT * FROM users WHERE teacher_status = 'pending' ORDER BY id DESC")->fetchAll();
 
 // Filters for the Courses tab only -- applied in-memory rather than a
 // separate SQL query, since $courses is already fully loaded for the
@@ -324,6 +347,7 @@ $flaggedMessages = $pdo->query(
     <div class="tabs">
         <a href="?tab=users" class="tab-btn <?= $tab === 'users' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="users" class="lucide-icon"></i> Users (<?= count($users) ?>)</a>
         <a href="?tab=pending" class="tab-btn <?= $tab === 'pending' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="clock" class="lucide-icon"></i> Pending Review (<?= count($pendingCourses) ?>)</a>
+        <a href="?tab=instructors" class="tab-btn <?= $tab === 'instructors' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="presentation" class="lucide-icon"></i> Instructor Applications (<?= count($pendingInstructors) ?>)</a>
         <a href="?tab=courses" class="tab-btn <?= $tab === 'courses' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="library" class="lucide-icon"></i> Courses (<?= count($courses) ?>)</a>
         <a href="?tab=subjects" class="tab-btn <?= $tab === 'subjects' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="tag" class="lucide-icon"></i> Subjects (<?= count($subjects) ?>)</a>
         <a href="?tab=settings" class="tab-btn <?= $tab === 'settings' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="settings" class="lucide-icon"></i> Settings</a>
@@ -354,6 +378,25 @@ $flaggedMessages = $pdo->query(
                     <form method="post" style="flex:1"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="approve_course" value="<?= (int) $c['id'] ?>" class="btn btn-green btn-full btn-sm"><i data-lucide="check-circle-2" class="lucide-icon"></i> Approve</button></form>
                     <form method="post" style="flex:1" onsubmit="return confirm('Reject this course? It will not be visible to students.')"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="reject_course" value="<?= (int) $c['id'] ?>" class="btn btn-outline btn-full btn-sm" style="color:#c00;border-color:#c00"><i data-lucide="x" class="lucide-icon"></i> Reject</button></form>
                     <a href="chat.php?with=<?= (int) $c['teacher_id'] ?>&course=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="Message teacher" aria-label="Message teacher"><i data-lucide="message-circle" class="lucide-icon"></i></a>
+                </div>
+            </div></div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+    <?php elseif ($tab === 'instructors'): ?>
+        <?php if (!$pendingInstructors): ?>
+            <div class="empty-state"><div class="icon"><i data-lucide="check-circle-2" class="lucide-icon"></i></div><h3>No instructor applications awaiting review</h3></div>
+        <?php else: ?>
+        <div class="grid-2">
+            <?php foreach ($pendingInstructors as $u): ?>
+            <div class="card"><div class="card-body">
+                <h3 style="font-size:1.05rem;margin-bottom:.2rem"><?= e(displayNameOf($u)) ?></h3>
+                <p style="font-size:.85rem;color:var(--text-mid);margin-bottom:.6rem"><?= e($u['email']) ?></p>
+                <?php if ($u['headline']): ?><p style="font-size:.85rem;font-weight:600;margin-bottom:.4rem"><?= e($u['headline']) ?></p><?php endif; ?>
+                <p style="font-size:.85rem;color:var(--text-mid);margin-bottom:1rem;white-space:pre-line"><?= e($u['qualification']) ?></p>
+                <div style="display:flex;gap:.5rem">
+                    <form method="post" style="flex:1"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="approve_instructor" value="<?= (int) $u['id'] ?>" class="btn btn-green btn-full btn-sm"><i data-lucide="check-circle-2" class="lucide-icon"></i> Approve</button></form>
+                    <form method="post" style="flex:1" onsubmit="return confirm('Reject this instructor application?')"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="reject_instructor" value="<?= (int) $u['id'] ?>" class="btn btn-outline btn-full btn-sm" style="color:#c00;border-color:#c00"><i data-lucide="x" class="lucide-icon"></i> Reject</button></form>
                 </div>
             </div></div>
             <?php endforeach; ?>
@@ -707,9 +750,6 @@ $flaggedMessages = $pdo->query(
                             <select name="set_role" onchange="this.form.submit()" class="form-control" style="padding:.3rem .5rem;font-size:.78rem;width:auto;display:inline-block">
                                 <option value="">Change role…</option>
                                 <option value="student" <?= $u['role']==='student'?'selected':'' ?>>Student</option>
-                                <option value="teacher" <?= $u['role']==='teacher'?'selected':'' ?>>Teacher</option>
-                                <option value="parent" <?= $u['role']==='parent'?'selected':'' ?>>Parent</option>
-                                <option value="institution" <?= $u['role']==='institution'?'selected':'' ?>>Institution</option>
                                 <option value="admin" <?= $u['role']==='admin'?'selected':'' ?>>Admin</option>
                                 <option value="customer_service" <?= $u['role']==='customer_service'?'selected':'' ?>>Customer Service</option>
                             </select>

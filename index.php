@@ -47,7 +47,7 @@ $bestsellerIds = array_column(
 
 $recommendedCourses = [];
 $myFieldNames = [];
-if ($user && ($user['role'] ?? '') !== 'teacher') {
+if ($user) {
     $myFieldsStmt = $pdo->prepare(
         "SELECT f.id, f.name FROM user_learning_fields ulf JOIN fields_of_study f ON f.id = ulf.field_of_study_id
          WHERE ulf.user_id = ? ORDER BY f.name"
@@ -89,7 +89,7 @@ foreach ($fieldsOfStudy as $f) {
 
 $stats = $pdo->query(
     "SELECT
-        (SELECT COUNT(*) FROM users WHERE role='teacher') AS teachers,
+        (SELECT COUNT(*) FROM users WHERE teacher_status='approved') AS teachers,
         (SELECT COUNT(*) FROM users WHERE role='student') AS students,
         (SELECT COUNT(*) FROM courses WHERE is_published=1 AND moderation_status='approved') AS courses"
 )->fetch();
@@ -132,7 +132,7 @@ $categoryNav = renderCategoryNav($pdo);
         <a href="feedback.php">Feedback</a>
         <?php if ($user): ?>
             <a href="chat.php">Messages</a>
-            <?php if (($user['role'] ?? '') === 'teacher'): ?><a href="add-course.php">+ New Course</a><?php endif; ?>
+            <?php if (isApprovedTeacher($user)): ?><a href="add-course.php">+ New Course</a><?php endif; ?>
             <?= renderCartIcon($pdo, $user) ?>
             <div class="nav-account">
                 <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="Account menu">
@@ -150,7 +150,8 @@ $categoryNav = renderCategoryNav($pdo);
                     <div class="nav-menu-divider"></div>
                     <a href="dashboard.php"><i data-lucide="layout-dashboard" class="lucide-icon"></i> Dashboard</a>
                     <a href="chat.php"><i data-lucide="message-circle" class="lucide-icon"></i> Messages</a>
-                    <?php if (($user['role'] ?? '') === 'teacher'): ?><a href="add-course.php"><i data-lucide="plus" class="lucide-icon"></i> New Course</a><?php endif; ?>
+                    <?php if (isApprovedTeacher($user)): ?><a href="add-course.php"><i data-lucide="plus" class="lucide-icon"></i> New Course</a><?php endif; ?>
+                    <?php if (!isApprovedTeacher($user) && ($user['teacher_status'] ?? 'none') !== 'pending'): ?><a href="become-instructor.php"><i data-lucide="presentation" class="lucide-icon"></i> Become an Instructor</a><?php endif; ?>
                     <div class="nav-menu-divider"></div>
                     <a href="edit-profile.php"><i data-lucide="user-cog" class="lucide-icon"></i> Edit Profile</a>
                     <a href="activity-log.php"><i data-lucide="shield-check" class="lucide-icon"></i> Account Activity</a>
@@ -256,13 +257,13 @@ $categoryNav = renderCategoryNav($pdo);
     </div>
     <?php endif; ?>
 
-    <?php if (($user['role'] ?? '') !== 'teacher'): ?>
+    <?php if (!$user || !isApprovedTeacher($user)): ?>
     <div class="teach-cta-band">
         <div>
             <h3><i data-lucide="presentation" class="lucide-icon"></i> Teach on <?= e(SITE_NAME) ?></h3>
             <p>Share your knowledge, reach students anywhere in the world, and earn teaching what you know.</p>
         </div>
-        <a href="<?= $user ? 'edit-profile.php' : 'register.php' ?>" class="btn btn-primary">Become a Teacher</a>
+        <a href="<?= $user ? 'become-instructor.php' : 'register.php' ?>" class="btn btn-primary">Become a Teacher</a>
     </div>
     <?php endif; ?>
 </div>

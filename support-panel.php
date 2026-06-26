@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (isset($_POST['select_teacher'])) {
         $teacherId = (int) $_POST['select_teacher'];
-        $stmt = $pdo->prepare("SELECT id FROM users WHERE id = ? AND role = 'teacher'");
+        $stmt = $pdo->prepare("SELECT id FROM users WHERE id = ? AND teacher_status = 'approved'");
         $stmt->execute([$teacherId]);
         if ($stmt->fetchColumn()) {
             $_SESSION['acting_as_teacher_id'] = $teacherId;
@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $teachers = $pdo->query(
     "SELECT id, name, display_name, email, (SELECT COUNT(*) FROM courses WHERE teacher_id = users.id) AS course_count
-     FROM users WHERE role = 'teacher' ORDER BY name"
+     FROM users WHERE teacher_status = 'approved' ORDER BY name"
 )->fetchAll();
 
 $actingAsId = (int) ($_SESSION['acting_as_teacher_id'] ?? 0);

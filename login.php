@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email    = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
 
-    $stmt = $pdo->prepare('SELECT id, name, display_name, email, password, role, avatar, is_approved, is_verified FROM users WHERE email = ?');
+    $stmt = $pdo->prepare('SELECT id, name, display_name, email, password, role, teacher_status, avatar, is_approved, is_verified FROM users WHERE email = ?');
     $stmt->execute([$email]);
     $u = $stmt->fetch();
 
@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!$u['is_verified']) {
         $unverifiedEmail = $email;
     } else {
-        $_SESSION['user'] = ['id' => $u['id'], 'name' => $u['name'], 'display_name' => $u['display_name'], 'email' => $u['email'], 'role' => $u['role'], 'avatar' => $u['avatar']];
+        $_SESSION['user'] = ['id' => $u['id'], 'name' => $u['name'], 'display_name' => $u['display_name'], 'email' => $u['email'], 'role' => $u['role'], 'teacher_status' => $u['teacher_status'], 'avatar' => $u['avatar']];
         logActivity($pdo, (int) $u['id'], 'Logged in');
         redirect('dashboard.php');
     }

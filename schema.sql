@@ -27,18 +27,26 @@ CREATE TABLE IF NOT EXISTS users (
     name         VARCHAR(100) NOT NULL,
     email        VARCHAR(150) NOT NULL UNIQUE,
     password     VARCHAR(255) NOT NULL,
-    role         ENUM('student','teacher','parent','institution','admin') DEFAULT 'student',
+    role         ENUM('student','teacher','parent','institution','admin','customer_service') DEFAULT 'student',
+    -- 'teacher' is a legacy role value kept only for rows created before
+    -- teaching became an orthogonal capability (see teacher_status below);
+    -- new accounts are always 'student' regardless of whether they teach.
+    -- 'parent'/'institution' are likewise legacy-only -- signup no longer
+    -- offers them (see register.php); a future dedicated intake flow may
+    -- reintroduce them as their own "Become a Parent/Institution" upgrade,
+    -- mirroring teacher_status, but that doesn't exist yet.
+    teacher_status ENUM('none','pending','approved','rejected') NOT NULL DEFAULT 'none', -- see isApprovedTeacher() in db.php -- the actual source of truth for teaching access, independent of role
     gender       ENUM('male','female','unspecified') DEFAULT 'unspecified',
     date_of_birth DATE NULL,
     education_level VARCHAR(50) NULL,       -- Student/Parent: highest level completed or in progress
     preferred_language VARCHAR(50) NULL,
-    organization_name VARCHAR(200) NULL,    -- Institution accounts
+    organization_name VARCHAR(200) NULL,    -- legacy Institution accounts only
     phone        VARCHAR(30),
     phone_verified TINYINT(1) DEFAULT 0,
     country      VARCHAR(100),
     bio          TEXT,
-    qualification TEXT,              -- Teacher: credentials, degrees
-    headline     VARCHAR(150) NULL,  -- Teacher: short title shown under their name, e.g. "Developer and Lead Instructor"
+    qualification TEXT,              -- Instructor application: credentials, degrees
+    headline     VARCHAR(150) NULL,  -- Instructor application: short title shown under their name, e.g. "Developer and Lead Instructor"
     avatar       VARCHAR(300),
     is_approved  TINYINT(1) DEFAULT 1,  -- Admin can suspend
     is_verified  TINYINT(1) DEFAULT 0,

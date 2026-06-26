@@ -36,7 +36,7 @@ $myCertificates->execute([$user['id']]);
 $myCertificates = $myCertificates->fetchAll();
 
 $recommended = [];
-if (($user['role'] ?? '') !== 'teacher' && $myFieldIds) {
+if ($myFieldIds) {
     $placeholders = implode(',', array_fill(0, count($myFieldIds), '?'));
     $recStmt = $pdo->prepare(
         "SELECT c.*, COALESCE(u.display_name, u.name) AS teacher_name, s.name AS subject_name, s.icon AS subject_icon
@@ -80,7 +80,7 @@ $dashBg = siteSetting($pdo, 'dashboard_banner_bg');
         <a href="feedback.php">Feedback</a>
         <?php if ($user): ?>
             <a href="chat.php">Messages</a>
-            <?php if (($user['role'] ?? '') === 'teacher'): ?><a href="add-course.php">+ New Course</a><?php endif; ?>
+            <?php if (isApprovedTeacher($user)): ?><a href="add-course.php">+ New Course</a><?php endif; ?>
             <?= renderCartIcon($pdo, $user) ?>
             <div class="nav-account">
                 <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="Account menu">
@@ -98,7 +98,8 @@ $dashBg = siteSetting($pdo, 'dashboard_banner_bg');
                     <div class="nav-menu-divider"></div>
                     <a href="dashboard.php"><i data-lucide="layout-dashboard" class="lucide-icon"></i> Dashboard</a>
                     <a href="chat.php"><i data-lucide="message-circle" class="lucide-icon"></i> Messages</a>
-                    <?php if (($user['role'] ?? '') === 'teacher'): ?><a href="add-course.php"><i data-lucide="plus" class="lucide-icon"></i> New Course</a><?php endif; ?>
+                    <?php if (isApprovedTeacher($user)): ?><a href="add-course.php"><i data-lucide="plus" class="lucide-icon"></i> New Course</a><?php endif; ?>
+                    <?php if (!isApprovedTeacher($user) && ($user['teacher_status'] ?? 'none') !== 'pending'): ?><a href="become-instructor.php"><i data-lucide="presentation" class="lucide-icon"></i> Become an Instructor</a><?php endif; ?>
                     <div class="nav-menu-divider"></div>
                     <a href="edit-profile.php"><i data-lucide="user-cog" class="lucide-icon"></i> Edit Profile</a>
                     <a href="activity-log.php"><i data-lucide="shield-check" class="lucide-icon"></i> Account Activity</a>
@@ -124,7 +125,7 @@ $dashBg = siteSetting($pdo, 'dashboard_banner_bg');
         <?php else: ?>
             <p style="margin-bottom:.3rem"><a href="personalize.php" class="dashboard-header-link"><i data-lucide="sparkles" class="lucide-icon"></i> Add occupation and interests</a></p>
         <?php endif; ?>
-        <p><?= ($user['role'] ?? '') === 'teacher' ? 'Manage your courses and track your students.' : 'Continue your learning journey.' ?></p>
+        <p><?= isApprovedTeacher($user) ? 'Manage your courses and track your students.' : 'Continue your learning journey.' ?></p>
         <span class="dashboard-role"><?= e(ucfirst(($user['role'] ?? ''))) ?></span>
     </div>
 
@@ -193,7 +194,7 @@ $dashBg = siteSetting($pdo, 'dashboard_banner_bg');
     </div>
     <?php endif; ?>
 
-    <?php if (($user['role'] ?? '') === 'teacher'): ?>
+    <?php if (isApprovedTeacher($user)): ?>
         <?php
         $stmt = $pdo->prepare(
             "SELECT c.*, s.name AS subject_name, (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) AS student_count
@@ -201,23 +202,23 @@ $dashBg = siteSetting($pdo, 'dashboard_banner_bg');
              WHERE c.teacher_id = ? ORDER BY c.created_at DESC"
         );
         $stmt->execute([$user['id']]);
-        $myCourses = $stmt->fetchAll();
+        $myTeachingCourses = $stmt->fetchAll();
         ?>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
-            <h3 style="font-size:1.1rem;color:var(--green-deep)">My Courses (<?= count($myCourses) ?>)</h3>
+            <h3 style="font-size:1.1rem;color:var(--green-deep)">My Courses (<?= count($myTeachingCourses) ?>)</h3>
             <div style="display:flex;gap:.5rem">
                 <a href="single-upload.php" class="btn btn-outline btn-sm"><i data-lucide="upload" class="lucide-icon"></i> Single Upload</a>
                 <a href="add-course.php" class="btn btn-primary btn-sm">+ New Course</a>
             </div>
         </div>
 
-        <?php if (!$myCourses): ?>
+        <?php if (!$myTeachingCourses): ?>
             <div class="empty-state"><div class="icon"><i data-lucide="library" class="lucide-icon"></i></div><h3>You haven't created any courses yet</h3></div>
         <?php else: ?>
         <table class="table table-cards">
             <thead><tr><th>Title</th><th>Subject</th><th>Level</th><th>Price</th><th>Students</th><th>Status</th><th></th></tr></thead>
             <tbody>
-                <?php foreach ($myCourses as $c): ?>
+                <?php foreach ($myTeachingCourses as $c): ?>
                 <tr>
                     <td data-label="Title"><a href="course.php?id=<?= (int) $c['id'] ?>"><?= e($c['title']) ?></a></td>
                     <td data-label="Subject"><?= e($c['subject_name'] ?? '—') ?></td>
@@ -246,46 +247,49 @@ $dashBg = siteSetting($pdo, 'dashboard_banner_bg');
         </table>
         <?php endif; ?>
 
-    <?php else: ?>
-        <?php
-        $stmt = $pdo->prepare(
-            "SELECT c.*, COALESCE(u.display_name, u.name) AS teacher_name, s.name AS subject_name,
-                    (SELECT COUNT(*) FROM lessons l WHERE l.course_id = c.id) AS lesson_count,
-                    (SELECT COUNT(*) FROM lesson_progress lp JOIN lessons l2 ON l2.id = lp.lesson_id WHERE l2.course_id = c.id AND lp.student_id = ?) AS completed_count
-             FROM enrollments e
-             JOIN courses c ON c.id = e.course_id
-             JOIN users u ON u.id = c.teacher_id
-             LEFT JOIN subjects s ON s.id = c.subject_id
-             WHERE e.student_id = ?
-             ORDER BY e.enrolled_at DESC"
-        );
-        $stmt->execute([$user['id'], $user['id']]);
-        $myCourses = $stmt->fetchAll();
-        ?>
-        <h3 style="font-size:1.1rem;color:var(--green-deep);margin-bottom:1rem">My Enrolled Courses (<?= count($myCourses) ?>)</h3>
+        <div style="margin-top:2.5rem"></div>
+    <?php endif; ?>
 
-        <?php if (!$myCourses): ?>
-            <div class="empty-state">
-                <div class="icon"><i data-lucide="graduation-cap" class="lucide-icon"></i></div>
-                <h3>You haven't enrolled in any courses yet</h3>
-                <p><a href="courses.php" class="btn btn-primary" style="margin-top:1rem">Browse Courses</a></p>
-            </div>
-        <?php else: ?>
-        <div class="grid-2">
-            <?php foreach ($myCourses as $c): ?>
-            <?php $pct = $c['lesson_count'] ? (int) round($c['completed_count'] / $c['lesson_count'] * 100) : 0; ?>
-            <a href="course.php?id=<?= (int) $c['id'] ?>" class="card" style="text-decoration:none;color:inherit">
-                <div class="card-body">
-                    <div class="course-subject"><?= e($c['subject_name'] ?? 'General') ?></div>
-                    <div class="card-title"><?= e($c['title']) ?></div>
-                    <div style="font-size:.85rem;color:var(--text-light);margin-bottom:.6rem"><i data-lucide="user" class="lucide-icon"></i> <?= e($c['teacher_name']) ?></div>
-                    <div class="progress-bar"><div class="progress-fill" style="width:<?= $pct ?>%"></div></div>
-                    <p style="font-size:.8rem;color:var(--text-light);margin-top:.4rem"><?= $pct ?>% complete (<?= (int) $c['completed_count'] ?>/<?= (int) $c['lesson_count'] ?> lessons)</p>
-                </div>
-            </a>
-            <?php endforeach; ?>
+    <?php
+    // Shown to everyone, including approved teachers -- teaching no longer
+    // excludes someone from also being a learner.
+    $stmt = $pdo->prepare(
+        "SELECT c.*, COALESCE(u.display_name, u.name) AS teacher_name, s.name AS subject_name,
+                (SELECT COUNT(*) FROM lessons l WHERE l.course_id = c.id) AS lesson_count,
+                (SELECT COUNT(*) FROM lesson_progress lp JOIN lessons l2 ON l2.id = lp.lesson_id WHERE l2.course_id = c.id AND lp.student_id = ?) AS completed_count
+         FROM enrollments e
+         JOIN courses c ON c.id = e.course_id
+         JOIN users u ON u.id = c.teacher_id
+         LEFT JOIN subjects s ON s.id = c.subject_id
+         WHERE e.student_id = ?
+         ORDER BY e.enrolled_at DESC"
+    );
+    $stmt->execute([$user['id'], $user['id']]);
+    $myEnrolledCourses = $stmt->fetchAll();
+    ?>
+    <h3 style="font-size:1.1rem;color:var(--green-deep);margin-bottom:1rem">My Enrolled Courses (<?= count($myEnrolledCourses) ?>)</h3>
+
+    <?php if (!$myEnrolledCourses): ?>
+        <div class="empty-state">
+            <div class="icon"><i data-lucide="graduation-cap" class="lucide-icon"></i></div>
+            <h3>You haven't enrolled in any courses yet</h3>
+            <p><a href="courses.php" class="btn btn-primary" style="margin-top:1rem">Browse Courses</a></p>
         </div>
-        <?php endif; ?>
+    <?php else: ?>
+    <div class="grid-2">
+        <?php foreach ($myEnrolledCourses as $c): ?>
+        <?php $pct = $c['lesson_count'] ? (int) round($c['completed_count'] / $c['lesson_count'] * 100) : 0; ?>
+        <a href="course.php?id=<?= (int) $c['id'] ?>" class="card" style="text-decoration:none;color:inherit">
+            <div class="card-body">
+                <div class="course-subject"><?= e($c['subject_name'] ?? 'General') ?></div>
+                <div class="card-title"><?= e($c['title']) ?></div>
+                <div style="font-size:.85rem;color:var(--text-light);margin-bottom:.6rem"><i data-lucide="user" class="lucide-icon"></i> <?= e($c['teacher_name']) ?></div>
+                <div class="progress-bar"><div class="progress-fill" style="width:<?= $pct ?>%"></div></div>
+                <p style="font-size:.8rem;color:var(--text-light);margin-top:.4rem"><?= $pct ?>% complete (<?= (int) $c['completed_count'] ?>/<?= (int) $c['lesson_count'] ?> lessons)</p>
+            </div>
+        </a>
+        <?php endforeach; ?>
+    </div>
     <?php endif; ?>
 </div>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>

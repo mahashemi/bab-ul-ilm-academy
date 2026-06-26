@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$dobTime || $dobTime > time()) $errors[] = 'Please enter a valid date of birth.';
     }
 
-    if ($me['role'] === 'teacher' && mb_strlen($qualification) < 5) $errors[] = 'Please describe your teaching qualification (min 5 characters).';
+    if (isApprovedTeacher($me) && mb_strlen($qualification) < 5) $errors[] = 'Please describe your teaching qualification (min 5 characters).';
 
     if ($newPass !== '') {
         if (!password_verify($currentPass, $me['password'])) $errors[] = 'Current password is incorrect.';
@@ -64,8 +64,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (!$errors) {
-        $qualToSave = $me['role'] === 'teacher' ? $qualification : $me['qualification'];
-        $headlineToSave = $me['role'] === 'teacher' ? ($headline ?: null) : $me['headline'];
+        $qualToSave = isApprovedTeacher($me) ? $qualification : $me['qualification'];
+        $headlineToSave = isApprovedTeacher($me) ? ($headline ?: null) : $me['headline'];
         $educationToSave = in_array($me['role'], ['student', 'parent'], true) ? ($educationLevel ?: null) : $me['education_level'];
         $avatarPath = handleImageUpload('avatar', 'avatars') ?? $me['avatar'];
         $displayNameToSave = $displayName ?: null;
@@ -195,7 +195,7 @@ document.addEventListener('DOMContentLoaded', function () {
         <a href="feedback.php">Feedback</a>
         <?php if ($user): ?>
             <a href="chat.php">Messages</a>
-            <?php if (($user['role'] ?? '') === 'teacher'): ?><a href="add-course.php">+ New Course</a><?php endif; ?>
+            <?php if (isApprovedTeacher($user)): ?><a href="add-course.php">+ New Course</a><?php endif; ?>
             <?= renderCartIcon($pdo, $user) ?>
             <div class="nav-account">
                 <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="Account menu">
@@ -213,7 +213,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     <div class="nav-menu-divider"></div>
                     <a href="dashboard.php"><i data-lucide="layout-dashboard" class="lucide-icon"></i> Dashboard</a>
                     <a href="chat.php"><i data-lucide="message-circle" class="lucide-icon"></i> Messages</a>
-                    <?php if (($user['role'] ?? '') === 'teacher'): ?><a href="add-course.php"><i data-lucide="plus" class="lucide-icon"></i> New Course</a><?php endif; ?>
+                    <?php if (isApprovedTeacher($user)): ?><a href="add-course.php"><i data-lucide="plus" class="lucide-icon"></i> New Course</a><?php endif; ?>
+                    <?php if (!isApprovedTeacher($user) && ($user['teacher_status'] ?? 'none') !== 'pending'): ?><a href="become-instructor.php"><i data-lucide="presentation" class="lucide-icon"></i> Become an Instructor</a><?php endif; ?>
                     <div class="nav-menu-divider"></div>
                     <a href="edit-profile.php"><i data-lucide="user-cog" class="lucide-icon"></i> Edit Profile</a>
                     <a href="activity-log.php"><i data-lucide="shield-check" class="lucide-icon"></i> Account Activity</a>
@@ -341,7 +342,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             <p style="font-size:.85rem"><a href="personalize.php"><i data-lucide="sparkles" class="lucide-icon"></i> Set your learning interests</a> — helps us recommend courses for you.</p>
 
-            <?php if ($me['role'] === 'teacher'): ?>
+            <?php if (isApprovedTeacher($me)): ?>
             <div class="form-group">
                 <label class="form-label">Professional Headline</label>
                 <input type="text" name="headline" class="form-control" placeholder="e.g. Developer and Lead Instructor" maxlength="150" value="<?= e($me['headline'] ?? '') ?>">

@@ -105,10 +105,33 @@ function requireRole(string $role): void {
     }
 }
 
-// Students, parents, and institution accounts can all enroll in courses —
-// only teachers (who create them) and admins are excluded.
+// requireRole('teacher') used to gate teacher-only pages; teaching is no
+// longer a role value, so this checks isApprovedTeacher() instead. Returns
+// the user array (callers need it anyway, e.g. for displayNameOf()).
+function requireApprovedTeacher(): array {
+    requireAuth();
+    $user = auth();
+    if (!isApprovedTeacher($user)) {
+        header('Location: dashboard.php');
+        exit;
+    }
+    return $user;
+}
+
+// Teaching is an orthogonal capability (see isApprovedTeacher()), not a
+// different account type -- every real account can enroll, including
+// approved teachers. Only internal staff accounts are excluded.
 function canEnroll(?string $role): bool {
-    return in_array($role, ['student', 'parent', 'institution'], true);
+    return !in_array($role, ['admin', 'customer_service'], true);
+}
+
+// The single source of truth for "can this account create/manage courses" —
+// independent of `role`, which is now just the account's base identity.
+// Approving an instructor application (admin.php) is the only thing that
+// sets this to 'approved'; existing pre-this-feature teacher accounts were
+// grandfathered in via a one-time migration (see schema.sql).
+function isApprovedTeacher(array $user): bool {
+    return ($user['teacher_status'] ?? 'none') === 'approved';
 }
 
 function roleLabel(string $role): string {
@@ -129,7 +152,7 @@ function roleLabel(string $role): string {
 // own id if they ARE a teacher, or whichever teacher an admin/customer_service
 // rep has selected, or null if neither applies.
 function effectiveTeacherId(array $user): ?int {
-    if (($user['role'] ?? '') === 'teacher') {
+    if (isApprovedTeacher($user)) {
         return (int) $user['id'];
     }
     if (in_array($user['role'] ?? '', ['customer_service', 'admin'], true) && !empty($_SESSION['acting_as_teacher_id'])) {
@@ -138,15 +161,16 @@ function effectiveTeacherId(array $user): ?int {
     return null;
 }
 
-// Like requireRole('teacher'), but also admits an admin or customer_service
-// rep who has already selected a teacher on support-panel.php. Returns the
+// Like requireRole('teacher') used to be, but checks isApprovedTeacher()
+// instead of role, and also admits an admin or customer_service rep who
+// has already selected a teacher on support-panel.php. Returns the
 // effective teacher_id for the caller to use in place of auth()['id']
 // wherever content is being created or its ownership checked.
 function requireTeacherOrSupport(): int {
     requireAuth();
     $user = auth();
     $role = $user['role'] ?? '';
-    if ($role === 'teacher') {
+    if (isApprovedTeacher($user)) {
         return (int) $user['id'];
     }
     if (in_array($role, ['customer_service', 'admin'], true)) {
@@ -240,7 +264,7 @@ function profileCompletionPercent(PDO $pdo, array $me): int {
     if (in_array($me['role'], ['student', 'parent'], true)) {
         $checks[] = !empty($me['education_level']);
     }
-    if ($me['role'] === 'teacher') {
+    if (isApprovedTeacher($me)) {
         $checks[] = !empty($me['headline']);
     }
 
@@ -405,9 +429,9 @@ function checkAndAwardBadges(PDO $pdo, int $userId): array {
         if ($b = awardBadge($pdo, $userId, $code)) $newBadges[] = $b;
     };
 
-    $userStmt = $pdo->prepare('SELECT role FROM users WHERE id = ?');
+    $userStmt = $pdo->prepare('SELECT * FROM users WHERE id = ?');
     $userStmt->execute([$userId]);
-    $role = $userStmt->fetchColumn();
+    $badgeUser = $userStmt->fetch();
 
     $points = getUserPoints($pdo, $userId);
     if ($points >= 100) $check('bronze_learner');
@@ -446,7 +470,7 @@ function checkAndAwardBadges(PDO $pdo, int $userId): array {
     $chatStmt->execute([$userId]);
     if ((int) $chatStmt->fetchColumn() >= 10) $check('chatty');
 
-    if ($role === 'teacher') {
+    if (isApprovedTeacher($badgeUser)) {
         $publishedStmt = $pdo->prepare("SELECT COUNT(*) FROM courses WHERE teacher_id = ? AND moderation_status = 'approved'");
         $publishedStmt->execute([$userId]);
         if ((int) $publishedStmt->fetchColumn() >= 1) $check('published_teacher');
@@ -731,7 +755,8 @@ function oauthLoginOrRegister(PDO $pdo, string $provider, array $profile): array
 
     $_SESSION['user'] = [
         'id' => $user['id'], 'name' => $user['name'], 'display_name' => $user['display_name'] ?? null,
-        'email' => $user['email'], 'role' => $user['role'], 'avatar' => $user['avatar'],
+        'email' => $user['email'], 'role' => $user['role'], 'teacher_status' => $user['teacher_status'] ?? 'none',
+        'avatar' => $user['avatar'],
     ];
     $_SESSION['last_activity'] = time();
     logActivity($pdo, (int) $user['id'], 'Logged in via ' . ucfirst($provider));

@@ -4,8 +4,6 @@ require_once __DIR__ . '/db.php';
 if (auth()) redirect('dashboard.php');
 
 $errors = [];
-$role = $_POST['role'] ?? 'student';
-if (!in_array($role, ['student', 'teacher', 'parent', 'institution'], true)) $role = 'student';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
@@ -16,8 +14,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $country        = trim($_POST['country'] ?? '');
     $dialCode       = trim($_POST['dial_code'] ?? '');
     $phoneDigits    = preg_replace('/\D/', '', $_POST['phone_number'] ?? '');
-    $qualification  = trim($_POST['qualification'] ?? '');
-    $organization   = trim($_POST['organization_name'] ?? '');
 
     if ($name === '' || mb_strlen($name) < 2) $errors[] = 'Please enter your full name.';
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Please enter a valid email address.';
@@ -30,9 +26,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $phone = $phoneDigits !== '' ? $dialCode . ' ' . $phoneDigits : '';
 
-    if ($role === 'teacher' && mb_strlen($qualification) < 5) $errors[] = 'Please describe your teaching qualification (min 5 characters).';
-    if ($role === 'institution' && mb_strlen($organization) < 2) $errors[] = 'Please enter your institution\'s name.';
-
     if (!$errors) {
         $stmt = $pdo->prepare('SELECT id FROM users WHERE email = ?');
         $stmt->execute([$email]);
@@ -42,16 +35,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$errors) {
         $hash = password_hash($password, PASSWORD_DEFAULT);
         $token = generateVerificationToken();
+        // Every signup is a plain student account -- no role choice here.
+        // Teaching is an opt-in upgrade requiring admin approval, applied for
+        // later from the dashboard (see become-instructor.php), not a
+        // different signup path. Keeps this form identical for everyone,
+        // including the upcoming Google OAuth signup.
         $stmt = $pdo->prepare(
-            'INSERT INTO users (name, email, password, role, country, phone, qualification, organization_name, verification_token, verification_expires)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 24 HOUR))'
+            'INSERT INTO users (name, email, password, role, country, phone, verification_token, verification_expires)
+             VALUES (?, ?, ?, \'student\', ?, ?, ?, DATE_ADD(NOW(), INTERVAL 24 HOUR))'
         );
-        $stmt->execute([
-            $name, $email, $hash, $role, $country, $phone,
-            $role === 'teacher' ? $qualification : null,
-            $role === 'institution' ? $organization : null,
-            $token,
-        ]);
+        $stmt->execute([$name, $email, $hash, $country, $phone, $token]);
         $newUserId = (int) $pdo->lastInsertId();
         logActivity($pdo, $newUserId, 'Account created');
 
@@ -60,13 +53,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('verify-pending.php?email=' . urlencode($email) . $devParam);
     }
 }
-
-$ROLES = [
-    'student'     => ['icon' => 'graduation-cap', 'label' => 'Student',     'desc' => 'I want to learn'],
-    'teacher'     => ['icon' => 'book-open',       'label' => 'Teacher',    'desc' => 'I want to teach'],
-    'parent'      => ['icon' => 'users',           'label' => 'Parent',     'desc' => 'I support a learner'],
-    'institution' => ['icon' => 'landmark',        'label' => 'Institution','desc' => 'We teach as an org'],
-];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -101,23 +87,10 @@ $ROLES = [
         <?php $oauthButtons = renderOauthButtons(); ?>
         <?php if ($oauthButtons): ?>
             <?= $oauthButtons ?>
-            <p style="font-size:.78rem;color:var(--text-light);text-align:center;margin-top:-.6rem;margin-bottom:1.2rem">Signs you up as a student. Teachers, parents, and institutions: use the form below instead.</p>
         <?php endif; ?>
 
         <form method="post" autocomplete="off" id="regForm">
             <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
-            <input type="hidden" name="role" id="roleInput" value="<?= e($role) ?>">
-
-            <h3 class="reg-section-title">I am joining as a...</h3>
-            <div class="role-card-grid">
-                <?php foreach ($ROLES as $key => $r): ?>
-                <div class="role-card <?= $role === $key ? 'active' : '' ?>" id="role-<?= e($key) ?>" onclick="setRole('<?= e($key) ?>')">
-                    <?= catIcon($r['icon']) ?>
-                    <div class="role-card-label"><?= e($r['label']) ?></div>
-                    <div class="role-card-desc"><?= e($r['desc']) ?></div>
-                </div>
-                <?php endforeach; ?>
-            </div>
 
             <div class="form-group">
                 <label class="form-label">Full Name</label>
@@ -148,20 +121,6 @@ $ROLES = [
                 <div class="form-hint">Select your country above to auto-fill the code, then enter your 10-digit number without the leading 0.</div>
             </div>
 
-            <div id="teacherFields" style="display:<?= $role === 'teacher' ? 'block' : 'none' ?>">
-                <div class="form-group">
-                    <label class="form-label">Teaching Qualification</label>
-                    <textarea name="qualification" class="form-control" placeholder="e.g. MA Islamic Studies, Hafiz-ul-Quran, 5 years teaching Tajweed"><?= e($_POST['qualification'] ?? '') ?></textarea>
-                </div>
-            </div>
-
-            <div id="institutionFields" style="display:<?= $role === 'institution' ? 'block' : 'none' ?>">
-                <div class="form-group">
-                    <label class="form-label">Institution Name</label>
-                    <input type="text" name="organization_name" class="form-control" placeholder="e.g. Al-Huda Islamic Center" value="<?= e($_POST['organization_name'] ?? '') ?>">
-                </div>
-            </div>
-
             <div class="form-group">
                 <label class="form-label">Password</label>
                 <div style="position:relative">
@@ -179,14 +138,6 @@ $ROLES = [
     </div>
 </div>
 <script>
-function setRole(r) {
-    document.getElementById('roleInput').value = r;
-    document.querySelectorAll('.role-card').forEach(function (el) {
-        el.classList.toggle('active', el.id === 'role-' + r);
-    });
-    document.getElementById('teacherFields').style.display = (r === 'teacher') ? 'block' : 'none';
-    document.getElementById('institutionFields').style.display = (r === 'institution') ? 'block' : 'none';
-}
 const COUNTRIES = [
     {name:"Pakistan", dial:"+92"}, {name:"India", dial:"+91"}, {name:"Bangladesh", dial:"+880"},
     {name:"Saudi Arabia", dial:"+966"}, {name:"United Arab Emirates", dial:"+971"}, {name:"Qatar", dial:"+974"},

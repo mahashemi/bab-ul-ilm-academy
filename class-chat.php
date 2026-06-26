@@ -153,7 +153,8 @@ if ($canModerate) {
         <a href="about.php">About</a>
         <a href="feedback.php">Feedback</a>
         <a href="chat.php">Messages</a>
-        <?php if (($user['role'] ?? '') === 'teacher'): ?><a href="add-course.php">+ New Course</a><?php endif; ?>
+        <?php if (isApprovedTeacher($user)): ?><a href="add-course.php">+ New Course</a><?php endif; ?>
+        <?php if (!isApprovedTeacher($user) && ($user['teacher_status'] ?? 'none') !== 'pending'): ?><a href="become-instructor.php">Become an Instructor</a><?php endif; ?>
         <?= renderCartIcon($pdo, $user) ?>
         <div class="nav-account">
             <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="Account menu">
@@ -201,7 +202,7 @@ if ($canModerate) {
                     <div style="flex:1;min-width:0">
                         <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
                             <span style="font-weight:700;font-size:.85rem"><?= e($m['sender_name']) ?></span>
-                            <?php if ($m['sender_role'] === 'teacher'): ?><span class="badge badge-free" style="font-size:.65rem">Teacher</span><?php endif; ?>
+                            <?php if ((int) $m['sender_id'] === (int) $course['teacher_id']): ?><span class="badge badge-free" style="font-size:.65rem">Teacher</span><?php endif; ?>
                             <?php if ($m['is_broadcast']): ?><span class="badge" style="background:#fff8e1;color:#e65100;font-size:.65rem">Announcement</span><?php endif; ?>
                             <span style="font-size:.75rem;color:var(--text-light)"><?= chatTime($m['created_at']) ?></span>
                         </div>

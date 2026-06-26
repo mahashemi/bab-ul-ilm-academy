@@ -5,3 +5,8 @@ Thumbs.db
 .idea/
 uploads/courses/*
 !uploads/courses/.gitkeep
+
+# Contains real SSH/DB/gateway credentials -- never commit this.
+DEPLOYMENT_RUNBOOK.md
+new 1.txt
+site-assets/

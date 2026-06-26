@@ -252,7 +252,7 @@ $categoryNav = renderCategoryNav($pdo);
     <?php if (!$newCourses): ?>
         <div class="empty-state"><div class="icon"><i data-lucide="book-open" class="lucide-icon"></i></div><h3>No courses published yet</h3></div>
     <?php else: ?>
-    <div class="grid-3">
+    <div class="carousel-row" style="margin-bottom:2.5rem">
         <?php foreach ($newCourses as $c): ?><?= renderCourseCard($c, $bestsellerIds) ?><?php endforeach; ?>
     </div>
     <?php endif; ?>

@@ -22,7 +22,7 @@ if (!$isOwner && !$isAdmin && !$isActingForThisCourse) {
 }
 
 $step = $_GET['step'] ?? 'basics';
-if (!in_array($step, ['basics', 'cover', 'curriculum', 'pricing', 'publish'], true)) $step = 'basics';
+if (!in_array($step, ['basics', 'details', 'cover', 'curriculum', 'pricing', 'publish'], true)) $step = 'basics';
 
 function fetchPreviewCard(PDO $pdo, int $courseId): ?array {
     $stmt = $pdo->prepare(
@@ -63,34 +63,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_course'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step === 'basics') {
     verifyCsrf();
     $title       = trim($_POST['title'] ?? '');
-    $description = trim($_POST['description'] ?? '');
-    $objectives  = trim($_POST['learning_objectives'] ?? '');
-    $requirements = trim($_POST['requirements'] ?? '');
-    $textbook    = trim($_POST['textbook'] ?? '');
     $subjectId   = (int) ($_POST['subject_id'] ?? 0);
     $level       = $_POST['level'] ?? 'beginner';
     $language    = trim($_POST['language'] ?? 'English');
 
     if (mb_strlen($title) < 5) $errors[] = 'Title must be at least 5 characters.';
-    if (mb_strlen($description) < 20) $errors[] = 'Description must be at least 20 characters.';
     if (!in_array($level, ['beginner','intermediate','advanced'], true)) $errors[] = 'Invalid level.';
 
     if (!$errors) {
         $pdo->prepare(
-            'UPDATE courses SET title=?, description=?, learning_objectives=?, requirements=?, textbook=?, subject_id=?, level=?, language=?, updated_by=?, updated_at=NOW() WHERE id=?'
-        )->execute([$title, $description, $objectives ?: null, $requirements ?: null, $textbook ?: null, $subjectId ?: null, $level, $language, $user['id'], $id]);
-        flash('success', 'Basics saved. Next, add a cover image.');
-        redirect('edit-course.php?id=' . $id . '&step=cover');
+            'UPDATE courses SET title=?, subject_id=?, level=?, language=?, updated_by=?, updated_at=NOW() WHERE id=?'
+        )->execute([$title, $subjectId ?: null, $level, $language, $user['id'], $id]);
+        flash('success', 'Basics saved. Next, add a description and what learners will gain.');
+        redirect('edit-course.php?id=' . $id . '&step=details');
     }
     // Validation failed -- redisplay what the teacher just typed instead of stale DB values.
     $course['title'] = $title;
-    $course['description'] = $description;
     $course['level'] = $level;
     $course['language'] = $language;
+    $course['subject_id'] = $subjectId;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step === 'details') {
+    verifyCsrf();
+    $description = trim($_POST['description'] ?? '');
+    $objectives  = trim($_POST['learning_objectives'] ?? '');
+    $requirements = trim($_POST['requirements'] ?? '');
+    $textbook    = trim($_POST['textbook'] ?? '');
+
+    if (mb_strlen($description) < 20) $errors[] = 'Description must be at least 20 characters.';
+
+    if (!$errors) {
+        $pdo->prepare(
+            'UPDATE courses SET description=?, learning_objectives=?, requirements=?, textbook=?, updated_by=?, updated_at=NOW() WHERE id=?'
+        )->execute([$description, $objectives ?: null, $requirements ?: null, $textbook ?: null, $user['id'], $id]);
+        flash('success', 'Details saved. Next, add a cover image.');
+        redirect('edit-course.php?id=' . $id . '&step=cover');
+    }
+    $course['description'] = $description;
     $course['learning_objectives'] = $objectives;
     $course['requirements'] = $requirements;
     $course['textbook'] = $textbook;
-    $course['subject_id'] = $subjectId;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step === 'cover') {
@@ -145,9 +158,11 @@ $enrollmentCount->execute([$id]);
 $enrollmentCount = (int) $enrollmentCount->fetchColumn();
 
 $previewCard = fetchPreviewCard($pdo, $id);
+$completionPercent = courseCompletionPercent($course, count($lessons));
 
 $stepTitles = [
     'basics' => 'Basics',
+    'details' => 'Details',
     'cover' => 'Cover Image',
     'curriculum' => 'Curriculum',
     'pricing' => 'Pricing',
@@ -233,36 +248,21 @@ $stepTitles = [
     <?= renderCourseWizardSidebar($id, $step) ?>
     <div>
 
+    <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:.6rem;margin-bottom:.5rem">
+            <strong style="font-size:.88rem"><i data-lucide="bar-chart-3" class="lucide-icon"></i> Course is <?= $completionPercent ?>% complete</strong>
+        </div>
+        <div class="profile-progress-track"><div class="profile-progress-fill" style="width:<?= $completionPercent ?>%"></div></div>
+    </div></div>
+
     <?php if ($step === 'basics'): ?>
         <div class="card"><div class="card-body">
-            <form method="post" enctype="multipart/form-data">
+            <form method="post">
                 <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
 
                 <div class="form-group">
                     <label class="form-label">Course Title</label>
                     <input type="text" name="title" class="form-control" value="<?= e($course['title']) ?>" required>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Description</label>
-                    <textarea name="description" class="form-control" required><?= e($course['description']) ?></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">What You'll Learn (one per line)</label>
-                    <textarea name="learning_objectives" class="form-control"><?= e($course['learning_objectives'] ?? '') ?></textarea>
-                    <div class="form-hint">Shown as a checklist on the course page. One bullet per line.</div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Requirements (one per line)</label>
-                    <textarea name="requirements" class="form-control"><?= e($course['requirements'] ?? '') ?></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Textbook / Reference Material (optional)</label>
-                    <input type="text" name="textbook" class="form-control" placeholder="e.g. Nurani Qaida, 1st Edition" value="<?= e($course['textbook'] ?? '') ?>">
-                    <div class="form-hint">Used to ground the AI lesson-writing helper in the right material.</div>
                 </div>
 
                 <div class="form-row">
@@ -294,6 +294,38 @@ $stepTitles = [
                 <div class="form-group">
                     <label class="form-label">Language</label>
                     <input type="text" name="language" class="form-control" value="<?= e($course['language']) ?>">
+                </div>
+
+                <button type="submit" class="btn btn-primary">Save &amp; Continue</button>
+            </form>
+        </div></div>
+
+    <?php elseif ($step === 'details'): ?>
+        <div class="card"><div class="card-body">
+            <form method="post">
+                <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea name="description" class="form-control" placeholder="Introduce the course in a paragraph or two — the topic, who it's for, and why it matters." required><?= e($course['description']) ?></textarea>
+                    <div class="form-hint">The general pitch shown at the top of the course page.</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">What Will Learners Gain? (one per line)</label>
+                    <textarea name="learning_objectives" class="form-control" placeholder="e.g.&#10;Read Quran with correct Tajweed rules&#10;Identify the 28 Arabic letters and their articulation points"><?= e($course['learning_objectives'] ?? '') ?></textarea>
+                    <div class="form-hint">Different from the description above: this becomes a bullet-point checklist of specific, concrete outcomes (skills/knowledge learners walk away with) — the description sells the course, this list proves it.</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Requirements (one per line)</label>
+                    <textarea name="requirements" class="form-control" placeholder="e.g.&#10;No prior knowledge needed&#10;A Quran copy (any edition)"><?= e($course['requirements'] ?? '') ?></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Textbook / Reference Material (optional)</label>
+                    <input type="text" name="textbook" class="form-control" placeholder="e.g. Nurani Qaida, 1st Edition" value="<?= e($course['textbook'] ?? '') ?>">
+                    <div class="form-hint">Used to ground the AI lesson-writing helper in the right material.</div>
                 </div>
 
                 <button type="submit" class="btn btn-primary">Save &amp; Continue</button>

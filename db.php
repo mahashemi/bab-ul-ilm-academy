@@ -217,10 +217,11 @@ function renderCourseWizardSidebar(?int $courseId, string $activeStep): string {
     $groups = [
         'Plan your course' => [
             'basics' => ['label' => 'Basics', 'icon' => 'file-text'],
+            'details' => ['label' => 'Details', 'icon' => 'list-checks'],
         ],
         'Create your content' => [
             'cover' => ['label' => 'Cover Image', 'icon' => 'image'],
-            'curriculum' => ['label' => 'Curriculum', 'icon' => 'list-checks'],
+            'curriculum' => ['label' => 'Curriculum', 'icon' => 'clipboard-list'],
         ],
         'Publish your course' => [
             'pricing' => ['label' => 'Pricing', 'icon' => 'dollar-sign'],
@@ -248,6 +249,23 @@ function renderCourseWizardSidebar(?int $courseId, string $activeStep): string {
     </aside>
     <?php
     return ob_get_clean();
+}
+
+// Mirrors profileCompletionPercent() below but for a course being built
+// through the wizard -- shown in the wizard sidebar so a teacher always
+// knows how much is left before the course is genuinely ready, not just
+// which step they're on.
+function courseCompletionPercent(array $course, int $lessonCount): int {
+    $checks = [
+        mb_strlen($course['title'] ?? '') >= 5,
+        mb_strlen($course['description'] ?? '') >= 20,
+        !empty($course['learning_objectives']),
+        !empty($course['subject_id']),
+        !empty($course['cover_url']),
+        $lessonCount >= 1,
+        (int) ($course['is_published'] ?? 0) === 1,
+    ];
+    return (int) round(count(array_filter($checks)) / count($checks) * 100);
 }
 
 // Registration only collects the minimum (name/email/country/password) — everything
@@ -1617,9 +1635,18 @@ function catIcon(?string $iconName): string {
 // The name shown publicly (class chat, instructor byline, navbar) — falls
 // back to the account's legal name when no display name is set. The legal
 // name itself is never overwritten/hidden, just not shown by default.
+// Title-cases a name for display (e.g. "jan ali kazmi" -> "Jan Ali Kazmi")
+// without touching the stored value -- people often type their name in all
+// lowercase/uppercase on mobile keyboards, so this keeps every page that
+// shows a name looking consistent regardless of how it was originally typed.
+function properCaseName(string $name): string {
+    return mb_convert_case(trim($name), MB_CASE_TITLE, 'UTF-8');
+}
+
 function displayNameOf(?array $user): string {
     if (!$user) return '?';
-    return ($user['display_name'] ?? '') ?: ($user['name'] ?? '?');
+    $name = ($user['display_name'] ?? '') ?: ($user['name'] ?? '?');
+    return $name === '?' ? $name : properCaseName($name);
 }
 
 // Renders a profile photo if the user has uploaded one, falling back to the

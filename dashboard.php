@@ -116,7 +116,7 @@ $dashBg = siteSetting($pdo, 'dashboard_banner_bg');
 
 <div class="dashboard-wrap">
     <div class="dashboard-header" <?php if ($dashBg): ?>style="background-image:linear-gradient(90deg, rgba(10,61,31,.95) 0%, rgba(10,61,31,.65) 60%, rgba(10,61,31,.35) 100%), url('<?= e($dashBg) ?>');background-size:cover;background-position:center"<?php endif; ?>>
-        <h2>Welcome, <?= e($user['name']) ?></h2>
+        <h2>Welcome, <?= e(displayNameOf($user)) ?></h2>
         <?php if ($me['occupation'] || $myFieldNames): ?>
             <p style="margin-bottom:.3rem">
                 <?= e(trim(($me['occupation'] ? $me['occupation'] : '') . ($me['occupation'] && $myFieldNames ? ', ' : '') . implode(', ', $myFieldNames))) ?>
@@ -126,7 +126,7 @@ $dashBg = siteSetting($pdo, 'dashboard_banner_bg');
             <p style="margin-bottom:.3rem"><a href="personalize.php" class="dashboard-header-link"><i data-lucide="sparkles" class="lucide-icon"></i> Add occupation and interests</a></p>
         <?php endif; ?>
         <p><?= isApprovedTeacher($user) ? 'Manage your courses and track your students.' : 'Continue your learning journey.' ?></p>
-        <span class="dashboard-role"><?= e(ucfirst(($user['role'] ?? ''))) ?></span>
+        <span class="dashboard-role"><?= e(isApprovedTeacher($user) ? 'Teacher' : roleLabel($user['role'] ?? 'student')) ?></span>
     </div>
 
     <?php if ($profileCompletion < 100): ?>

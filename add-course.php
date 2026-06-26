@@ -21,34 +21,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
 
     $title       = trim($_POST['title'] ?? '');
-    $description = trim($_POST['description'] ?? '');
-    $objectives  = trim($_POST['learning_objectives'] ?? '');
-    $requirements = trim($_POST['requirements'] ?? '');
-    $textbook    = trim($_POST['textbook'] ?? '');
     $subjectId   = (int) ($_POST['subject_id'] ?? 0);
     $level       = $_POST['level'] ?? 'beginner';
     $language    = trim($_POST['language'] ?? 'English');
-    $price       = (float) ($_POST['price'] ?? 0);
 
     if (mb_strlen($title) < 5) $errors[] = 'Title must be at least 5 characters.';
-    if (mb_strlen($description) < 20) $errors[] = 'Description must be at least 20 characters.';
     if (!in_array($level, ['beginner','intermediate','advanced'], true)) $errors[] = 'Invalid level.';
 
     if (!$errors) {
-        $imagePath = handleImageUpload('cover', 'courses');
-        // New courses always start as 'pending' — they're not visible to students until
-        // an admin reviews and approves them, regardless of the teacher's publish intent.
+        // Created as a minimal draft the moment Basics is saved -- every later
+        // step (Details, Cover, Curriculum, Pricing, Publish) edits this same
+        // row instead of needing the whole course described in one go.
+        // New courses always start unpublished + 'pending' moderation -- not
+        // visible to students until both the teacher publishes AND an admin
+        // approves, regardless of how far through the wizard they are.
         $stmt = $pdo->prepare(
-            "INSERT INTO courses (teacher_id, subject_id, title, description, learning_objectives, requirements, textbook, level, language, price, cover_url, is_published, moderation_status)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'pending')"
+            "INSERT INTO courses (teacher_id, subject_id, title, level, language, is_published, moderation_status)
+             VALUES (?, ?, ?, ?, ?, 0, 'pending')"
         );
-        $stmt->execute([$teacherId, $subjectId ?: null, $title, $description, $objectives ?: null, $requirements ?: null, $textbook ?: null, $level, $language, $price, $imagePath]);
+        $stmt->execute([$teacherId, $subjectId ?: null, $title, $level, $language]);
         $newId = (int) $pdo->lastInsertId();
         if ($teacherId !== (int) $user['id']) {
             logActivity($pdo, $user['id'], 'Created course #' . $newId . ' on behalf of teacher #' . $teacherId);
         }
-        flash('success', 'Course created! Now add a cover image, then your curriculum.');
-        redirect('edit-course.php?id=' . $newId . '&step=cover');
+        flash('success', 'Basics saved. Next, add a description and what learners will gain.');
+        redirect('edit-course.php?id=' . $newId . '&step=details');
     }
 }
 ?>
@@ -129,40 +126,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php endif; ?>
 
     <div class="card"><div class="card-body">
-        <form method="post" enctype="multipart/form-data">
+        <form method="post">
             <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
-
-            <div class="form-group">
-                <label class="form-label">Cover Image (optional)</label>
-                <input type="file" name="cover" class="form-control" accept="image/jpeg,image/png,image/webp">
-                <div class="form-hint">JPG, PNG, or WEBP. Max 5MB. Leave blank to use a subject icon instead.<br>Recommended size: 1280×720 (16:9) — the image is cropped to fill the tile, so keep the important part centered. You'll be able to preview the tile after saving.</div>
-            </div>
 
             <div class="form-group">
                 <label class="form-label">Course Title</label>
                 <input type="text" name="title" class="form-control" placeholder="e.g. Tajweed for Beginners" value="<?= e($_POST['title'] ?? '') ?>" required>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Description</label>
-                <textarea name="description" class="form-control" placeholder="What will students learn in this course?" required><?= e($_POST['description'] ?? '') ?></textarea>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">What You'll Learn (one per line)</label>
-                <textarea name="learning_objectives" class="form-control" placeholder="e.g.&#10;Read Quran with correct Tajweed rules&#10;Identify the 28 Arabic letters and their articulation points"><?= e($_POST['learning_objectives'] ?? '') ?></textarea>
-                <div class="form-hint">Shown as a checklist on the course page. One bullet per line.</div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Requirements (one per line)</label>
-                <textarea name="requirements" class="form-control" placeholder="e.g.&#10;No prior knowledge needed&#10;A Quran copy (any edition)"><?= e($_POST['requirements'] ?? '') ?></textarea>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Textbook / Reference Material (optional)</label>
-                <input type="text" name="textbook" class="form-control" placeholder="e.g. Nurani Qaida, 1st Edition" value="<?= e($_POST['textbook'] ?? '') ?>">
-                <div class="form-hint">If your course follows a specific book, mention it here — it'll be used to ground the AI lesson-writing helper in the right material.</div>
+                <div class="form-hint">A working title is fine — you can change it any time.</div>
             </div>
 
             <div class="form-row">
@@ -191,18 +161,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             </div>
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Language</label>
-                    <input type="text" name="language" class="form-control" value="English" placeholder="English">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Price ($) — 0 for free</label>
-                    <input type="number" name="price" class="form-control" min="0" step="0.01" placeholder="0">
-                </div>
+            <div class="form-group">
+                <label class="form-label">Language</label>
+                <input type="text" name="language" class="form-control" value="English" placeholder="English">
             </div>
 
-            <button type="submit" class="btn btn-primary btn-full">Create Course &amp; Continue</button>
+            <button type="submit" class="btn btn-primary btn-full">Save &amp; Continue</button>
         </form>
     </div></div>
 

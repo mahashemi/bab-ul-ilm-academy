@@ -739,7 +739,7 @@ img { max-width: 100%; height: auto; display: block; }
    must not rely on .badge-* tints (those assume a light page background and
    become nearly invisible here; combining classes also let .badge-* win the
    cascade and override these colors entirely). */
-.dashboard-role { display: inline-flex; align-items: center; gap: .3rem; background: rgba(255,255,255,.18); color: var(--white); border: 1px solid rgba(255,255,255,.35); border-radius: 12px; padding: .25rem .9rem; font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; margin-top: .8rem; }
+.dashboard-role { align-self: flex-start; display: inline-flex; align-items: center; gap: .3rem; background: rgba(255,255,255,.18); color: var(--white); border: 1px solid rgba(255,255,255,.35); border-radius: 12px; padding: .25rem .9rem; font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; margin-top: .8rem; }
 
 /* ── Auth ── */
 .auth-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--green-deep) 0%, var(--teal-deep) 100%); padding: 2rem; }

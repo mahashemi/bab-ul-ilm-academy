@@ -93,8 +93,9 @@ $user = auth();
         </div></div>
     </div>
     <div style="text-align:center;margin-top:2.5rem">
-        <p style="color:var(--text-mid);margin-bottom:1rem">Have a question or suggestion?</p>
-        <a href="feedback.php" class="btn btn-primary">Send Us Feedback</a>
+        <p style="color:var(--text-mid);margin-bottom:1rem">Wondering how to get started?</p>
+        <a href="getting-started.php" class="btn btn-primary" style="margin-right:.6rem">How It Works</a>
+        <a href="feedback.php" class="btn btn-outline">Send Us Feedback</a>
     </div>
 </div>
 

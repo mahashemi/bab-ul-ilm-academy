@@ -179,6 +179,7 @@ $categoryNav = renderCategoryNav($pdo);
                 <a href="register.php" class="btn btn-primary">Start Learning Free</a>
             <?php endif; ?>
             <a href="#courses" class="btn btn-secondary">Explore</a>
+            <a href="getting-started.php" class="btn btn-secondary">How It Works</a>
         </div>
         <div class="hero-stats">
             <div class="hero-stat"><div class="num"><?= (int) $stats['teachers'] ?></div><div class="lbl">Teachers</div></div>

@@ -1369,6 +1369,7 @@ function renderFooter(PDO $pdo): string {
             <div>
                 <div class="footer-heading">Learn</div>
                 <ul class="footer-links">
+                    <li><a href="getting-started.php">How It Works</a></li>
                     <li><a href="courses.php">All Courses</a></li>
                     <li><a href="register.php">Join Free</a></li>
                     <li><a href="register.php">Become a Teacher</a></li>

@@ -28,6 +28,8 @@ if ($isTeacher) {
     $coursesStmt = $pdo->prepare(
         "SELECT c.*, COALESCE(u.display_name, u.name) AS teacher_name, s.name AS subject_name, s.icon AS subject_icon,
                 (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) AS student_count,
+                (SELECT COUNT(*) FROM lessons l WHERE l.course_id = c.id) AS lesson_count,
+                (SELECT COALESCE(SUM(duration_minutes),0) FROM lessons l WHERE l.course_id = c.id) AS total_minutes,
                 (SELECT COUNT(*) FROM course_reviews r WHERE r.course_id = c.id) AS review_count,
                 (SELECT COALESCE(AVG(rating),0) FROM course_reviews r WHERE r.course_id = c.id) AS avg_rating
          FROM courses c JOIN users u ON u.id = c.teacher_id LEFT JOIN subjects s ON s.id = c.subject_id

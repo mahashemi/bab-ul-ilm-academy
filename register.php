@@ -94,6 +94,14 @@ $ROLES = [
             <div class="alert alert-error">
                 <?php foreach ($errors as $err): ?><div><?= e($err) ?></div><?php endforeach; ?>
             </div>
+        <?php elseif (flash('error')): ?>
+            <div class="alert alert-error"><?= e(flash('error')) ?></div>
+        <?php endif; ?>
+
+        <?php $oauthButtons = renderOauthButtons(); ?>
+        <?php if ($oauthButtons): ?>
+            <?= $oauthButtons ?>
+            <p style="font-size:.78rem;color:var(--text-light);text-align:center;margin-top:-.6rem;margin-bottom:1.2rem">Signs you up as a student. Teachers, parents, and institutions: use the form below instead.</p>
         <?php endif; ?>
 
         <form method="post" autocomplete="off" id="regForm">

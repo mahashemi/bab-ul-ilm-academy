@@ -612,6 +612,17 @@ img { max-width: 100%; height: auto; display: block; }
 .auth-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--green-deep) 0%, var(--teal-deep) 100%); padding: 2rem; }
 .auth-box { background: var(--white); border-radius: var(--radius); padding: 2.5rem; width: 100%; max-width: 460px; box-shadow: var(--shadow-lg); }
 .auth-logo { text-align: center; margin-bottom: 1.5rem; }
+.oauth-buttons { display: flex; flex-direction: column; gap: .7rem; }
+.oauth-btn {
+    display: flex; align-items: center; justify-content: center; gap: .7rem;
+    padding: .7rem 1rem; border: 1.5px solid var(--border); border-radius: var(--radius-full);
+    background: var(--white); color: var(--text); font-weight: 600; font-size: .9rem;
+    transition: var(--transition);
+}
+.oauth-btn:hover { background: var(--cream); border-color: var(--gold); box-shadow: var(--shadow); }
+.oauth-btn svg { flex-shrink: 0; }
+.auth-divider { display: flex; align-items: center; gap: .8rem; margin: 1.2rem 0; color: var(--text-light); font-size: .78rem; text-transform: uppercase; letter-spacing: .5px; }
+.auth-divider::before, .auth-divider::after { content: ''; flex: 1; border-top: 1px solid var(--border); }
 .auth-logo h2 { color: var(--green-deep); font-size: 1.5rem; font-weight: 800; }
 .auth-logo p  { color: var(--text-light); font-size: .85rem; }
 .auth-logo-img { height: 64px; width: auto; margin: 0 auto; display: block; }

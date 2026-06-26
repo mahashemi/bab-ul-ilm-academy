@@ -29,6 +29,49 @@ define('DEV_SHOW_VERIFY_LINK', true);
 // the session as expired and logs the user out on their next request.
 define('SESSION_IDLE_TIMEOUT', 1800); // 30 minutes
 
+// ── Social Login (OAuth) ─────────────────────────────────────────────────
+// Each provider's client_id/client_secret start empty. The "Continue with
+// X" button on login.php/register.php only renders once BOTH are filled
+// in for that provider (see oauthConfigured() in db.php) -- an
+// unconfigured provider simply has no button, rather than one that would
+// fail. See oauth-login.php/oauth-callback.php for the flow itself, and
+// ask for the setup guide (exact steps per provider's developer console,
+// including the redirect URI to register) when you're ready to fill these in.
+define('OAUTH_PROVIDERS', [
+    'google' => [
+        'label' => 'Google',
+        'client_id' => '',
+        'client_secret' => '',
+        'auth_url' => 'https://accounts.google.com/o/oauth2/v2/auth',
+        'token_url' => 'https://oauth2.googleapis.com/token',
+        'scope' => 'openid email profile',
+    ],
+    'facebook' => [
+        'label' => 'Facebook',
+        'client_id' => '',
+        'client_secret' => '',
+        'auth_url' => 'https://www.facebook.com/v19.0/dialog/oauth',
+        'token_url' => 'https://graph.facebook.com/v19.0/oauth/access_token',
+        'scope' => 'email public_profile',
+    ],
+    'microsoft' => [
+        'label' => 'Microsoft',
+        'client_id' => '',
+        'client_secret' => '',
+        'auth_url' => 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
+        'token_url' => 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+        'scope' => 'openid email profile User.Read',
+    ],
+    'github' => [
+        'label' => 'GitHub',
+        'client_id' => '',
+        'client_secret' => '',
+        'auth_url' => 'https://github.com/login/oauth/authorize',
+        'token_url' => 'https://github.com/login/oauth/access_token',
+        'scope' => 'read:user user:email',
+    ],
+]);
+
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params(['httponly' => true, 'samesite' => 'Lax']);
     session_start();

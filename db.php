@@ -505,6 +505,229 @@ function siteBaseUrl(): string {
     return $scheme . '://' . $_SERVER['HTTP_HOST'] . $dir;
 }
 
+// ── Social Login (OAuth) ─────────────────────────────────────────────────
+// defined() guard: config.php is skip-worktree'd on production, so
+// OAUTH_PROVIDERS landing in code via git pull doesn't mean a given
+// server's actual config.php defines it yet (the same lesson as
+// HOME_HERO_HEADLINE_DEFAULT earlier) -- referencing it unconditionally
+// would be a fatal "undefined constant" error on every page that calls
+// these helpers, including login.php/register.php on every load.
+function oauthProviders(): array {
+    return defined('OAUTH_PROVIDERS') ? OAUTH_PROVIDERS : [];
+}
+
+function oauthProviderConfig(string $provider): ?array {
+    return oauthProviders()[$provider] ?? null;
+}
+
+// A provider only shows a "Continue with X" button once both halves of
+// its credential pair are filled in -- never a button that's guaranteed
+// to fail because config.php still has empty placeholders.
+function oauthConfigured(string $provider): bool {
+    $cfg = oauthProviderConfig($provider);
+    return $cfg && $cfg['client_id'] !== '' && $cfg['client_secret'] !== '';
+}
+
+function oauthRedirectUri(string $provider): string {
+    return siteBaseUrl() . '/oauth-callback.php?provider=' . urlencode($provider);
+}
+
+function oauthAuthUrl(string $provider, string $state): ?string {
+    $cfg = oauthProviderConfig($provider);
+    if (!$cfg || !oauthConfigured($provider)) return null;
+    $params = [
+        'client_id'     => $cfg['client_id'],
+        'redirect_uri'  => oauthRedirectUri($provider),
+        'response_type' => 'code',
+        'scope'         => $cfg['scope'],
+        'state'         => $state,
+    ];
+    if ($provider === 'google') { $params['access_type'] = 'online'; $params['prompt'] = 'select_account'; }
+    return $cfg['auth_url'] . '?' . http_build_query($params);
+}
+
+function oauthHttpPost(string $url, array $params, array $extraHeaders = []): ?array {
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => http_build_query($params),
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER     => array_merge(['User-Agent: BabUlIlmAcademy', 'Accept: application/json'], $extraHeaders),
+        CURLOPT_TIMEOUT        => 10,
+    ]);
+    $response = curl_exec($ch);
+    $ok = $response !== false && curl_getinfo($ch, CURLINFO_HTTP_CODE) < 400;
+    curl_close($ch);
+    return $ok ? json_decode($response, true) : null;
+}
+
+function oauthHttpGet(string $url, string $accessToken, bool $githubStyleAuth = false): ?array {
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => [
+            'User-Agent: BabUlIlmAcademy',
+            'Accept: application/json',
+            ($githubStyleAuth ? 'Authorization: token ' : 'Authorization: Bearer ') . $accessToken,
+        ],
+        CURLOPT_TIMEOUT => 10,
+    ]);
+    $response = curl_exec($ch);
+    $ok = $response !== false && curl_getinfo($ch, CURLINFO_HTTP_CODE) < 400;
+    curl_close($ch);
+    return $ok ? json_decode($response, true) : null;
+}
+
+// Exchanges the authorization code for an access token, then fetches and
+// normalizes that provider's profile into a common ['id','email','name',
+// 'avatar'] shape -- each provider's raw response differs (Google:
+// sub/email/name/picture; Facebook: id/email/name/picture.data.url;
+// Microsoft Graph: id/mail-or-userPrincipalName/displayName, no direct
+// photo URL since that needs a separate binary-image call, skipped here;
+// GitHub: id/email(often null if kept private)/name/avatar_url, with a
+// fallback call to /user/emails for the verified primary address).
+// Returns null on any failure -- callers show a generic "couldn't sign
+// in with X" rather than leaking provider-specific error detail.
+function oauthFetchProfile(string $provider, string $code): ?array {
+    $cfg = oauthProviderConfig($provider);
+    if (!$cfg) return null;
+
+    $tokenData = oauthHttpPost($cfg['token_url'], [
+        'client_id'     => $cfg['client_id'],
+        'client_secret' => $cfg['client_secret'],
+        'code'          => $code,
+        'redirect_uri'  => oauthRedirectUri($provider),
+        'grant_type'    => 'authorization_code',
+    ]);
+    $accessToken = $tokenData['access_token'] ?? null;
+    if (!$accessToken) return null;
+
+    switch ($provider) {
+        case 'google':
+            $p = oauthHttpGet('https://www.googleapis.com/oauth2/v3/userinfo', $accessToken);
+            if (!$p) return null;
+            return ['id' => $p['sub'] ?? null, 'email' => $p['email'] ?? null, 'name' => $p['name'] ?? null, 'avatar' => $p['picture'] ?? null];
+
+        case 'facebook':
+            $p = oauthHttpGet('https://graph.facebook.com/me?fields=id,name,email,picture', $accessToken);
+            if (!$p) return null;
+            return ['id' => $p['id'] ?? null, 'email' => $p['email'] ?? null, 'name' => $p['name'] ?? null, 'avatar' => $p['picture']['data']['url'] ?? null];
+
+        case 'microsoft':
+            $p = oauthHttpGet('https://graph.microsoft.com/v1.0/me', $accessToken);
+            if (!$p) return null;
+            return ['id' => $p['id'] ?? null, 'email' => $p['mail'] ?? $p['userPrincipalName'] ?? null, 'name' => $p['displayName'] ?? null, 'avatar' => null];
+
+        case 'github':
+            $p = oauthHttpGet('https://api.github.com/user', $accessToken, true);
+            if (!$p) return null;
+            $email = $p['email'] ?? null;
+            if (!$email) {
+                $emails = oauthHttpGet('https://api.github.com/user/emails', $accessToken, true);
+                foreach ((array) $emails as $e) {
+                    if (!empty($e['primary']) && !empty($e['verified'])) { $email = $e['email']; break; }
+                }
+            }
+            return ['id' => isset($p['id']) ? (string) $p['id'] : null, 'email' => $email, 'name' => $p['name'] ?? $p['login'] ?? null, 'avatar' => $p['avatar_url'] ?? null];
+
+        default:
+            return null;
+    }
+}
+
+// Finds-or-creates the account matching a normalized OAuth profile and
+// logs it in. An existing password-based (or different-provider) account
+// with a matching email gets this provider linked to it rather than a
+// duplicate account created -- Google/Facebook/Microsoft/GitHub all
+// verify the email themselves before handing it to us, so a matching
+// email is treated as the same person, the same trust assumption every
+// "Sign in with Google" implementation makes. New accounts default to
+// the 'student' role (the common case) since the whole point of this
+// flow is removing friction, not adding a role-picker step back in --
+// switchable later from Edit Profile same as any other account detail.
+// Returns ['user' => array, 'error' => ?string].
+function oauthLoginOrRegister(PDO $pdo, string $provider, array $profile): array {
+    $email = trim((string) ($profile['email'] ?? ''));
+    $oauthId = trim((string) ($profile['id'] ?? ''));
+    if ($email === '' || $oauthId === '') {
+        return ['user' => null, 'error' => 'That ' . ucfirst($provider) . ' account did not share an email address with us, so we could not sign you in.'];
+    }
+
+    $stmt = $pdo->prepare('SELECT * FROM users WHERE oauth_provider = ? AND oauth_id = ?');
+    $stmt->execute([$provider, $oauthId]);
+    $user = $stmt->fetch();
+
+    if (!$user) {
+        $stmt = $pdo->prepare('SELECT * FROM users WHERE email = ?');
+        $stmt->execute([$email]);
+        $user = $stmt->fetch();
+
+        if ($user) {
+            $pdo->prepare('UPDATE users SET oauth_provider = ?, oauth_id = ?, is_verified = 1 WHERE id = ?')
+                ->execute([$provider, $oauthId, $user['id']]);
+            $user['oauth_provider'] = $provider;
+            $user['is_verified'] = 1;
+        } else {
+            $name = trim((string) ($profile['name'] ?? '')) ?: explode('@', $email)[0];
+            $randomPassword = password_hash(bin2hex(random_bytes(32)), PASSWORD_DEFAULT);
+            $pdo->prepare(
+                'INSERT INTO users (name, email, password, role, oauth_provider, oauth_id, avatar, is_verified)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, 1)'
+            )->execute([$name, $email, $randomPassword, 'student', $provider, $oauthId, $profile['avatar'] ?? null]);
+            $newId = (int) $pdo->lastInsertId();
+            $stmt = $pdo->prepare('SELECT * FROM users WHERE id = ?');
+            $stmt->execute([$newId]);
+            $user = $stmt->fetch();
+            logActivity($pdo, $newId, 'Account created via ' . ucfirst($provider) . ' sign-in');
+        }
+    }
+
+    if (!$user['is_approved']) {
+        return ['user' => null, 'error' => 'Your account has been suspended. Please contact the administrator.'];
+    }
+
+    $_SESSION['user'] = [
+        'id' => $user['id'], 'name' => $user['name'], 'display_name' => $user['display_name'] ?? null,
+        'email' => $user['email'], 'role' => $user['role'], 'avatar' => $user['avatar'],
+    ];
+    $_SESSION['last_activity'] = time();
+    logActivity($pdo, (int) $user['id'], 'Logged in via ' . ucfirst($provider));
+    return ['user' => $user, 'error' => null];
+}
+
+// Brand marks for the "Continue with X" buttons -- inline SVG rather than
+// a Lucide icon (Lucide is a generic UI icon set with no brand/logo
+// icons) and rather than pulling in a whole separate icon-font library
+// just for four logos.
+function oauthProviderIcon(string $provider): string {
+    $icons = [
+        'google' => '<svg viewBox="0 0 48 48" width="20" height="20"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/></svg>',
+        'facebook' => '<svg viewBox="0 0 24 24" width="20" height="20" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>',
+        'microsoft' => '<svg viewBox="0 0 21 21" width="20" height="20"><rect x="1" y="1" width="9" height="9" fill="#F25022"/><rect x="11" y="1" width="9" height="9" fill="#7FBA00"/><rect x="1" y="11" width="9" height="9" fill="#00A4EF"/><rect x="11" y="11" width="9" height="9" fill="#FFB900"/></svg>',
+        'github' => '<svg viewBox="0 0 16 16" width="20" height="20" fill="#181717"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>',
+    ];
+    return $icons[$provider] ?? '';
+}
+
+// Shared "Continue with X" button row for login.php/register.php --
+// empty string (renders nothing) if no provider has both client_id and
+// client_secret filled in yet, so the divider/buttons don't show up
+// floating above an otherwise-unchanged form.
+function renderOauthButtons(): string {
+    $available = array_filter(array_keys(oauthProviders()), 'oauthConfigured');
+    if (!$available) return '';
+    ob_start();
+    ?>
+    <div class="oauth-buttons">
+        <?php foreach ($available as $p): $cfg = oauthProviderConfig($p); ?>
+            <a href="oauth-login.php?provider=<?= e($p) ?>" class="oauth-btn"><?= oauthProviderIcon($p) ?> Continue with <?= e($cfg['label']) ?></a>
+        <?php endforeach; ?>
+    </div>
+    <div class="auth-divider"><span>or</span></div>
+    <?php
+    return ob_get_clean();
+}
+
 // Security activity log — lets a user see "is this really my recent
 // activity" (logins, password changes, etc.), same idea as Google/
 // Facebook's account activity page. Best-effort: never blocks the action

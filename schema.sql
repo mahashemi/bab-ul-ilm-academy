@@ -567,6 +567,20 @@ CREATE TABLE IF NOT EXISTS ai_prompt_templates (
 -- stays auditable even though the content is attributed to the teacher.
 ALTER TABLE users MODIFY role ENUM('student','teacher','parent','institution','admin','customer_service') DEFAULT 'student';
 
+-- ── Social login (Google / Facebook / Microsoft / GitHub) ──
+-- One linked identity per account, not a separate identities table --
+-- simplest thing that satisfies "ease the signup process"; if someone
+-- later logs in via a different provider under the same email, the link
+-- just gets overwritten to that provider rather than supporting multiple
+-- simultaneous links. password stays NOT NULL even for OAuth-only
+-- accounts (a random, never-shared bcrypt hash is stored at signup) so
+-- no existing password? code path anywhere else in the app needs a
+-- null-check. Multiple NULL rows are fine under this UNIQUE key --
+-- MySQL doesn't treat NULL <> NULL as a uniqueness violation.
+ALTER TABLE users ADD COLUMN oauth_provider VARCHAR(20) NULL AFTER password;
+ALTER TABLE users ADD COLUMN oauth_id VARCHAR(255) NULL AFTER oauth_provider;
+ALTER TABLE users ADD UNIQUE KEY uniq_oauth (oauth_provider, oauth_id);
+
 -- ── Initial Admin Account ───────────────────────────────────────────────
 -- Default password: Admin@123
 -- IMPORTANT: Log in immediately and change this password via your profile.

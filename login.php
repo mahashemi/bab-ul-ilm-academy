@@ -60,7 +60,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 Please verify your email before logging in.
                 <a href="resend-verification.php?email=<?= e(urlencode($unverifiedEmail)) ?>">Resend verification link</a>
             </div>
+        <?php elseif (flash('error')): ?>
+            <div class="alert alert-error"><?= e(flash('error')) ?></div>
         <?php endif; ?>
+
+        <?= renderOauthButtons() ?>
 
         <form method="post" autocomplete="off">
             <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">

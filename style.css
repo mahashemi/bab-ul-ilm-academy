@@ -561,6 +561,10 @@ img { max-width: 100%; height: auto; display: block; }
 .wizard-step.disabled { color: var(--text-light); opacity: .55; cursor: not-allowed; }
 .wizard-step.disabled:hover { background: none; }
 
+/* Visually separated from the regular Save/Cancel actions above it, so a
+   destructive action never sits right under a routine one. */
+.danger-zone-section { margin-top: 3rem; padding-top: 1.8rem; border-top: 2px dashed #f3c9c9; }
+
 .video-upload-placeholder {
     border: 1.5px dashed var(--border); border-radius: 8px; padding: 1.2rem;
     text-align: center; color: var(--text-light); background: var(--cream);

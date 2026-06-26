@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS users (
     -- reintroduce them as their own "Become a Parent/Institution" upgrade,
     -- mirroring teacher_status, but that doesn't exist yet.
     teacher_status ENUM('none','pending','approved','rejected') NOT NULL DEFAULT 'none', -- see isApprovedTeacher() in db.php -- the actual source of truth for teaching access, independent of role
+    instructor_policies_agreed_at DATETIME NULL, -- set when the instructor application (become-instructor.php) is submitted, after they check "I agree" to instructor-policies.php
     gender       ENUM('male','female','unspecified') DEFAULT 'unspecified',
     date_of_birth DATE NULL,
     education_level VARCHAR(50) NULL,       -- Student/Parent: highest level completed or in progress

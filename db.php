@@ -1795,7 +1795,7 @@ function renderFooter(PDO $pdo): string {
                     <li><a href="getting-started.php">How It Works</a></li>
                     <li><a href="courses.php">All Courses</a></li>
                     <li><a href="register.php">Join Free</a></li>
-                    <li><a href="register.php">Become a Teacher</a></li>
+                    <li><a href="<?= auth() ? 'become-instructor.php' : 'register.php' ?>">Become a Teacher</a></li>
                 </ul>
             </div>
             <div>
@@ -1812,6 +1812,7 @@ function renderFooter(PDO $pdo): string {
                 <ul class="footer-links">
                     <li><a href="about.php">About Us</a></li>
                     <li><a href="feedback.php">Send Feedback</a></li>
+                    <li><a href="instructor-policies.php">Instructor Policies</a></li>
                 </ul>
             </div>
         </div>

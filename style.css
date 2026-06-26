@@ -91,6 +91,7 @@ img { max-width: 100%; height: auto; display: block; }
 .nav-avatar-img { object-fit: cover; }
 .chat-avatar-img { object-fit: cover; }
 .msg-group-avatar-img { object-fit: cover; }
+.profile-avatar-img { object-fit: cover; border-radius: 50%; }
 .nav-account-trigger .lucide-icon { color: rgba(255,255,255,.7); width: .9em; height: .9em; }
 .nav-account-menu {
     position: absolute; top: calc(100% + 10px); right: 0; width: 260px;
@@ -669,7 +670,7 @@ img { max-width: 100%; height: auto; display: block; }
 .pw-strength-track { height: 5px; background: var(--border); border-radius: 3px; margin-top: .5rem; overflow: hidden; }
 .pw-strength-fill { height: 100%; width: 0; transition: var(--transition); }
 .profile-progress-track { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
-.profile-progress-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--green-mid)); border-radius: 4px; transition: var(--transition); }
+.profile-progress-fill { height: 100%; background: var(--green-mid); border-radius: 4px; transition: var(--transition); }
 
 /* ── Post-enrollment "Great choice!" page ── */
 .enroll-success-banner {
@@ -806,7 +807,7 @@ textarea.form-control { min-height: 100px; resize: vertical; }
 
 /* ── Progress ── */
 .progress-bar { background: var(--border); border-radius: 10px; height: 8px; overflow: hidden; margin-top: .5rem; }
-.progress-fill { height: 100%; background: linear-gradient(90deg, var(--green-deep), var(--gold)); border-radius: 10px; transition: width .4s ease; }
+.progress-fill { height: 100%; background: var(--green-mid); border-radius: 10px; transition: width .4s ease; }
 
 /* ── Footer ── */
 footer { background: var(--green-deep); color: rgba(255,255,255,.75); padding: 3rem 1.5rem 1.5rem; margin-top: 4rem; }

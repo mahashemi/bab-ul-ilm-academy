@@ -23,12 +23,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $headline = trim($_POST['headline'] ?? '');
     $qualification = trim($_POST['qualification'] ?? '');
+    $agreedPolicies = isset($_POST['agree_policies']);
 
     if (mb_strlen($qualification) < 5) $errors[] = 'Please describe your teaching qualification (min 5 characters).';
     if ($headline !== '' && mb_strlen($headline) > 150) $errors[] = 'Headline must be 150 characters or fewer.';
+    if (!$agreedPolicies) $errors[] = 'Please read and agree to the Instructor Policies before applying.';
 
     if (!$errors) {
-        $pdo->prepare("UPDATE users SET headline = ?, qualification = ?, teacher_status = 'pending' WHERE id = ?")
+        $pdo->prepare("UPDATE users SET headline = ?, qualification = ?, teacher_status = 'pending', instructor_policies_agreed_at = NOW() WHERE id = ?")
             ->execute([$headline ?: null, $qualification, $user['id']]);
         $_SESSION['user']['teacher_status'] = 'pending';
         logActivity($pdo, (int) $user['id'], 'Applied to become an instructor');
@@ -131,6 +133,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="form-group">
                     <label class="form-label">Teaching Qualification</label>
                     <textarea name="qualification" class="form-control" placeholder="e.g. MA Islamic Studies, Hafiz-ul-Quran, 5 years teaching Tajweed"><?= e($me['qualification'] ?? '') ?></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label style="display:flex;align-items:flex-start;gap:.6rem;cursor:pointer;font-size:.88rem">
+                        <input type="checkbox" name="agree_policies" value="1" style="width:auto;margin-top:.2rem" required>
+                        <span>I have read and agree to the <a href="instructor-policies.php" target="_blank">Instructor Policies</a> — including content quality, code of conduct, and how payments/payouts currently work on this platform.</span>
+                    </label>
                 </div>
 
                 <button type="submit" class="btn btn-primary btn-full">Submit Application</button>

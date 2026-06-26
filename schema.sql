@@ -161,8 +161,9 @@ CREATE TABLE IF NOT EXISTS lessons (
     course_id       INT UNSIGNED NOT NULL,
     section_title   VARCHAR(150) DEFAULT NULL,  -- groups lessons into curriculum sections (Udemy-style)
     title           VARCHAR(200) NOT NULL,
-    content         LONGTEXT,            -- Text/HTML content
+    content         LONGTEXT,            -- Sanitized rich-text HTML (see sanitizeLessonHtml())
     video_url       VARCHAR(500),        -- YouTube / Vimeo embed URL
+    slides_url      VARCHAR(500),        -- Uploaded PDF slide deck, served from /uploads/lesson-slides/
     duration_minutes SMALLINT UNSIGNED DEFAULT 0,
     is_preview      TINYINT(1) DEFAULT 0, -- viewable without enrolling
     sort_order      SMALLINT UNSIGNED DEFAULT 0,

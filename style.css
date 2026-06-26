@@ -502,6 +502,69 @@ img { max-width: 100%; height: auto; display: block; }
 .lesson-title { font-size: .9rem; font-weight: 500; color: var(--text); }
 .lesson-check { margin-left: auto; color: #4caf50; font-size: 1.1rem; }
 
+/* ── Curriculum Builder (Sections → Lectures tree) ── */
+.curriculum-section { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 1rem; overflow: hidden; }
+.curriculum-section-head {
+    display: flex; align-items: center; gap: .6rem; padding: .8rem 1rem;
+    background: var(--cream); cursor: pointer; user-select: none;
+}
+.curriculum-section-head:hover { background: #f0ead9; }
+.curriculum-section-head .chevron { transition: transform .15s; color: var(--text-light); }
+.curriculum-section.collapsed .curriculum-section-head .chevron { transform: rotate(-90deg); }
+.curriculum-section-head strong { font-size: .92rem; color: var(--green-deep); flex: 1; }
+.curriculum-section-body { padding: .6rem; }
+.curriculum-section.collapsed .curriculum-section-body { display: none; }
+.curriculum-lecture {
+    display: flex; align-items: center; gap: .7rem; padding: .65rem .8rem;
+    border: 1px solid var(--border); border-radius: 8px; background: var(--white); margin-bottom: .5rem;
+}
+.curriculum-lecture-check { width: 22px; height: 22px; border-radius: 50%; background: #e8f5e9; color: #2e7d32; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.curriculum-lecture-check.empty { background: var(--cream); color: var(--text-light); }
+.curriculum-lecture-title { flex: 1; font-size: .88rem; font-weight: 500; }
+.curriculum-lecture-meta { font-size: .75rem; color: var(--text-light); }
+.curriculum-add-btn {
+    display: inline-flex; align-items: center; gap: .4rem; background: none;
+    border: 1.5px solid var(--green-mid); color: var(--green-mid); border-radius: 8px;
+    padding: .45rem .9rem; font-size: .82rem; font-weight: 600; cursor: pointer; transition: var(--transition);
+}
+.curriculum-add-btn:hover { background: var(--green-mid); color: var(--white); }
+
+/* Content-type tabs inside the add/edit lecture form */
+.content-type-tabs { display: flex; gap: .5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border); }
+.content-type-tab {
+    padding: .55rem 1rem; font-size: .85rem; font-weight: 600; color: var(--text-light);
+    background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; margin-bottom: -1px;
+}
+.content-type-tab.active { color: var(--green-deep); border-bottom-color: var(--green-deep); }
+.content-type-panel { display: none; }
+.content-type-panel.active { display: block; }
+
+.video-upload-placeholder {
+    border: 1.5px dashed var(--border); border-radius: 8px; padding: 1.2rem;
+    text-align: center; color: var(--text-light); background: var(--cream);
+}
+.video-upload-placeholder input[type="file"] { pointer-events: none; opacity: .6; }
+
+/* Quill editor sizing to match our form-control look */
+.ql-toolbar.ql-snow { border-color: var(--border); border-radius: 8px 8px 0 0; }
+.ql-container.ql-snow { border-color: var(--border); border-radius: 0 0 8px 8px; min-height: 160px; font-family: inherit; font-size: .9rem; }
+
+/* ── Rendered lesson rich-text content (student-facing) ── */
+.lesson-rich-content { color: var(--text-mid); line-height: 1.75; font-size: .95rem; }
+.lesson-rich-content h1, .lesson-rich-content h2, .lesson-rich-content h3 { color: var(--green-deep); margin: 1.2rem 0 .6rem; }
+.lesson-rich-content p { margin: 0 0 .9rem; }
+.lesson-rich-content ul, .lesson-rich-content ol { margin: 0 0 .9rem 1.3rem; }
+.lesson-rich-content a { color: var(--green-mid); text-decoration: underline; }
+.lesson-rich-content img { max-width: 100%; border-radius: 8px; margin: .6rem 0; }
+.lesson-rich-content blockquote { border-left: 3px solid var(--gold); padding-left: 1rem; color: var(--text-light); margin: 0 0 .9rem; }
+.lesson-rich-content pre, .lesson-rich-content code { background: var(--cream); border-radius: 6px; padding: .1rem .4rem; font-size: .85em; }
+.lesson-rich-content pre { padding: .8rem; overflow-x: auto; }
+
+.lesson-slides-card {
+    display: flex; align-items: center; gap: .8rem; padding: .9rem 1rem;
+    border: 1px solid var(--border); border-radius: 10px; background: var(--cream); margin-bottom: 1.2rem;
+}
+
 /* ── Course Detail Page ── */
 .profile-avatar {
     display: inline-flex; align-items: center; justify-content: center;

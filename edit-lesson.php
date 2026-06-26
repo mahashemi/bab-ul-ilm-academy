@@ -25,27 +25,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
 
     if (isset($_POST['delete_lesson'])) {
+        if ($lesson['slides_url'] && str_starts_with($lesson['slides_url'], 'uploads/lesson-slides/')) {
+            @unlink(__DIR__ . '/' . $lesson['slides_url']);
+        }
         $pdo->prepare('DELETE FROM lessons WHERE id = ?')->execute([$id]);
-        flash('success', 'Lesson deleted.');
+        flash('success', 'Lecture deleted.');
         redirect('add-lesson.php?course_id=' . $courseId);
+    }
+
+    if (isset($_POST['remove_slides'])) {
+        if ($lesson['slides_url'] && str_starts_with($lesson['slides_url'], 'uploads/lesson-slides/')) {
+            @unlink(__DIR__ . '/' . $lesson['slides_url']);
+        }
+        $pdo->prepare('UPDATE lessons SET slides_url = NULL WHERE id = ?')->execute([$id]);
+        flash('success', 'Slides removed.');
+        redirect('edit-lesson.php?id=' . $id);
     }
 
     $sectionTitle = trim($_POST['section_title'] ?? '');
     $title    = trim($_POST['title'] ?? '');
-    $content  = trim($_POST['content'] ?? '');
+    $content  = sanitizeLessonHtml($_POST['content'] ?? '');
     $videoUrl = trim($_POST['video_url'] ?? '');
     $duration = (int) ($_POST['duration_minutes'] ?? 0);
     $isPreview = isset($_POST['is_preview']) ? 1 : 0;
 
     if (mb_strlen($title) < 3) $errors[] = 'Lesson title must be at least 3 characters.';
 
+    $slidesUrl = $lesson['slides_url'];
+    $slides = handleAttachmentUpload('slides_file', 'lesson-slides');
+    if ($slides) {
+        if ($slides['type'] !== 'file') {
+            $errors[] = 'Slides must be uploaded as a PDF file.';
+        } else {
+            if ($slidesUrl && str_starts_with($slidesUrl, 'uploads/lesson-slides/')) {
+                @unlink(__DIR__ . '/' . $slidesUrl);
+            }
+            $slidesUrl = $slides['path'];
+        }
+    }
+
     if (!$errors) {
         $pdo->prepare(
-            'UPDATE lessons SET section_title=?, title=?, content=?, video_url=?, duration_minutes=?, is_preview=? WHERE id=?'
-        )->execute([$sectionTitle ?: null, $title, $content, $videoUrl, $duration, $isPreview, $id]);
-        flash('success', 'Lesson updated.');
+            'UPDATE lessons SET section_title=?, title=?, content=?, video_url=?, slides_url=?, duration_minutes=?, is_preview=? WHERE id=?'
+        )->execute([$sectionTitle ?: null, $title, $content, $videoUrl, $slidesUrl, $duration, $isPreview, $id]);
+        flash('success', 'Lecture updated.');
         redirect('add-lesson.php?course_id=' . $courseId);
     }
+    $lesson['section_title'] = $sectionTitle;
+    $lesson['title'] = $title;
+    $lesson['content'] = $content;
+    $lesson['video_url'] = $videoUrl;
+    $lesson['slides_url'] = $slidesUrl;
+    $lesson['duration_minutes'] = $duration;
+    $lesson['is_preview'] = $isPreview;
 }
 ?>
 <!DOCTYPE html>
@@ -53,13 +85,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Edit Lesson — <?= e($lesson['course_title']) ?></title>
+<title>Edit Lecture — <?= e($lesson['course_title']) ?></title>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="assets/icon-green-180.png">
 <link rel="manifest" href="assets/site.webmanifest">
 <meta name="theme-color" content="#0a3d1f">
 <link rel="stylesheet" href="style.css">
+<link href="https://unpkg.com/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
 </head>
 <body>
 <nav class="navbar">
@@ -111,59 +144,138 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </nav>
 
 <div class="dashboard-wrap">
-    <p style="font-size:.85rem;margin-bottom:.6rem"><a href="add-lesson.php?course_id=<?= $courseId ?>"><i data-lucide="arrow-left" class="lucide-icon"></i> Back to Lessons</a></p>
-    <div class="dashboard-header"><h2><i data-lucide="pencil" class="lucide-icon"></i> Edit Lesson</h2><p><?= e($lesson['course_title']) ?></p></div>
+    <p style="font-size:.85rem;margin-bottom:.6rem"><a href="add-lesson.php?course_id=<?= $courseId ?>"><i data-lucide="arrow-left" class="lucide-icon"></i> Back to Curriculum</a></p>
+    <div class="dashboard-header"><h2><i data-lucide="pencil" class="lucide-icon"></i> Edit Lecture</h2><p><?= e($lesson['course_title']) ?></p></div>
 
     <?php if ($errors): ?><div class="alert alert-error"><?php foreach ($errors as $err): ?><div><?= e($err) ?></div><?php endforeach; ?></div><?php endif; ?>
 
     <div class="card"><div class="card-body">
-        <form method="post">
+        <form method="post" enctype="multipart/form-data" id="lectureForm">
             <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+            <input type="hidden" name="content" id="contentHidden">
 
             <div class="form-group">
-                <label class="form-label">Section <span style="font-weight:400;font-size:.78rem;color:var(--text-light)">(groups lessons into a curriculum section — Week 1, Week 2... works well)</span></label>
+                <label class="form-label">Section <span style="font-weight:400;font-size:.78rem;color:var(--text-light)">(groups lectures into a curriculum section — Week 1, Week 2... works well)</span></label>
                 <input type="text" name="section_title" class="form-control" list="sectionSuggestions" placeholder="e.g. Week 1: Introduction" value="<?= e($lesson['section_title'] ?? '') ?>">
                 <datalist id="sectionSuggestions">
                     <?php foreach ($existingSections as $s): ?><option value="<?= e($s) ?>"><?php endforeach; ?>
                 </datalist>
             </div>
             <div class="form-group">
-                <label class="form-label">Lesson Title</label>
+                <label class="form-label">Lecture Title</label>
                 <input type="text" name="title" class="form-control" value="<?= e($lesson['title']) ?>" required>
             </div>
-            <div class="form-group">
-                <label class="form-label">Lesson Content</label>
-                <textarea name="content" class="form-control" placeholder="Write the lesson text/notes here..."><?= e($lesson['content'] ?? '') ?></textarea>
-            </div>
             <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Video URL (optional, YouTube/Vimeo embed link)</label>
-                    <input type="text" name="video_url" class="form-control" value="<?= e($lesson['video_url'] ?? '') ?>" placeholder="https://www.youtube.com/embed/...">
-                </div>
                 <div class="form-group">
                     <label class="form-label">Duration (minutes)</label>
                     <input type="number" name="duration_minutes" class="form-control" min="0" value="<?= (int) $lesson['duration_minutes'] ?>">
                 </div>
+                <div class="form-group" style="display:flex;align-items:flex-end">
+                    <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
+                        <input type="checkbox" name="is_preview" value="1" style="width:auto" <?= $lesson['is_preview'] ? 'checked' : '' ?>>
+                        Free preview — visible without enrolling
+                    </label>
+                </div>
             </div>
-            <div class="form-group">
-                <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
-                    <input type="checkbox" name="is_preview" value="1" style="width:auto" <?= $lesson['is_preview'] ? 'checked' : '' ?>>
-                    Free preview — visible to everyone, even without enrolling
-                </label>
+
+            <div class="content-type-tabs">
+                <button type="button" class="content-type-tab active" data-panel="video">Video</button>
+                <button type="button" class="content-type-tab" data-panel="article">Article</button>
+                <button type="button" class="content-type-tab" data-panel="slides">Slides</button>
             </div>
-            <div style="display:flex;justify-content:space-between;gap:.6rem">
+
+            <div class="content-type-panel active" data-panel="video">
+                <div class="form-group">
+                    <label class="form-label">Video URL (YouTube/Vimeo embed link)</label>
+                    <input type="text" name="video_url" class="form-control" value="<?= e($lesson['video_url'] ?? '') ?>" placeholder="https://www.youtube.com/embed/...">
+                    <div class="form-hint">No ads, full control over playback — consider Vimeo over YouTube where possible.</div>
+                </div>
+                <div class="video-upload-placeholder">
+                    <input type="file" disabled>
+                    <p style="margin-top:.5rem;font-size:.82rem"><i data-lucide="upload-cloud" class="lucide-icon"></i> Direct video upload is coming soon (no more YouTube ads). For now, paste a video link above.</p>
+                </div>
+            </div>
+
+            <div class="content-type-panel" data-panel="article">
+                <label class="form-label">Article Text</label>
+                <div id="editor"></div>
+                <textarea id="initialContent" style="display:none"><?= e($lesson['content'] ?? '') ?></textarea>
+            </div>
+
+            <div class="content-type-panel" data-panel="slides">
+                <?php if (!empty($lesson['slides_url'])): ?>
+                <div class="lesson-slides-card">
+                    <i data-lucide="file-text" class="lucide-icon"></i>
+                    <span style="flex:1;font-size:.85rem">Current slides: <a href="<?= e($lesson['slides_url']) ?>" target="_blank">view PDF</a></span>
+                    <button type="submit" name="remove_slides" value="1" class="btn btn-outline btn-sm" style="color:#c62828;border-color:#c62828">Remove</button>
+                </div>
+                <?php endif; ?>
+                <div class="form-group">
+                    <label class="form-label"><?= $lesson['slides_url'] ? 'Replace Slide Deck (PDF)' : 'Slide Deck (PDF)' ?></label>
+                    <input type="file" name="slides_file" class="form-control" accept="application/pdf">
+                    <div class="form-hint">Students will see a "Download Slides" link on this lecture.</div>
+                </div>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;gap:.6rem;margin-top:1rem">
                 <button type="submit" class="btn btn-primary">Save Changes</button>
             </div>
         </form>
-        <form method="post" onsubmit="return confirm('Delete this lesson? This cannot be undone.')" style="margin-top:.8rem;border-top:1px solid var(--border);padding-top:.8rem">
+        <form method="post" onsubmit="return confirm('Delete this lecture? This cannot be undone.')" style="margin-top:.8rem;border-top:1px solid var(--border);padding-top:.8rem">
             <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
-            <button type="submit" name="delete_lesson" value="1" class="btn btn-outline" style="color:#c62828;border-color:#c62828"><i data-lucide="trash-2" class="lucide-icon"></i> Delete Lesson</button>
+            <button type="submit" name="delete_lesson" value="1" class="btn btn-outline" style="color:#c62828;border-color:#c62828"><i data-lucide="trash-2" class="lucide-icon"></i> Delete Lecture</button>
         </form>
     </div></div>
 </div>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="https://unpkg.com/quill@2.0.2/dist/quill.js"></script>
 <script src="app.js" defer></script>
 <?= renderFooter($pdo) ?>
+<script>
+if (window.lucide) lucide.createIcons();
+
+document.querySelectorAll('.content-type-tab').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+        document.querySelectorAll('.content-type-tab').forEach(function (t) { t.classList.remove('active'); });
+        document.querySelectorAll('.content-type-panel').forEach(function (p) { p.classList.remove('active'); });
+        tab.classList.add('active');
+        document.querySelector('.content-type-panel[data-panel="' + tab.dataset.panel + '"]').classList.add('active');
+    });
+});
+
+var quill = new Quill('#editor', {
+    theme: 'snow',
+    placeholder: 'Write the lecture notes/article here...',
+    modules: {
+        toolbar: [
+            [{ header: [1, 2, 3, false] }],
+            ['bold', 'italic', 'underline'],
+            [{ list: 'ordered' }, { list: 'bullet' }],
+            ['link', 'image', 'code-block'],
+            ['clean'],
+        ],
+    },
+});
+quill.root.innerHTML = document.getElementById('initialContent').value;
+var toolbar = quill.getModule('toolbar');
+toolbar.addHandler('image', function () {
+    var url = window.prompt('Image URL (https://...)');
+    if (url) {
+        var range = quill.getSelection(true);
+        quill.insertEmbed(range.index, 'image', url, 'user');
+    }
+});
+if (document.getElementById('initialContent').value.trim() !== '') {
+    document.querySelectorAll('.content-type-tab').forEach(function (t) { t.classList.remove('active'); });
+    document.querySelectorAll('.content-type-panel').forEach(function (p) { p.classList.remove('active'); });
+    document.querySelector('.content-type-tab[data-panel="article"]').classList.add('active');
+    document.querySelector('.content-type-panel[data-panel="article"]').classList.add('active');
+}
+
+document.getElementById('lectureForm').addEventListener('submit', function () {
+    document.getElementById('contentHidden').value = quill.root.innerHTML === '<p><br></p>' ? '' : quill.root.innerHTML;
+});
+</script>
 <script>if (window.lucide) lucide.createIcons();</script>
 </body>
 </html>

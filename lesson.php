@@ -162,9 +162,17 @@ function lessonAccessible(array $l, bool $isEnrolled, bool $isOwnerOrAdmin): boo
                 <div class="card-body">
                     <?php if ($lesson['is_preview']): ?><span class="badge badge-free" style="margin-bottom:.6rem">Free Preview</span><?php endif; ?>
                     <h1 style="font-size:1.4rem;margin-bottom:.6rem"><?= e($lesson['title']) ?></h1>
+                    <?php if (!empty($lesson['slides_url'])): ?>
+                    <div class="lesson-slides-card">
+                        <i data-lucide="presentation" class="lucide-icon"></i>
+                        <span style="flex:1;font-size:.9rem">Slide deck for this lecture</span>
+                        <a href="<?= e($lesson['slides_url']) ?>" target="_blank" class="btn btn-outline btn-sm"><i data-lucide="download" class="lucide-icon"></i> Download Slides</a>
+                    </div>
+                    <?php endif; ?>
                     <?php if ($lesson['content']): ?>
-                        <div style="color:var(--text-mid);white-space:pre-line;line-height:1.7"><?= e($lesson['content']) ?></div>
-                    <?php elseif (!$lesson['video_url']): ?>
+                        <?php /* content is sanitized server-side on save via sanitizeLessonHtml() before ever reaching the DB -- safe to render unescaped */ ?>
+                        <div class="lesson-rich-content"><?= $lesson['content'] ?></div>
+                    <?php elseif (!$lesson['video_url'] && empty($lesson['slides_url'])): ?>
                         <p style="color:var(--text-light);font-style:italic">No content has been added for this lesson yet.</p>
                     <?php endif; ?>
                 </div>

@@ -1252,6 +1252,82 @@ function handleAttachmentUpload(string $fieldName, string $subDir): ?array {
     return ['path' => 'uploads/' . $subDir . '/' . $filename, 'type' => $type, 'name' => $originalName];
 }
 
+// Allowlist HTML sanitizer for lesson "Article" content (stored as rich
+// HTML from the Quill editor, rendered unescaped on lesson.php). Strips
+// everything not explicitly allowed -- tags, on* event attributes, and
+// javascript:/data: URLs in href/src -- rather than trying to blocklist
+// dangerous patterns, since an allowlist can't be bypassed by a payload
+// we didn't think of. Disallowed tags are unwrapped (text kept), not
+// dropped, except for active-content tags (script/style/iframe/object/
+// embed/form), which are removed entirely along with their contents.
+function sanitizeLessonHtml(string $html): string {
+    $html = trim($html);
+    if ($html === '') return '';
+
+    $allowedTags = ['p', 'br', 'strong', 'b', 'em', 'i', 'u', 's',
+        'h1', 'h2', 'h3', 'ul', 'ol', 'li', 'a', 'blockquote',
+        'code', 'pre', 'span', 'img', 'hr'];
+    $allowedAttrs = [
+        'a'   => ['href'],
+        'img' => ['src', 'alt'],
+    ];
+    $removeEntirely = ['script', 'style', 'iframe', 'object', 'embed', 'form', 'link', 'meta'];
+
+    $doc = new DOMDocument();
+    libxml_use_internal_errors(true);
+    $doc->loadHTML('<?xml encoding="utf-8"?><div id="sanitize-root">' . $html . '</div>', LIBXML_NOERROR | LIBXML_NOWARNING);
+    libxml_clear_errors();
+
+    $root = $doc->getElementById('sanitize-root');
+    if (!$root) return '';
+
+    $isSafeUrl = function (string $url): bool {
+        $url = trim($url);
+        if ($url === '' || $url[0] === '/' || $url[0] === '#') return true;
+        return (bool) preg_match('/^(https?|mailto):/i', $url);
+    };
+
+    $walk = function (DOMNode $node) use (&$walk, $allowedTags, $allowedAttrs, $removeEntirely, $isSafeUrl, $doc) {
+        $children = [];
+        foreach ($node->childNodes as $child) $children[] = $child;
+
+        foreach ($children as $child) {
+            if (!($child instanceof DOMElement)) continue; // text/comment nodes are inert, leave as-is
+            $tag = strtolower($child->tagName);
+
+            if (in_array($tag, $removeEntirely, true)) {
+                $node->removeChild($child);
+                continue;
+            }
+
+            $walk($child); // recurse before unwrapping so nested disallowed tags are also cleaned
+
+            if (!in_array($tag, $allowedTags, true)) {
+                while ($child->firstChild) $node->insertBefore($child->firstChild, $child);
+                $node->removeChild($child);
+                continue;
+            }
+
+            foreach (iterator_to_array($child->attributes ?? []) as $attr) {
+                $name = strtolower($attr->name);
+                $keep = in_array($name, $allowedAttrs[$tag] ?? [], true);
+                if ($keep && in_array($name, ['href', 'src'], true) && !$isSafeUrl($attr->value)) {
+                    $keep = false;
+                }
+                if (!$keep) $child->removeAttribute($attr->name);
+            }
+            if ($tag === 'a') $child->setAttribute('rel', 'noopener noreferrer');
+        }
+    };
+    $walk($root);
+
+    $out = '';
+    foreach ($root->childNodes as $child) {
+        $out .= $doc->saveHTML($child);
+    }
+    return trim($out);
+}
+
 /**
  * Parses an uploaded CSV into a lowercase header row + associative data rows.
  * Reads via fgetcsv() on a memory stream (not a manual newline split) so that

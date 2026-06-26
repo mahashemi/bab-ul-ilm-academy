@@ -40,21 +40,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['move_lesson'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['title'])) {
     verifyCsrf();
     $sectionTitle = trim($_POST['section_title'] ?? '');
-    $title   = trim($_POST['title'] ?? '');
-    $content = trim($_POST['content'] ?? '');
+    $title    = trim($_POST['title'] ?? '');
+    $content  = sanitizeLessonHtml($_POST['content'] ?? '');
     $videoUrl = trim($_POST['video_url'] ?? '');
     $duration = (int) ($_POST['duration_minutes'] ?? 0);
     $isPreview = isset($_POST['is_preview']) ? 1 : 0;
 
     if (mb_strlen($title) < 3) $errors[] = 'Lesson title must be at least 3 characters.';
 
+    $slidesUrl = null;
+    $slides = handleAttachmentUpload('slides_file', 'lesson-slides');
+    if ($slides) {
+        if ($slides['type'] !== 'file') {
+            $errors[] = 'Slides must be uploaded as a PDF file.';
+        } else {
+            $slidesUrl = $slides['path'];
+        }
+    }
+
     if (!$errors) {
         $maxOrder = $pdo->prepare('SELECT COALESCE(MAX(sort_order),0) m FROM lessons WHERE course_id = ?');
         $maxOrder->execute([$courseId]);
         $next = (int) $maxOrder->fetch()['m'] + 1;
 
-        $stmt = $pdo->prepare('INSERT INTO lessons (course_id, section_title, title, content, video_url, duration_minutes, is_preview, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-        $stmt->execute([$courseId, $sectionTitle ?: null, $title, $content, $videoUrl, $duration, $isPreview, $next]);
+        $stmt = $pdo->prepare('INSERT INTO lessons (course_id, section_title, title, content, video_url, slides_url, duration_minutes, is_preview, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $stmt->execute([$courseId, $sectionTitle ?: null, $title, $content, $videoUrl, $slidesUrl, $duration, $isPreview, $next]);
         if ($teacherId !== (int) $user['id']) {
             logActivity($pdo, $user['id'], 'Added a lesson to course #' . $courseId . ' on behalf of teacher #' . $teacherId);
         }
@@ -74,19 +84,27 @@ $existingSections = $existingSections->fetchAll(PDO::FETCH_COLUMN);
 // by pre-filling the next logical week number — still just a suggestion,
 // editable/clearable like any other field.
 $suggestedSection = 'Week ' . (count($existingSections) + 1);
+
+// Group lessons into their sections, preserving sort order, for the tree view below.
+$sections = [];
+foreach ($lessons as $l) {
+    $key = $l['section_title'] ?: '';
+    $sections[$key][] = $l;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Add Lesson — <?= e($course['title']) ?></title>
+<title>Curriculum — <?= e($course['title']) ?></title>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="assets/icon-green-180.png">
 <link rel="manifest" href="assets/site.webmanifest">
 <meta name="theme-color" content="#0a3d1f">
 <link rel="stylesheet" href="style.css">
+<link href="https://unpkg.com/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
 </head>
 <body>
 <nav class="navbar">
@@ -138,7 +156,7 @@ $suggestedSection = 'Week ' . (count($existingSections) + 1);
 </nav>
 
 <div class="dashboard-wrap">
-    <div class="dashboard-header"><h2><i data-lucide="clipboard-list" class="lucide-icon"></i> Lessons — <?= e($course['title']) ?></h2><p>Add lessons in the order students should learn them.</p></div>
+    <div class="dashboard-header"><h2><i data-lucide="clipboard-list" class="lucide-icon"></i> Curriculum — <?= e($course['title']) ?></h2><p>Create your course in sections, each focused on a single learning objective. Then add video, article, or slide content to each lecture.</p></div>
 
     <?= renderActingAsBanner($pdo) ?>
 
@@ -162,82 +180,162 @@ $suggestedSection = 'Week ' . (count($existingSections) + 1);
     </div></div>
     <?php endif; ?>
 
-    <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
-        <form method="post">
+    <h3 style="margin-bottom:1rem;font-size:1.1rem;color:var(--green-deep)">Curriculum (<?= count($lessons) ?> lecture<?= count($lessons) === 1 ? '' : 's' ?>)</h3>
+
+    <?php if (!$lessons): ?>
+        <div class="card" style="margin-bottom:1.5rem"><div class="empty-state"><div class="icon"><i data-lucide="notebook-pen" class="lucide-icon"></i></div><h3>No lectures yet</h3><p>Add your first one below.</p></div></div>
+    <?php else: ?>
+        <?php foreach ($sections as $sectionName => $sectionLessons): ?>
+        <div class="curriculum-section">
+            <div class="curriculum-section-head" onclick="this.closest('.curriculum-section').classList.toggle('collapsed')">
+                <i data-lucide="chevron-down" class="lucide-icon chevron"></i>
+                <strong><?= e($sectionName ?: 'Untitled Section') ?></strong>
+                <span style="font-size:.78rem;color:var(--text-light)"><?= count($sectionLessons) ?> lecture<?= count($sectionLessons) === 1 ? '' : 's' ?></span>
+            </div>
+            <div class="curriculum-section-body">
+                <?php foreach ($sectionLessons as $l):
+                    $hasContent = $l['content'] || $l['video_url'] || $l['slides_url'];
+                    $i = array_search($l, $lessons, true);
+                ?>
+                <div class="curriculum-lecture">
+                    <div class="curriculum-lecture-check <?= $hasContent ? '' : 'empty' ?>"><i data-lucide="<?= $hasContent ? 'check' : 'file-text' ?>" class="lucide-icon" style="width:13px;height:13px"></i></div>
+                    <div class="curriculum-lecture-title">
+                        <a href="edit-lesson.php?id=<?= (int) $l['id'] ?>"><?= e($l['title']) ?></a>
+                        <?php if ($l['video_url']): ?><i data-lucide="video" class="lucide-icon" style="width:13px;height:13px;vertical-align:-2px;color:var(--text-light)" data-tip="Has video"></i><?php endif; ?>
+                        <?php if ($l['slides_url']): ?><i data-lucide="presentation" class="lucide-icon" style="width:13px;height:13px;vertical-align:-2px;color:var(--text-light)" data-tip="Has slides"></i><?php endif; ?>
+                    </div>
+                    <?php if ((int) $l['duration_minutes'] > 0): ?><span class="curriculum-lecture-meta"><?= (int) $l['duration_minutes'] ?> min</span><?php endif; ?>
+                    <?php if ($l['is_preview']): ?><span class="badge badge-free">Preview</span><?php endif; ?>
+                    <div class="action-row">
+                        <?php if ($i > 0): ?>
+                        <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><input type="hidden" name="direction" value="up"><button type="submit" name="move_lesson" value="<?= (int) $l['id'] ?>" class="icon-btn" data-tip="Move up" aria-label="Move up"><i data-lucide="chevron-up" class="lucide-icon"></i></button></form>
+                        <?php endif; ?>
+                        <?php if ($i < count($lessons) - 1): ?>
+                        <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><input type="hidden" name="direction" value="down"><button type="submit" name="move_lesson" value="<?= (int) $l['id'] ?>" class="icon-btn" data-tip="Move down" aria-label="Move down"><i data-lucide="chevron-down" class="lucide-icon"></i></button></form>
+                        <?php endif; ?>
+                        <a href="edit-lesson.php?id=<?= (int) $l['id'] ?>" class="icon-btn" data-tip="Edit lecture" aria-label="Edit lecture"><i data-lucide="pencil" class="lucide-icon"></i></a>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+                <a href="#addLectureForm" onclick="document.getElementById('sectionTitleInput').value=<?= json_encode($sectionName) ?>" class="curriculum-add-btn"><i data-lucide="plus" class="lucide-icon"></i> Curriculum item</a>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    <?php endif; ?>
+
+    <a href="#addLectureForm" onclick="document.getElementById('sectionTitleInput').value=<?= json_encode($suggestedSection) ?>" class="curriculum-add-btn" style="margin-bottom:2rem"><i data-lucide="plus" class="lucide-icon"></i> Section</a>
+
+    <div class="card" id="addLectureForm" style="margin-bottom:1.5rem"><div class="card-body">
+        <h3 style="font-size:1rem;margin-bottom:1rem"><i data-lucide="plus-circle" class="lucide-icon"></i> Add a Lecture</h3>
+        <form method="post" enctype="multipart/form-data" id="lectureForm">
             <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
             <input type="hidden" name="course_id" value="<?= (int) $courseId ?>">
+            <input type="hidden" name="content" id="contentHidden">
 
             <div class="form-group">
-                <label class="form-label">Section <span style="font-weight:400;font-size:.78rem;color:var(--text-light)">(groups lessons into a curriculum section — Week 1, Week 2... works well)</span></label>
-                <input type="text" name="section_title" class="form-control" list="sectionSuggestions" placeholder="e.g. Week 1: Introduction" value="<?= e($suggestedSection) ?>">
+                <label class="form-label">Section <span style="font-weight:400;font-size:.78rem;color:var(--text-light)">(groups lectures into a curriculum section — Week 1, Week 2... works well)</span></label>
+                <input type="text" name="section_title" id="sectionTitleInput" class="form-control" list="sectionSuggestions" placeholder="e.g. Week 1: Introduction" value="<?= e($suggestedSection) ?>">
                 <datalist id="sectionSuggestions">
                     <?php foreach ($existingSections as $s): ?><option value="<?= e($s) ?>"><?php endforeach; ?>
                 </datalist>
             </div>
             <div class="form-group">
-                <label class="form-label">Lesson Title</label>
+                <label class="form-label">Lecture Title</label>
                 <input type="text" name="title" class="form-control" placeholder="e.g. Introduction to Makharij" required>
             </div>
-            <div class="form-group">
-                <label class="form-label">Lesson Content</label>
-                <textarea name="content" class="form-control" placeholder="Write the lesson text/notes here..."></textarea>
-            </div>
             <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Video URL (optional, YouTube/Vimeo embed link)</label>
-                    <input type="text" name="video_url" class="form-control" placeholder="https://www.youtube.com/embed/...">
-                </div>
                 <div class="form-group">
                     <label class="form-label">Duration (minutes)</label>
                     <input type="number" name="duration_minutes" class="form-control" min="0" placeholder="e.g. 12">
                 </div>
+                <div class="form-group" style="display:flex;align-items:flex-end">
+                    <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
+                        <input type="checkbox" name="is_preview" value="1" style="width:auto">
+                        Free preview — visible without enrolling
+                    </label>
+                </div>
             </div>
-            <div class="form-group">
-                <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
-                    <input type="checkbox" name="is_preview" value="1" style="width:auto">
-                    Free preview — visible to everyone, even without enrolling
-                </label>
+
+            <div class="content-type-tabs">
+                <button type="button" class="content-type-tab active" data-panel="video">Video</button>
+                <button type="button" class="content-type-tab" data-panel="article">Article</button>
+                <button type="button" class="content-type-tab" data-panel="slides">Slides</button>
             </div>
-            <button type="submit" class="btn btn-primary">+ Add Lesson</button>
+
+            <div class="content-type-panel active" data-panel="video">
+                <div class="form-group">
+                    <label class="form-label">Video URL (YouTube/Vimeo embed link)</label>
+                    <input type="text" name="video_url" class="form-control" placeholder="https://www.youtube.com/embed/...">
+                    <div class="form-hint">No ads, full control over playback — consider Vimeo over YouTube where possible.</div>
+                </div>
+                <div class="video-upload-placeholder">
+                    <input type="file" disabled>
+                    <p style="margin-top:.5rem;font-size:.82rem"><i data-lucide="upload-cloud" class="lucide-icon"></i> Direct video upload is coming soon (no more YouTube ads). For now, paste a video link above.</p>
+                </div>
+            </div>
+
+            <div class="content-type-panel" data-panel="article">
+                <label class="form-label">Article Text</label>
+                <div id="editor"></div>
+            </div>
+
+            <div class="content-type-panel" data-panel="slides">
+                <div class="form-group">
+                    <label class="form-label">Slide Deck (PDF)</label>
+                    <input type="file" name="slides_file" class="form-control" accept="application/pdf">
+                    <div class="form-hint">Students will see a "Download Slides" link on this lecture.</div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="margin-top:1rem">+ Add Lecture</button>
         </form>
     </div></div>
-
-    <h3 style="margin-bottom:1rem;font-size:1.1rem;color:var(--green-deep)">Current Lessons (<?= count($lessons) ?>)</h3>
-    <div class="card">
-        <?php if (!$lessons): ?>
-            <div class="empty-state"><div class="icon"><i data-lucide="notebook-pen" class="lucide-icon"></i></div><h3>No lessons yet</h3></div>
-        <?php else: ?>
-        <ul class="lesson-list">
-            <?php $lastSection = null; ?>
-            <?php foreach ($lessons as $i => $l): ?>
-                <?php if ($l['section_title'] && $l['section_title'] !== $lastSection): $lastSection = $l['section_title']; ?>
-                    <li style="padding:.6rem 1rem;font-weight:700;font-size:.85rem;color:var(--green-deep);background:var(--cream)"><?= e($l['section_title']) ?></li>
-                <?php endif; ?>
-            <li class="lesson-item">
-                <div class="lesson-num"><?= $i + 1 ?></div>
-                <div class="lesson-title" style="flex:1"><a href="edit-lesson.php?id=<?= (int) $l['id'] ?>"><?= e($l['title']) ?></a></div>
-                <?php if ((int) $l['duration_minutes'] > 0): ?><span style="font-size:.78rem;color:var(--text-light)"><?= (int) $l['duration_minutes'] ?> min</span><?php endif; ?>
-                <?php if ($l['is_preview']): ?><span class="badge badge-free" style="margin-left:.5rem">Preview</span><?php endif; ?>
-                <div class="action-row" style="margin-left:.6rem">
-                    <?php if ($i > 0): ?>
-                    <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><input type="hidden" name="direction" value="up"><button type="submit" name="move_lesson" value="<?= (int) $l['id'] ?>" class="icon-btn" data-tip="Move up" aria-label="Move up"><i data-lucide="chevron-up" class="lucide-icon"></i></button></form>
-                    <?php endif; ?>
-                    <?php if ($i < count($lessons) - 1): ?>
-                    <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><input type="hidden" name="direction" value="down"><button type="submit" name="move_lesson" value="<?= (int) $l['id'] ?>" class="icon-btn" data-tip="Move down" aria-label="Move down"><i data-lucide="chevron-down" class="lucide-icon"></i></button></form>
-                    <?php endif; ?>
-                    <a href="edit-lesson.php?id=<?= (int) $l['id'] ?>" class="icon-btn" data-tip="Edit lesson" aria-label="Edit lesson"><i data-lucide="pencil" class="lucide-icon"></i></a>
-                </div>
-            </li>
-            <?php endforeach; ?>
-        </ul>
-        <?php endif; ?>
-    </div>
 
     <p style="margin-top:1.5rem"><a href="course.php?id=<?= (int) $courseId ?>" class="btn btn-outline">View Course Page <i data-lucide="arrow-right" class="lucide-icon"></i></a></p>
 </div>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="https://unpkg.com/quill@2.0.2/dist/quill.js"></script>
 <script src="app.js" defer></script>
 <?= renderFooter($pdo) ?>
+<script>
+if (window.lucide) lucide.createIcons();
+
+document.querySelectorAll('.content-type-tab').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+        document.querySelectorAll('.content-type-tab').forEach(function (t) { t.classList.remove('active'); });
+        document.querySelectorAll('.content-type-panel').forEach(function (p) { p.classList.remove('active'); });
+        tab.classList.add('active');
+        document.querySelector('.content-type-panel[data-panel="' + tab.dataset.panel + '"]').classList.add('active');
+    });
+});
+
+var quill = new Quill('#editor', {
+    theme: 'snow',
+    placeholder: 'Write the lecture notes/article here...',
+    modules: {
+        toolbar: [
+            [{ header: [1, 2, 3, false] }],
+            ['bold', 'italic', 'underline'],
+            [{ list: 'ordered' }, { list: 'bullet' }],
+            ['link', 'image', 'code-block'],
+            ['clean'],
+        ],
+    },
+});
+var ImageBlot = Quill.import('formats/image');
+var toolbar = quill.getModule('toolbar');
+toolbar.addHandler('image', function () {
+    var url = window.prompt('Image URL (https://...)');
+    if (url) {
+        var range = quill.getSelection(true);
+        quill.insertEmbed(range.index, 'image', url, 'user');
+    }
+});
+
+document.getElementById('lectureForm').addEventListener('submit', function () {
+    document.getElementById('contentHidden').value = quill.root.innerHTML === '<p><br></p>' ? '' : quill.root.innerHTML;
+});
+</script>
 <script>if (window.lucide) lucide.createIcons();</script>
 </body>
 </html>

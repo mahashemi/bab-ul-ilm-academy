@@ -14,6 +14,23 @@ if (!$course) {
 }
 
 $errors = [];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_section'])) {
+    verifyCsrf();
+    $oldSection = trim($_POST['old_section'] ?? '');
+    $newSection = trim($_POST['new_section'] ?? '');
+    if ($newSection !== '') {
+        if ($oldSection === '') {
+            $pdo->prepare('UPDATE lessons SET section_title = ? WHERE course_id = ? AND (section_title IS NULL OR section_title = \'\')')
+                ->execute([$newSection, $courseId]);
+        } else {
+            $pdo->prepare('UPDATE lessons SET section_title = ? WHERE course_id = ? AND section_title = ?')
+                ->execute([$newSection, $courseId, $oldSection]);
+        }
+        flash('success', 'Section renamed.');
+    }
+    redirect('add-lesson.php?course_id=' . $courseId);
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['move_lesson'])) {
     verifyCsrf();
     $lid = (int) $_POST['move_lesson'];
@@ -167,12 +184,32 @@ foreach ($lessons as $l) {
     <div class="card" style="margin-bottom:1.5rem;border-color:var(--gold)"><div class="card-body">
         <h3 style="font-size:1rem;margin-bottom:.6rem"><i data-lucide="sparkles" class="lucide-icon"></i> Don't want to type out every lesson by hand?</h3>
         <p style="font-size:.88rem;margin-bottom:.8rem">Copy this prompt into ChatGPT, Claude, DeepSeek, or any AI assistant. It already knows this course's title and description — just tell it how many lessons you want, and it'll write a complete lesson plan as a CSV you can upload directly below.</p>
+
+        <button type="button" class="curriculum-add-btn" style="margin-bottom:1rem" onclick="document.getElementById('pacingPanel').classList.toggle('open')"><i data-lucide="calendar-clock" class="lucide-icon"></i> Add a Schedule (optional)</button>
+        <div id="pacingPanel" class="pacing-panel<?= lessonScheduleNote() ? ' open' : '' ?>">
+            <form method="get">
+                <input type="hidden" name="course_id" value="<?= (int) $courseId ?>">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Number of days</label>
+                        <input type="number" name="days" class="form-control" min="1" value="<?= (int) ($_GET['days'] ?? '') ?: '' ?>" placeholder="e.g. 14">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Minutes of lessons per day</label>
+                        <input type="number" name="minutes_per_day" class="form-control" min="1" value="<?= (int) ($_GET['minutes_per_day'] ?? '') ?: '' ?>" placeholder="e.g. 20">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">Apply to Prompt</button>
+            </form>
+        </div>
+
         <div class="ai-prompt-box">
             <pre id="lessonHelperPrompt"><?= e(renderAiPrompt($pdo, 'course_lessons', [
                 'site_name' => SITE_NAME,
                 'course_title' => $course['title'],
                 'course_description' => $course['description'],
                 'textbook' => $course['textbook'] ?: 'None specified — use your general knowledge of the subject.',
+                'schedule_note' => lessonScheduleNote(),
             ])) ?></pre>
             <button type="button" class="btn btn-outline btn-sm copy-prompt-btn" data-target="lessonHelperPrompt"><i data-lucide="copy" class="lucide-icon"></i> Copy Prompt</button>
         </div>
@@ -187,9 +224,17 @@ foreach ($lessons as $l) {
     <?php else: ?>
         <?php foreach ($sections as $sectionName => $sectionLessons): ?>
         <div class="curriculum-section">
-            <div class="curriculum-section-head" onclick="this.closest('.curriculum-section').classList.toggle('collapsed')">
-                <i data-lucide="chevron-down" class="lucide-icon chevron"></i>
-                <strong><?= e($sectionName ?: 'Untitled Section') ?></strong>
+            <div class="curriculum-section-head">
+                <i data-lucide="chevron-down" class="lucide-icon chevron" onclick="this.closest('.curriculum-section').classList.toggle('collapsed')"></i>
+                <strong class="section-name-display" onclick="this.closest('.curriculum-section').classList.toggle('collapsed')"><?= e($sectionName ?: 'Untitled Section') ?></strong>
+                <form method="post" class="section-rename-form" onclick="event.stopPropagation()" onsubmit="return this.new_section.value.trim() !== ''">
+                    <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+                    <input type="hidden" name="old_section" value="<?= e($sectionName) ?>">
+                    <input type="text" name="new_section" class="form-control" value="<?= e($sectionName) ?>" placeholder="Section name">
+                    <button type="submit" name="rename_section" value="1" class="btn btn-primary btn-sm">Save</button>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="this.closest('.curriculum-section-head').classList.remove('renaming')">Cancel</button>
+                </form>
+                <button type="button" class="icon-btn" data-tip="Rename section" aria-label="Rename section" onclick="event.stopPropagation();this.closest('.curriculum-section-head').classList.add('renaming')"><i data-lucide="pencil" class="lucide-icon"></i></button>
                 <span style="font-size:.78rem;color:var(--text-light)"><?= count($sectionLessons) ?> lecture<?= count($sectionLessons) === 1 ? '' : 's' ?></span>
             </div>
             <div class="curriculum-section-body">

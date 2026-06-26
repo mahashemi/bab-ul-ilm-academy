@@ -183,6 +183,49 @@ function renderActingAsBanner(PDO $pdo): string {
     return ob_get_clean();
 }
 
+// Renders the Udemy-style left sidebar shared across the course
+// creation/edit flow (add-course.php, edit-course.php, and a non-active
+// link out to add-lesson.php for Curriculum). $courseId is null only on
+// add-course.php before the course is first saved — every step besides
+// Basics is disabled (greyed, unclickable) until a course exists, since
+// there's nothing yet to attach a cover/price/curriculum to.
+function renderCourseWizardSidebar(?int $courseId, string $activeStep): string {
+    $groups = [
+        'Plan your course' => [
+            'basics' => ['label' => 'Basics', 'icon' => 'file-text'],
+        ],
+        'Create your content' => [
+            'cover' => ['label' => 'Cover Image', 'icon' => 'image'],
+            'curriculum' => ['label' => 'Curriculum', 'icon' => 'list-checks'],
+        ],
+        'Publish your course' => [
+            'pricing' => ['label' => 'Pricing', 'icon' => 'dollar-sign'],
+            'publish' => ['label' => 'Publish', 'icon' => 'rocket'],
+        ],
+    ];
+    ob_start();
+    ?>
+    <aside class="course-wizard-sidebar">
+        <?php foreach ($groups as $groupLabel => $items): ?>
+        <div class="wizard-group-label"><?= e($groupLabel) ?></div>
+        <?php foreach ($items as $step => $info):
+            $isActive = $step === $activeStep;
+            $isDisabled = $courseId === null && $step !== 'basics';
+            $href = $isDisabled ? '#' : ($step === 'curriculum'
+                ? 'add-lesson.php?course_id=' . $courseId
+                : ($step === 'basics' && $courseId === null ? 'add-course.php' : 'edit-course.php?id=' . $courseId . '&step=' . $step));
+        ?>
+            <a href="<?= e($href) ?>" class="wizard-step<?= $isActive ? ' active' : '' ?><?= $isDisabled ? ' disabled' : '' ?>" <?= $isDisabled ? 'onclick="return false" title="Save Basics first"' : '' ?>>
+                <i data-lucide="<?= e($info['icon']) ?>" class="lucide-icon"></i>
+                <?= e($info['label']) ?>
+            </a>
+        <?php endforeach; ?>
+        <?php endforeach; ?>
+    </aside>
+    <?php
+    return ob_get_clean();
+}
+
 // Registration only collects the minimum (name/email/country/password) — everything
 // else is filled in later from Edit Profile. This scores how much of that optional
 // detail is filled in, so the dashboard can nudge users to complete it.
@@ -1431,20 +1474,20 @@ I'm building the full lesson plan for a course on an online learning platform ca
 Course title: {{course_title}}
 Course description: {{course_description}}
 Reference textbook / material: {{textbook}}
-
-Please act as an experienced curriculum designer and write a complete, well-structured set of lessons for this course. Output ONLY raw CSV text (no explanation, no markdown code fences, no extra commentary) with EXACTLY these column headers, in this order:
+{{schedule_note}}
+Please act as an experienced curriculum designer and write a complete, well-structured set of lessons for this course. You must produce an actual, ready-to-download CSV file — not a description of one, not a sample, not a few example rows with the rest implied. Output ONLY raw CSV text (no explanation, no markdown code fences, no extra commentary) with EXACTLY these column headers, in this order:
 section_title,title,content,video_url,duration_minutes
 
 Rules for each column:
 - section_title: group lessons logically into sections, e.g. "Week 1", "Week 2", or named modules that fit the subject. Use the exact same text on every lesson row within the same section.
 - title: a short, specific lesson title (3-80 characters)
-- content: REAL educational content the student will actually read and learn from — not a placeholder or outline. Write 150-400 words of substantive, accurate teaching material: explain concepts clearly, define key terms, and include a short example where useful. If a reference textbook was given above, align the content and terminology with it.
+- content: REAL educational content the student will actually read and learn from — never a placeholder, summary, outline, or text like "[lesson content here]". Write 150-400 words of substantive, accurate teaching material for EVERY single row: explain concepts clearly, define key terms, and include a short example where useful. If a reference textbook was given above, align the content and terminology with it. Do not shorten or skip this for later rows even if the course has many lessons — every row gets the full treatment.
 - video_url: leave this blank — do not invent a fake video link
 - duration_minutes: a realistic whole number (typically 10-30)
 
-Plan a complete course: decide how many lessons and sections fit the topic and description above (use your judgment — a typical course has 8-20 lessons), and order them so each lesson builds on the previous one.
+Plan a complete course: decide how many lessons and sections fit the topic and description above (use your judgment — a typical course has 8-20 lessons unless a schedule is specified above), and order them so each lesson builds on the previous one.
 
-Generate one row per lesson, in teaching order.
+Generate one full data row per lesson, in teaching order, with real content in every row — this is the actual file I will upload, not a draft.
 TXT,
         ],
         'quiz_questions' => [
@@ -1501,6 +1544,17 @@ function getAiPromptTemplate(PDO $pdo, string $key): array {
     $defaults = aiPromptDefaults();
     $d = $defaults[$key] ?? ['label' => $key, 'placeholders_help' => '', 'template_text' => ''];
     return ['template_key' => $key, 'label' => $d['label'], 'template_text' => $d['template_text'], 'placeholders_help' => $d['placeholders_help']];
+}
+
+// Builds the optional {{schedule_note}} line for the course_lessons prompt
+// from the "pacing" mini-form's ?days=&minutes_per_day= query params, so
+// the AI sizes the lesson plan to an actual course length instead of
+// guessing. Empty string (no extra line) if either value is missing/zero.
+function lessonScheduleNote(): string {
+    $days = (int) ($_GET['days'] ?? 0);
+    $minutesPerDay = (int) ($_GET['minutes_per_day'] ?? 0);
+    if ($days <= 0 || $minutesPerDay <= 0) return '';
+    return "This course should be structured as $days day(s) of lessons, with approximately $minutesPerDay minutes of lesson content per day (combine multiple short lessons per day if needed to reach that target). Use section_title values like \"Day 1\", \"Day 2\", etc. to group each day's lessons.\n";
 }
 
 function renderAiPrompt(PDO $pdo, string $key, array $vars): string {

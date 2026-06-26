@@ -96,7 +96,7 @@ $assignments = $assignments->fetchAll();
 </nav>
 
 <div class="dashboard-wrap">
-    <p style="font-size:.85rem;margin-bottom:.6rem"><a href="edit-course.php?id=<?= $courseId ?>"><i data-lucide="arrow-left" class="lucide-icon"></i> Back to Edit Course</a></p>
+    <p style="font-size:.85rem;margin-bottom:.6rem"><a href="edit-course.php?id=<?= $courseId ?>&step=curriculum"><i data-lucide="arrow-left" class="lucide-icon"></i> Back to Edit Course</a></p>
     <div class="dashboard-header"><h2><i data-lucide="file-edit" class="lucide-icon"></i> Assignments — <?= e($course['title']) ?></h2><p>Give students practical work to apply what they've learned.</p></div>
 
     <?= renderActingAsBanner($pdo) ?>

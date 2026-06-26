@@ -100,7 +100,7 @@ $quizzes = $quizzes->fetchAll();
 </nav>
 
 <div class="dashboard-wrap">
-    <p style="font-size:.85rem;margin-bottom:.6rem"><a href="edit-course.php?id=<?= $courseId ?>"><i data-lucide="arrow-left" class="lucide-icon"></i> Back to Edit Course</a></p>
+    <p style="font-size:.85rem;margin-bottom:.6rem"><a href="edit-course.php?id=<?= $courseId ?>&step=curriculum"><i data-lucide="arrow-left" class="lucide-icon"></i> Back to Edit Course</a></p>
     <div class="dashboard-header"><h2><i data-lucide="list-checks" class="lucide-icon"></i> Quizzes — <?= e($course['title']) ?></h2><p>Test student understanding after a section or at the end of the course.</p></div>
 
     <?= renderActingAsBanner($pdo) ?>

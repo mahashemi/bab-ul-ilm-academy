@@ -47,8 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($teacherId !== (int) $user['id']) {
             logActivity($pdo, $user['id'], 'Created course #' . $newId . ' on behalf of teacher #' . $teacherId);
         }
-        flash('success', 'Course created! It will be reviewed by an admin before it appears publicly. Now add some lessons.');
-        redirect('add-lesson.php?course_id=' . $newId);
+        flash('success', 'Course created! Now add a cover image, then your curriculum.');
+        redirect('edit-course.php?id=' . $newId . '&step=cover');
     }
 }
 ?>
@@ -115,9 +115,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </nav>
 
 <div class="dashboard-wrap">
-    <div class="dashboard-header"><h2><i data-lucide="book-open" class="lucide-icon"></i> Create a New Course</h2><p>Fill in the details below to publish your course. New to this? <a href="tutorial.php" style="color:var(--gold);text-decoration:underline">See the step-by-step tutorial</a>.</p></div>
+    <div class="dashboard-header"><h2><i data-lucide="book-open" class="lucide-icon"></i> Create a New Course</h2><p>Step 1: the basics. New to this? <a href="tutorial.php" style="color:var(--gold);text-decoration:underline">See the step-by-step tutorial</a>.</p></div>
 
     <?= renderActingAsBanner($pdo) ?>
+
+    <div class="course-wizard-layout">
+    <?= renderCourseWizardSidebar(null, 'basics') ?>
+    <div>
 
     <?php if ($errors): ?>
         <div class="alert alert-error"><?php foreach ($errors as $err): ?><div><?= e($err) ?></div><?php endforeach; ?></div>
@@ -197,9 +201,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-primary btn-full">Create Course</button>
+            <button type="submit" class="btn btn-primary btn-full">Create Course &amp; Continue</button>
         </form>
     </div></div>
+
+    </div>
+    </div>
 </div>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <script src="app.js" defer></script>

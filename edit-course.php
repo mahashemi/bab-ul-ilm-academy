@@ -21,6 +21,9 @@ if (!$isOwner && !$isAdmin && !$isActingForThisCourse) {
     die('<p style="font-family:sans-serif;padding:3rem;text-align:center">You do not have permission to edit this course. <a href="course.php?id=' . $id . '">Go back</a></p>');
 }
 
+$step = $_GET['step'] ?? 'basics';
+if (!in_array($step, ['basics', 'cover', 'curriculum', 'pricing', 'publish'], true)) $step = 'basics';
+
 function fetchPreviewCard(PDO $pdo, int $courseId): ?array {
     $stmt = $pdo->prepare(
         "SELECT c.*, COALESCE(u.display_name, u.name) AS teacher_name, s.name AS subject_name, s.icon AS subject_icon,
@@ -50,9 +53,15 @@ foreach ($fields as $row) {
 }
 $errors = [];
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_course'])) {
     verifyCsrf();
+    $pdo->prepare('DELETE FROM courses WHERE id = ?')->execute([$id]);
+    flash('success', 'Course deleted.');
+    redirect('dashboard.php');
+}
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step === 'basics') {
+    verifyCsrf();
     $title       = trim($_POST['title'] ?? '');
     $description = trim($_POST['description'] ?? '');
     $objectives  = trim($_POST['learning_objectives'] ?? '');
@@ -61,30 +70,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $subjectId   = (int) ($_POST['subject_id'] ?? 0);
     $level       = $_POST['level'] ?? 'beginner';
     $language    = trim($_POST['language'] ?? 'English');
-    $price       = (float) ($_POST['price'] ?? 0);
-    $isPublished = isset($_POST['is_published']) ? 1 : 0;
 
     if (mb_strlen($title) < 5) $errors[] = 'Title must be at least 5 characters.';
     if (mb_strlen($description) < 20) $errors[] = 'Description must be at least 20 characters.';
     if (!in_array($level, ['beginner','intermediate','advanced'], true)) $errors[] = 'Invalid level.';
 
     if (!$errors) {
-        $imagePath = handleImageUpload('cover', 'courses') ?? $course['cover_url'];
-        $stmt = $pdo->prepare(
-            'UPDATE courses SET title=?, description=?, learning_objectives=?, requirements=?, textbook=?, subject_id=?, level=?, language=?, price=?, cover_url=?, is_published=?, updated_by=?, updated_at=NOW()
-             WHERE id=?'
-        );
-        $stmt->execute([$title, $description, $objectives ?: null, $requirements ?: null, $textbook ?: null, $subjectId ?: null, $level, $language, $price, $imagePath, $isPublished, $user['id'], $id]);
-        flash('success', 'Course updated.');
-        redirect('course.php?id=' . $id);
+        $pdo->prepare(
+            'UPDATE courses SET title=?, description=?, learning_objectives=?, requirements=?, textbook=?, subject_id=?, level=?, language=?, updated_by=?, updated_at=NOW() WHERE id=?'
+        )->execute([$title, $description, $objectives ?: null, $requirements ?: null, $textbook ?: null, $subjectId ?: null, $level, $language, $user['id'], $id]);
+        flash('success', 'Basics saved. Next, add a cover image.');
+        redirect('edit-course.php?id=' . $id . '&step=cover');
+    }
+    // Validation failed -- redisplay what the teacher just typed instead of stale DB values.
+    $course['title'] = $title;
+    $course['description'] = $description;
+    $course['level'] = $level;
+    $course['language'] = $language;
+    $course['learning_objectives'] = $objectives;
+    $course['requirements'] = $requirements;
+    $course['textbook'] = $textbook;
+    $course['subject_id'] = $subjectId;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step === 'cover') {
+    verifyCsrf();
+    $imagePath = handleImageUpload('cover', 'courses') ?? $course['cover_url'];
+    $pdo->prepare('UPDATE courses SET cover_url=?, updated_by=?, updated_at=NOW() WHERE id=?')->execute([$imagePath, $user['id'], $id]);
+    flash('success', 'Cover image saved. Next, build your curriculum.');
+    redirect('add-lesson.php?course_id=' . $id);
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step === 'pricing') {
+    verifyCsrf();
+    $price = (float) ($_POST['price'] ?? 0);
+    if ($price < 0) $errors[] = 'Price cannot be negative.';
+    if (!$errors) {
+        $pdo->prepare('UPDATE courses SET price=?, updated_by=?, updated_at=NOW() WHERE id=?')->execute([$price, $user['id'], $id]);
+        flash('success', 'Pricing saved. Last step: publish.');
+        redirect('edit-course.php?id=' . $id . '&step=publish');
     }
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_course'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step === 'publish') {
     verifyCsrf();
-    $pdo->prepare('DELETE FROM courses WHERE id = ?')->execute([$id]);
-    flash('success', 'Course deleted.');
-    redirect('dashboard.php');
+    $isPublished = isset($_POST['is_published']) ? 1 : 0;
+    $pdo->prepare('UPDATE courses SET is_published=?, updated_by=?, updated_at=NOW() WHERE id=?')->execute([$isPublished, $user['id'], $id]);
+    flash('success', 'Course settings saved.');
+    redirect('edit-course.php?id=' . $id . '&step=publish');
+}
+
+// Re-fetch so every panel reflects current DB state -- skipped only when basics
+// validation just failed, so the teacher's just-typed (invalid) input stays on screen.
+if (!$errors) {
+    $stmt = $pdo->prepare('SELECT * FROM courses WHERE id = ?');
+    $stmt->execute([$id]);
+    $course = $stmt->fetch();
 }
 
 $lessons = $pdo->prepare('SELECT * FROM lessons WHERE course_id = ? ORDER BY sort_order ASC');
@@ -104,13 +145,21 @@ $enrollmentCount->execute([$id]);
 $enrollmentCount = (int) $enrollmentCount->fetchColumn();
 
 $previewCard = fetchPreviewCard($pdo, $id);
+
+$stepTitles = [
+    'basics' => 'Basics',
+    'cover' => 'Cover Image',
+    'curriculum' => 'Curriculum',
+    'pricing' => 'Pricing',
+    'publish' => 'Publish',
+];
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Edit Course — <?= e(SITE_NAME) ?></title>
+<title><?= e($stepTitles[$step]) ?> — Edit Course — <?= e(SITE_NAME) ?></title>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="assets/icon-green-180.png">
@@ -169,7 +218,7 @@ $previewCard = fetchPreviewCard($pdo, $id);
 
 <div class="dashboard-wrap">
     <div class="dashboard-header">
-        <h2><i data-lucide="pencil" class="lucide-icon"></i> Edit Course</h2>
+        <h2><i data-lucide="pencil" class="lucide-icon"></i> <?= e($course['title']) ?></h2>
         <p><?= $isAdmin && !$isOwner ? 'You are editing this course as an admin.' : 'Update your course details below.' ?> <a href="tutorial.php" style="color:var(--gold);text-decoration:underline">View tutorial</a></p>
     </div>
 
@@ -177,154 +226,186 @@ $previewCard = fetchPreviewCard($pdo, $id);
 
     <?php if (flash('success')): ?><div class="alert alert-success"><?= e(flash('success')) ?></div><?php endif; ?>
     <?php if (flash('error')): ?><div class="alert alert-error"><?= e(flash('error')) ?></div><?php endif; ?>
+    <?php if ($errors): ?><div class="alert alert-error"><?php foreach ($errors as $err): ?><div><?= e($err) ?></div><?php endforeach; ?></div><?php endif; ?>
 
-    <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.6rem;margin-bottom:<?= $lessons ? '1rem' : '0' ?>">
-            <h3 style="font-size:1.05rem;color:var(--green-deep)"><i data-lucide="clipboard-list" class="lucide-icon"></i> Lessons (<?= count($lessons) ?>)</h3>
-            <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-                <a href="bulk-lessons.php?course_id=<?= $id ?>" class="btn btn-outline btn-sm"><i data-lucide="upload" class="lucide-icon"></i> Bulk Upload</a>
-                <a href="add-lesson.php?course_id=<?= $id ?>" class="btn btn-primary btn-sm"><i data-lucide="plus" class="lucide-icon"></i> Add / Manage Lessons</a>
-            </div>
-        </div>
-        <?php if ($lessons): ?>
-        <ul class="lesson-list" style="margin:0 -1.2rem">
-            <?php foreach ($lessons as $i => $l): ?>
-            <li class="lesson-item">
-                <div class="lesson-num"><?= $i + 1 ?></div>
-                <div class="lesson-title" style="flex:1"><a href="edit-lesson.php?id=<?= (int) $l['id'] ?>"><?= e($l['title']) ?></a></div>
-                <?php if ((int) $l['duration_minutes'] > 0): ?><span style="font-size:.78rem;color:var(--text-light)"><?= (int) $l['duration_minutes'] ?> min</span><?php endif; ?>
-                <a href="edit-lesson.php?id=<?= (int) $l['id'] ?>" class="icon-btn" data-tip="Edit lesson" aria-label="Edit lesson" style="margin-left:.6rem"><i data-lucide="pencil" class="lucide-icon"></i></a>
-            </li>
-            <?php endforeach; ?>
-        </ul>
-        <?php else: ?>
-            <p style="font-size:.88rem;color:var(--text-light)">No lessons yet — students can't take this course until you add at least one.</p>
-        <?php endif; ?>
-    </div></div>
+    <div class="course-wizard-layout">
+    <?= renderCourseWizardSidebar($id, $step) ?>
+    <div>
 
-    <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
-        <div style="display:flex;gap:1rem;flex-wrap:wrap">
-            <a href="manage-quizzes.php?course_id=<?= $id ?>" class="btn btn-outline btn-sm"><i data-lucide="list-checks" class="lucide-icon"></i> Quizzes (<?= $quizCount ?>)</a>
-            <a href="manage-assignments.php?course_id=<?= $id ?>" class="btn btn-outline btn-sm"><i data-lucide="file-edit" class="lucide-icon"></i> Assignments (<?= $assignmentCount ?>)</a>
-            <a href="bulk-assessments.php?course_id=<?= $id ?>" class="btn btn-outline btn-sm"><i data-lucide="upload" class="lucide-icon"></i> Bulk Upload Quizzes/Assignments</a>
-        </div>
-    </div></div>
+    <?php if ($step === 'basics'): ?>
+        <div class="card"><div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
 
-    <?php if ($previewCard): ?>
-    <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
-        <h3 style="font-size:1.05rem;margin-bottom:.4rem;color:var(--green-deep)"><i data-lucide="eye" class="lucide-icon"></i> Tile Preview</h3>
-        <p style="font-size:.85rem;color:var(--text-light);margin-bottom:1rem">This is exactly how your course looks in the catalog — hover it to see the quick-look card students see. Cover images are cropped to fill the tile, so check that the important part of your photo isn't cut off.</p>
-        <div style="max-width:300px">
-            <?= renderCourseCard($previewCard) ?>
-        </div>
-    </div></div>
-    <?php endif; ?>
-
-    <?php if ($errors): ?>
-        <div class="alert alert-error"><?php foreach ($errors as $err): ?><div><?= e($err) ?></div><?php endforeach; ?></div>
-    <?php endif; ?>
-
-    <div class="card"><div class="card-body">
-        <form method="post" enctype="multipart/form-data">
-            <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
-
-            <div class="form-group">
-                <label class="form-label">Cover Image</label>
-                <?php if ($course['cover_url']): ?>
-                    <img src="<?= e($course['cover_url']) ?>" style="max-width:200px;border-radius:8px;margin-bottom:.6rem;display:block">
-                <?php endif; ?>
-                <input type="file" name="cover" class="form-control" accept="image/jpeg,image/png,image/webp">
-                <div class="form-hint">Upload a new cover to replace the current one, or leave blank to keep it.<br>Recommended size: 1280×720 (16:9) — the image is cropped to fill the tile, so keep the important part centered. See the Tile Preview below.</div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Course Title</label>
-                <input type="text" name="title" class="form-control" value="<?= e($_POST['title'] ?? $course['title']) ?>" required>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Description</label>
-                <textarea name="description" class="form-control" required><?= e($_POST['description'] ?? $course['description']) ?></textarea>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">What You'll Learn (one per line)</label>
-                <textarea name="learning_objectives" class="form-control"><?= e($_POST['learning_objectives'] ?? $course['learning_objectives'] ?? '') ?></textarea>
-                <div class="form-hint">Shown as a checklist on the course page. One bullet per line.</div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Requirements (one per line)</label>
-                <textarea name="requirements" class="form-control"><?= e($_POST['requirements'] ?? $course['requirements'] ?? '') ?></textarea>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Textbook / Reference Material (optional)</label>
-                <input type="text" name="textbook" class="form-control" placeholder="e.g. Nurani Qaida, 1st Edition" value="<?= e($_POST['textbook'] ?? $course['textbook'] ?? '') ?>">
-                <div class="form-hint">Used to ground the AI lesson-writing helper in the right material.</div>
-            </div>
-
-            <div class="form-row">
                 <div class="form-group">
-                    <label class="form-label">Subject</label>
-                    <select name="subject_id" class="form-control">
-                        <option value="">Select subject</option>
-                        <?php foreach ($grouped as $g): ?>
-                            <?php if (!empty($g['subjects'])): ?>
-                            <optgroup label="<?= e($g['label']) ?>">
-                                <?php foreach ($g['subjects'] as $s): ?>
-                                    <option value="<?= (int) $s['subject_id'] ?>" <?= $course['subject_id'] == $s['subject_id'] ? 'selected' : '' ?>><?= e($s['subject_name']) ?></option>
-                                <?php endforeach; ?>
-                            </optgroup>
-                            <?php endif; ?>
-                        <?php endforeach; ?>
-                    </select>
+                    <label class="form-label">Course Title</label>
+                    <input type="text" name="title" class="form-control" value="<?= e($course['title']) ?>" required>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Level</label>
-                    <select name="level" class="form-control">
-                        <?php foreach (['beginner'=>'Beginner','intermediate'=>'Intermediate','advanced'=>'Advanced'] as $val=>$label): ?>
-                            <option value="<?= $val ?>" <?= $course['level'] === $val ? 'selected' : '' ?>><?= $label ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-            </div>
 
-            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea name="description" class="form-control" required><?= e($course['description']) ?></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">What You'll Learn (one per line)</label>
+                    <textarea name="learning_objectives" class="form-control"><?= e($course['learning_objectives'] ?? '') ?></textarea>
+                    <div class="form-hint">Shown as a checklist on the course page. One bullet per line.</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Requirements (one per line)</label>
+                    <textarea name="requirements" class="form-control"><?= e($course['requirements'] ?? '') ?></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Textbook / Reference Material (optional)</label>
+                    <input type="text" name="textbook" class="form-control" placeholder="e.g. Nurani Qaida, 1st Edition" value="<?= e($course['textbook'] ?? '') ?>">
+                    <div class="form-hint">Used to ground the AI lesson-writing helper in the right material.</div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Subject</label>
+                        <select name="subject_id" class="form-control">
+                            <option value="">Select subject</option>
+                            <?php foreach ($grouped as $g): ?>
+                                <?php if (!empty($g['subjects'])): ?>
+                                <optgroup label="<?= e($g['label']) ?>">
+                                    <?php foreach ($g['subjects'] as $s): ?>
+                                        <option value="<?= (int) $s['subject_id'] ?>" <?= $course['subject_id'] == $s['subject_id'] ? 'selected' : '' ?>><?= e($s['subject_name']) ?></option>
+                                    <?php endforeach; ?>
+                                </optgroup>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Level</label>
+                        <select name="level" class="form-control">
+                            <?php foreach (['beginner'=>'Beginner','intermediate'=>'Intermediate','advanced'=>'Advanced'] as $val=>$label): ?>
+                                <option value="<?= $val ?>" <?= $course['level'] === $val ? 'selected' : '' ?>><?= $label ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label class="form-label">Language</label>
-                    <input type="text" name="language" class="form-control" value="<?= e($_POST['language'] ?? $course['language']) ?>">
+                    <input type="text" name="language" class="form-control" value="<?= e($course['language']) ?>">
                 </div>
+
+                <button type="submit" class="btn btn-primary">Save &amp; Continue</button>
+            </form>
+        </div></div>
+
+    <?php elseif ($step === 'cover'): ?>
+        <div class="card"><div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+                <div class="form-group">
+                    <label class="form-label">Cover Image</label>
+                    <?php if ($course['cover_url']): ?>
+                        <img src="<?= e($course['cover_url']) ?>" style="max-width:280px;border-radius:8px;margin-bottom:.6rem;display:block">
+                    <?php endif; ?>
+                    <input type="file" name="cover" class="form-control" accept="image/jpeg,image/png,image/webp">
+                    <div class="form-hint">JPG, PNG, or WEBP. Max 5MB. Leave blank to keep the current cover (or a subject icon if none set).<br>Recommended size: 1280×720 (16:9) — cropped to fill the catalog tile.</div>
+                </div>
+                <button type="submit" class="btn btn-primary">Save &amp; Continue</button>
+            </form>
+        </div></div>
+
+        <?php if ($previewCard): ?>
+        <div class="card" style="margin-top:1.5rem"><div class="card-body">
+            <h3 style="font-size:1.05rem;margin-bottom:.4rem;color:var(--green-deep)"><i data-lucide="eye" class="lucide-icon"></i> Tile Preview</h3>
+            <p style="font-size:.85rem;color:var(--text-light);margin-bottom:1rem">This is exactly how your course looks in the catalog.</p>
+            <div style="max-width:300px"><?= renderCourseCard($previewCard) ?></div>
+        </div></div>
+        <?php endif; ?>
+
+    <?php elseif ($step === 'curriculum'): ?>
+        <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.6rem;margin-bottom:<?= $lessons ? '1rem' : '0' ?>">
+                <h3 style="font-size:1.05rem;color:var(--green-deep)"><i data-lucide="clipboard-list" class="lucide-icon"></i> Lessons (<?= count($lessons) ?>)</h3>
+                <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+                    <a href="bulk-lessons.php?course_id=<?= $id ?>" class="btn btn-outline btn-sm"><i data-lucide="upload" class="lucide-icon"></i> Bulk Upload</a>
+                    <a href="add-lesson.php?course_id=<?= $id ?>" class="btn btn-primary btn-sm"><i data-lucide="plus" class="lucide-icon"></i> Add / Manage Lessons</a>
+                </div>
+            </div>
+            <?php if ($lessons): ?>
+            <ul class="lesson-list" style="margin:0 -1.2rem">
+                <?php foreach ($lessons as $i => $l): ?>
+                <li class="lesson-item">
+                    <div class="lesson-num"><?= $i + 1 ?></div>
+                    <div class="lesson-title" style="flex:1"><a href="edit-lesson.php?id=<?= (int) $l['id'] ?>"><?= e($l['title']) ?></a></div>
+                    <?php if ((int) $l['duration_minutes'] > 0): ?><span style="font-size:.78rem;color:var(--text-light)"><?= (int) $l['duration_minutes'] ?> min</span><?php endif; ?>
+                    <a href="edit-lesson.php?id=<?= (int) $l['id'] ?>" class="icon-btn" data-tip="Edit lesson" aria-label="Edit lesson" style="margin-left:.6rem"><i data-lucide="pencil" class="lucide-icon"></i></a>
+                </li>
+                <?php endforeach; ?>
+            </ul>
+            <?php else: ?>
+                <p style="font-size:.88rem;color:var(--text-light)">No lessons yet — students can't take this course until you add at least one.</p>
+            <?php endif; ?>
+        </div></div>
+
+        <div class="card"><div class="card-body">
+            <h3 style="font-size:1.05rem;margin-bottom:.8rem;color:var(--green-deep)">Quizzes &amp; Assignments</h3>
+            <div style="display:flex;gap:1rem;flex-wrap:wrap">
+                <a href="manage-quizzes.php?course_id=<?= $id ?>" class="btn btn-outline btn-sm"><i data-lucide="list-checks" class="lucide-icon"></i> Quizzes (<?= $quizCount ?>)</a>
+                <a href="manage-assignments.php?course_id=<?= $id ?>" class="btn btn-outline btn-sm"><i data-lucide="file-edit" class="lucide-icon"></i> Assignments (<?= $assignmentCount ?>)</a>
+                <a href="bulk-assessments.php?course_id=<?= $id ?>" class="btn btn-outline btn-sm"><i data-lucide="upload" class="lucide-icon"></i> Bulk Upload Quizzes/Assignments</a>
+            </div>
+        </div></div>
+
+    <?php elseif ($step === 'pricing'): ?>
+        <div class="card"><div class="card-body">
+            <form method="post">
+                <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
                 <div class="form-group">
                     <label class="form-label">Price ($) — 0 for free</label>
-                    <input type="number" name="price" class="form-control" min="0" step="0.01" value="<?= e($_POST['price'] ?? $course['price']) ?>">
+                    <input type="number" name="price" class="form-control" min="0" step="0.01" value="<?= e($course['price']) ?>">
+                    <div class="form-hint">Students checkout through the platform's own Stripe/PayPal integration once configured — see course.php's buy box.</div>
                 </div>
-            </div>
+                <button type="submit" class="btn btn-primary">Save &amp; Continue</button>
+            </form>
+        </div></div>
 
-            <div class="form-group">
-                <label class="form-label" style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
-                    <input type="checkbox" name="is_published" value="1" style="width:auto" <?= $course['is_published'] ? 'checked' : '' ?>>
-                    Published (visible in course catalog)
-                </label>
-            </div>
+    <?php elseif ($step === 'publish'): ?>
+        <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
+            <form method="post">
+                <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+                <div class="form-group">
+                    <label class="form-label" style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
+                        <input type="checkbox" name="is_published" value="1" style="width:auto" <?= $course['is_published'] ? 'checked' : '' ?>>
+                        Published (visible in course catalog)
+                    </label>
+                    <div class="form-hint">New courses still require admin review before they appear publicly, regardless of this toggle.</div>
+                </div>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </form>
+        </div></div>
 
-            <div style="display:flex;gap:.8rem">
-                <button type="submit" class="btn btn-primary">Save Changes</button>
-                <a href="course.php?id=<?= $id ?>" class="btn btn-outline">Cancel</a>
-            </div>
-        </form>
-    </div></div>
+        <?php if ($previewCard): ?>
+        <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
+            <h3 style="font-size:1.05rem;margin-bottom:.4rem;color:var(--green-deep)"><i data-lucide="eye" class="lucide-icon"></i> Tile Preview</h3>
+            <div style="max-width:300px"><?= renderCourseCard($previewCard) ?></div>
+        </div></div>
+        <?php endif; ?>
 
-    <div class="card" style="border-color:#c62828"><div class="card-body">
-        <h3 style="font-size:1rem;color:#c62828;margin-bottom:.5rem"><i data-lucide="triangle-alert" class="lucide-icon"></i> Danger Zone</h3>
-        <p style="font-size:.85rem;color:var(--text-mid);margin-bottom:.8rem">
-            Deleting this course permanently removes it along with all <?= count($lessons) ?> lesson(s)<?= $enrollmentCount > 0 ? ', and unenrolls ' . $enrollmentCount . ' student(s)' : '' ?>. This cannot be undone.
-        </p>
-        <form method="post" onsubmit="return confirm('Permanently delete this course<?= $enrollmentCount > 0 ? ' and unenroll ' . $enrollmentCount . ' student(s)' : '' ?>? This cannot be undone.')">
-            <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
-            <button type="submit" name="delete_course" value="1" class="btn btn-outline" style="color:#c62828;border-color:#c62828"><i data-lucide="trash-2" class="lucide-icon"></i> Delete This Course</button>
-        </form>
-    </div></div>
+        <div class="card" style="border-color:#c62828"><div class="card-body">
+            <h3 style="font-size:1rem;color:#c62828;margin-bottom:.5rem"><i data-lucide="triangle-alert" class="lucide-icon"></i> Danger Zone</h3>
+            <p style="font-size:.85rem;color:var(--text-mid);margin-bottom:.8rem">
+                Deleting this course permanently removes it along with all <?= count($lessons) ?> lesson(s)<?= $enrollmentCount > 0 ? ', and unenrolls ' . $enrollmentCount . ' student(s)' : '' ?>. This cannot be undone.
+            </p>
+            <form method="post" onsubmit="return confirm('Permanently delete this course<?= $enrollmentCount > 0 ? ' and unenroll ' . $enrollmentCount . ' student(s)' : '' ?>? This cannot be undone.')">
+                <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+                <button type="submit" name="delete_course" value="1" class="btn btn-outline" style="color:#c62828;border-color:#c62828"><i data-lucide="trash-2" class="lucide-icon"></i> Delete This Course</button>
+            </form>
+        </div></div>
+    <?php endif; ?>
+
+    </div>
+    </div>
 </div>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <script src="app.js" defer></script>

@@ -509,9 +509,14 @@ img { max-width: 100%; height: auto; display: block; }
     background: var(--cream); cursor: pointer; user-select: none;
 }
 .curriculum-section-head:hover { background: #f0ead9; }
-.curriculum-section-head .chevron { transition: transform .15s; color: var(--text-light); }
+.curriculum-section-head .chevron { transition: transform .15s; color: var(--text-light); cursor: pointer; }
 .curriculum-section.collapsed .curriculum-section-head .chevron { transform: rotate(-90deg); }
-.curriculum-section-head strong { font-size: .92rem; color: var(--green-deep); flex: 1; }
+.curriculum-section-head strong.section-name-display { font-size: .92rem; color: var(--green-deep); flex: 1; cursor: pointer; }
+.curriculum-section-head .section-rename-form { display: none; flex: 1; gap: .4rem; align-items: center; }
+.curriculum-section-head .section-rename-form .form-control { padding: .35rem .6rem; height: auto; font-size: .85rem; }
+.curriculum-section-head.renaming strong.section-name-display,
+.curriculum-section-head.renaming > button.icon-btn { display: none; }
+.curriculum-section-head.renaming .section-rename-form { display: flex; }
 .curriculum-section-body { padding: .6rem; }
 .curriculum-section.collapsed .curriculum-section-body { display: none; }
 .curriculum-lecture {
@@ -538,6 +543,23 @@ img { max-width: 100%; height: auto; display: block; }
 .content-type-tab.active { color: var(--green-deep); border-bottom-color: var(--green-deep); }
 .content-type-panel { display: none; }
 .content-type-panel.active { display: block; }
+
+.pacing-panel { display: none; border: 1px solid var(--border); border-radius: 10px; padding: 1rem; background: var(--cream); margin-bottom: 1.2rem; }
+.pacing-panel.open { display: block; }
+
+/* ── Course Wizard (sidebar + step content) ── */
+.course-wizard-layout { display: grid; grid-template-columns: 230px 1fr; gap: 1.8rem; align-items: start; }
+.course-wizard-sidebar { position: sticky; top: 1rem; display: flex; flex-direction: column; gap: .15rem; }
+.wizard-group-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-light); margin: 1rem 0 .4rem; }
+.wizard-group-label:first-child { margin-top: 0; }
+.wizard-step {
+    display: flex; align-items: center; gap: .6rem; padding: .55rem .7rem; border-radius: 8px;
+    font-size: .87rem; font-weight: 600; color: var(--text-mid); text-decoration: none; transition: var(--transition);
+}
+.wizard-step:hover { background: var(--cream); }
+.wizard-step.active { background: var(--green-deep); color: var(--white); }
+.wizard-step.disabled { color: var(--text-light); opacity: .55; cursor: not-allowed; }
+.wizard-step.disabled:hover { background: none; }
 
 .video-upload-placeholder {
     border: 1.5px dashed var(--border); border-radius: 8px; padding: 1.2rem;
@@ -942,6 +964,31 @@ footer { background: var(--green-deep); color: rgba(255,255,255,.75); padding: 3
     .footer-grid { grid-template-columns: 1fr; gap: 1.8rem; text-align: center; }
     .footer-links { display: flex; flex-direction: column; align-items: center; gap: .3rem; }
     .footer-links li { margin-bottom: 0; }
+
+    /* ── Course wizard: vertical sidebar -> horizontal scrollable tab bar
+       (same pattern as the admin .tabs scroller above) ── */
+    .course-wizard-layout { grid-template-columns: 1fr; gap: 1rem; }
+    .course-wizard-sidebar {
+        position: static; flex-direction: row; overflow-x: auto; scrollbar-width: none;
+        gap: .4rem; padding-bottom: .3rem; margin-bottom: .5rem;
+    }
+    .course-wizard-sidebar::-webkit-scrollbar { display: none; }
+    .wizard-group-label { display: none; }
+    .wizard-step { flex: 0 0 auto; white-space: nowrap; }
+
+    /* ── Curriculum builder: let lecture rows wrap instead of squeezing ── */
+    .curriculum-section-head { flex-wrap: wrap; }
+    .curriculum-section-head .section-rename-form { flex-basis: 100%; order: 4; margin-top: .5rem; }
+    .curriculum-lecture { flex-wrap: wrap; }
+    .curriculum-lecture-title { flex: 1 1 100%; }
+
+    /* ── Content-type tabs + Quill toolbar: scroll instead of clipping ── */
+    .content-type-tabs { overflow-x: auto; scrollbar-width: none; }
+    .content-type-tabs::-webkit-scrollbar { display: none; }
+    .content-type-tab { flex: 0 0 auto; white-space: nowrap; }
+    .ql-toolbar.ql-snow { overflow-x: auto; flex-wrap: nowrap; white-space: nowrap; }
+
+    .lesson-slides-card { flex-wrap: wrap; }
 }
 @media (max-width: 420px) {
     .hero h1 { font-size: 1.4rem; }

@@ -81,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             logActivity($pdo, $user['id'], 'Bulk-added ' . $created . ' lesson(s) to course #' . $courseId . ' on behalf of teacher #' . $teacherId);
         }
         flash('success', $created . ' lesson(s) added to "' . $course['title'] . '"!');
-        redirect('edit-course.php?id=' . $courseId);
+        redirect('edit-course.php?id=' . $courseId . '&step=curriculum');
     }
 }
 ?>
@@ -142,7 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </nav>
 
 <div class="dashboard-wrap" style="max-width:900px">
-    <p style="font-size:.85rem;margin-bottom:.6rem"><a href="edit-course.php?id=<?= $courseId ?>"><i data-lucide="arrow-left" class="lucide-icon"></i> Back to <?= e($course['title']) ?></a></p>
+    <p style="font-size:.85rem;margin-bottom:.6rem"><a href="edit-course.php?id=<?= $courseId ?>&step=curriculum"><i data-lucide="arrow-left" class="lucide-icon"></i> Back to <?= e($course['title']) ?></a></p>
     <div class="dashboard-header">
         <h2><i data-lucide="upload" class="lucide-icon"></i> Bulk Add Lessons</h2>
         <p><?= e($course['title']) ?> · Upload a CSV to add many lessons at once instead of typing each one individually.</p>
@@ -176,12 +176,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
         <h3 style="font-size:1rem;margin-bottom:.8rem"><i data-lucide="sparkles" class="lucide-icon"></i> Step 2 (Optional): Let an AI Fill It In For You</h3>
         <p style="font-size:.88rem;margin-bottom:.8rem">Copy this prompt, tell the AI your topic and how many lessons you want, and it will write the full lesson plan as a CSV.</p>
+
+        <button type="button" class="curriculum-add-btn" style="margin-bottom:1rem" onclick="document.getElementById('pacingPanel').classList.toggle('open')"><i data-lucide="calendar-clock" class="lucide-icon"></i> Add a Schedule (optional)</button>
+        <div id="pacingPanel" class="pacing-panel<?= lessonScheduleNote() ? ' open' : '' ?>">
+            <form method="get">
+                <input type="hidden" name="course_id" value="<?= (int) $courseId ?>">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Number of days</label>
+                        <input type="number" name="days" class="form-control" min="1" value="<?= (int) ($_GET['days'] ?? '') ?: '' ?>" placeholder="e.g. 14">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Minutes of lessons per day</label>
+                        <input type="number" name="minutes_per_day" class="form-control" min="1" value="<?= (int) ($_GET['minutes_per_day'] ?? '') ?: '' ?>" placeholder="e.g. 20">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">Apply to Prompt</button>
+            </form>
+        </div>
+
         <div class="ai-prompt-box">
             <pre id="lessonPrompt"><?= e(renderAiPrompt($pdo, 'course_lessons', [
                 'site_name' => SITE_NAME,
                 'course_title' => $course['title'],
                 'course_description' => $course['description'],
                 'textbook' => $course['textbook'] ?: 'None specified — use your general knowledge of the subject.',
+                'schedule_note' => lessonScheduleNote(),
             ])) ?></pre>
             <button type="button" class="btn btn-outline btn-sm copy-prompt-btn" data-target="lessonPrompt"><i data-lucide="copy" class="lucide-icon"></i> Copy Prompt</button>
         </div>

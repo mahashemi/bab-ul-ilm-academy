@@ -231,7 +231,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $lessonCount > 0) {
 </nav>
 
 <div class="dashboard-wrap" style="max-width:900px">
-    <p style="font-size:.85rem;margin-bottom:.6rem"><a href="edit-course.php?id=<?= $courseId ?>"><i data-lucide="arrow-left" class="lucide-icon"></i> Back to <?= e($course['title']) ?></a></p>
+    <p style="font-size:.85rem;margin-bottom:.6rem"><a href="edit-course.php?id=<?= $courseId ?>&step=curriculum"><i data-lucide="arrow-left" class="lucide-icon"></i> Back to <?= e($course['title']) ?></a></p>
     <div class="dashboard-header">
         <h2><i data-lucide="upload" class="lucide-icon"></i> Bulk Add Quizzes &amp; Assignments</h2>
         <p><?= e($course['title']) ?></p>

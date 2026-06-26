@@ -712,9 +712,12 @@ footer { background: var(--green-deep); color: rgba(255,255,255,.75); padding: 3
        form into a full-screen search overlay -- see .nav-search.search-open
        below and the toggle logic in app.js. No separate markup needed
        since it's the same .nav-search element on every page already. */
+    /* Logo was scaled to ~50% of navbar height here vs ~76% on desktop
+       (58px in a 76px bar) -- bumped to match that same proportion so it
+       doesn't look disproportionately tiny next to the icon buttons. */
     .navbar { padding: 0 1rem; height: 60px; flex-direction: row; align-items: center; gap: .5rem; }
     .nav-brand { font-size: 1.05rem; max-width: 50vw; }
-    .nav-logo { height: 30px; }
+    .nav-logo { height: 44px; }
     .nav-brand small { font-size: .68rem; }
     .nav-toggle { order: 3; display: block; }
     .nav-search {
@@ -836,7 +839,7 @@ footer { background: var(--green-deep); color: rgba(255,255,255,.75); padding: 3
 @media (max-width: 420px) {
     .hero h1 { font-size: 1.4rem; }
     .nav-brand { font-size: 1rem; max-width: 50vw; }
-    .nav-logo { height: 26px; }
+    .nav-logo { height: 38px; }
     .nav-search.search-open input::placeholder { font-size: .76rem; }
     .btn { padding: .6rem 1.2rem; font-size: .88rem; }
 }

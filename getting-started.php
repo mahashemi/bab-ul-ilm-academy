@@ -4,41 +4,27 @@ $user = auth();
 
 $ROLE_GUIDES = [
     'student' => [
-        'icon' => 'graduation-cap', 'label' => 'Student', 'desc' => 'I want to learn',
+        'icon' => 'graduation-cap', 'label' => 'Learn', 'desc' => 'I want to learn',
         'steps' => [
-            ['icon' => 'user-plus', 'title' => 'Create your free account', 'body' => 'Click <a href="register.php">Register</a>, choose "Student," and fill in your name, email, country, and a password. We\'ll send a verification link to your email — click it before logging in. (You can also skip this with one click via <a href="login.php">Google, Facebook, Microsoft, or GitHub</a>, if enabled.)'],
+            ['icon' => 'user-plus', 'title' => 'Create your free account', 'body' => 'Click <a href="register.php">Register</a> and fill in your name, email, country, and a password — every account starts the same way, there\'s no role to choose. We\'ll send a verification link to your email — click it before logging in. (You can also skip this with one click via <a href="login.php">Google, Facebook, Microsoft, or GitHub</a>, if enabled.)'],
             ['icon' => 'sparkles', 'title' => 'Tell us what you\'re interested in (optional)', 'body' => 'From your Dashboard, click "Add occupation and interests" to pick your fields of study. This shapes the "Recommended for You" courses on your Dashboard and homepage.'],
             ['icon' => 'search', 'title' => 'Find a course', 'body' => 'Browse <a href="courses.php">All Courses</a> and use the filters (level, language, price) or the search bar, or hover/tap a category from the home page to drill into a field and subject.'],
-            ['icon' => 'log-in', 'title' => 'Enroll', 'body' => 'Open a course page and click Enroll. Free courses unlock immediately; paid courses currently rely on you and the teacher arranging payment directly — there\'s no in-app checkout yet.'],
+            ['icon' => 'log-in', 'title' => 'Enroll', 'body' => 'Open a course page and click Enroll — free courses unlock immediately. For a paid course, click Buy Now or Add to Cart and check out securely with a card (Stripe) or PayPal.'],
             ['icon' => 'clipboard-list', 'title' => 'Learn at your own pace', 'body' => 'Mark each lesson complete as you go, take any quizzes, and submit assignments for grading. Your Dashboard tracks exactly how far through each course you are.'],
             ['icon' => 'message-circle', 'title' => 'Get help when you\'re stuck', 'body' => 'Message your teacher directly, post in the course\'s Class Discussion, or ask in its Q&A — all from the course page.'],
             ['icon' => 'award', 'title' => 'Earn points, badges, and certificates', 'body' => 'Enrolling, completing lessons, and passing quizzes earn you points and badges (see your Dashboard). Finish 100% of a course\'s lessons and we automatically issue a certificate with a verification code anyone can check.'],
         ],
     ],
     'teacher' => [
-        'icon' => 'book-open', 'label' => 'Teacher', 'desc' => 'I want to teach',
+        'icon' => 'book-open', 'label' => 'Teach', 'desc' => 'I want to teach too',
         'steps' => [
-            ['icon' => 'user-plus', 'title' => 'Create your free account', 'body' => 'Click <a href="register.php">Register</a>, choose "Teacher," and describe your teaching qualification (at least 5 characters — a sentence is fine). Verify your email before logging in.'],
-            ['icon' => 'book-open', 'title' => 'Create your first course', 'body' => 'From your Dashboard, click "+ New Course." For the full walkthrough — including how to let an AI help write your lessons, and how to bulk-upload a whole course from a CSV instead of typing everything by hand — see our <a href="tutorial.php">step-by-step Course Creation Tutorial</a>.'],
-            ['icon' => 'send', 'title' => 'Submit for review', 'body' => 'Once your course has at least one lesson, an admin reviews it before it appears in the public catalog. You\'ll be notified once it\'s approved.'],
+            ['icon' => 'user-plus', 'title' => 'Create your free account', 'body' => 'Same as everyone — click <a href="register.php">Register</a> and sign up. Every account can already browse and enroll in courses; teaching is something you add on afterward, whenever you\'re ready.'],
+            ['icon' => 'presentation', 'title' => 'Apply to become an instructor', 'body' => 'From your Dashboard\'s account menu, click "Become an Instructor," then fill in a short professional headline and describe your teaching qualification. This goes to an admin for review.'],
+            ['icon' => 'hourglass', 'title' => 'Wait for approval', 'body' => 'You\'ll keep full access to everything you can already do (browsing, enrolling, messaging) while your application is reviewed. Course-creation tools unlock automatically the moment you\'re approved — no need to re-apply.'],
+            ['icon' => 'book-open', 'title' => 'Create your first course', 'body' => 'Once approved, click "+ New Course" from your Dashboard. The wizard walks you through Basics, Details, Cover Image, Curriculum, Pricing, and Publishing one step at a time, saving as you go. For the full walkthrough — including how to let an AI help write your lessons, and how to bulk-upload a whole course from a CSV — see our <a href="tutorial.php">step-by-step Course Creation Tutorial</a>.'],
+            ['icon' => 'send', 'title' => 'Submit for review', 'body' => 'Once your course has at least one lesson and you publish it, an admin reviews it before it appears in the public catalog. You\'ll be notified once it\'s approved.'],
             ['icon' => 'users', 'title' => 'Engage your students', 'body' => 'Answer direct messages, host live Class Discussion, answer questions in each course\'s Q&A, and grade quizzes/assignments as students submit them.'],
             ['icon' => 'headset', 'title' => 'Need a hand building your course?', 'body' => 'If it\'s easier to describe your course over a phone call than to type it all out yourself, reach out via <a href="feedback.php">Feedback</a> — our support team can build the course, lessons, quizzes, and assignments for you directly, attributed to your account.'],
-        ],
-    ],
-    'parent' => [
-        'icon' => 'users', 'label' => 'Parent', 'desc' => 'I support a learner',
-        'steps' => [
-            ['icon' => 'user-plus', 'title' => 'Create your free account', 'body' => 'Click <a href="register.php">Register</a> and choose "Parent." Verify your email before logging in.'],
-            ['icon' => 'search', 'title' => 'Browse & enroll', 'body' => 'A Parent account works just like a Student account for enrollment — browse <a href="courses.php">All Courses</a>, open one, and click Enroll. There isn\'t a separate "add my child" profile yet, so many families either enroll under the parent\'s own account or register a Student account directly for the child.'],
-            ['icon' => 'bar-chart-3', 'title' => 'Track progress', 'body' => 'Your Dashboard shows every course you\'re enrolled in and exactly how much of it has been completed, lesson by lesson.'],
-        ],
-    ],
-    'institution' => [
-        'icon' => 'landmark', 'label' => 'Institution', 'desc' => 'We teach as an org',
-        'steps' => [
-            ['icon' => 'user-plus', 'title' => 'Create your free account', 'body' => 'Click <a href="register.php">Register</a>, choose "Institution," and enter your organization\'s name. Verify your email before logging in.'],
-            ['icon' => 'search', 'title' => 'Browse & enroll', 'body' => 'Institution accounts work like Student accounts for enrollment today — browse <a href="courses.php">All Courses</a> and enroll directly under your organization\'s account.'],
-            ['icon' => 'headset', 'title' => 'Need bulk enrollment for many students?', 'body' => 'There\'s no dedicated bulk-enrollment tool yet. If you need many students enrolled at once, reach out via <a href="feedback.php">Feedback</a> and our support team can help directly.'],
         ],
     ],
 ];

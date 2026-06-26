@@ -728,6 +728,247 @@ function renderOauthButtons(): string {
     return ob_get_clean();
 }
 
+// ── Cart & Checkout ──────────────────────────────────────────────────────
+function getCartItems(PDO $pdo, int $studentId): array {
+    $stmt = $pdo->prepare(
+        "SELECT ci.id AS cart_item_id, c.*, COALESCE(u.display_name, u.name) AS teacher_name
+         FROM cart_items ci JOIN courses c ON c.id = ci.course_id JOIN users u ON u.id = c.teacher_id
+         WHERE ci.student_id = ? ORDER BY ci.added_at DESC"
+    );
+    $stmt->execute([$studentId]);
+    return $stmt->fetchAll();
+}
+
+function getCartCount(PDO $pdo, int $studentId): int {
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM cart_items WHERE student_id = ?');
+    $stmt->execute([$studentId]);
+    return (int) $stmt->fetchColumn();
+}
+
+function getCartTotal(array $cartItems): float {
+    return array_sum(array_map('floatval', array_column($cartItems, 'price')));
+}
+
+// Shared navbar cart icon (with item-count badge) -- a single function so
+// every page's copy-pasted navbar only needs one inserted line, instead
+// of duplicating the count query and badge markup ~45 times.
+function renderCartIcon(PDO $pdo, ?array $user): string {
+    if (!$user || !canEnroll($user['role'] ?? null)) return '';
+    $count = getCartCount($pdo, (int) $user['id']);
+    ob_start();
+    ?>
+    <a href="cart.php" class="nav-cart-link" aria-label="Shopping cart">
+        <i data-lucide="shopping-cart" class="lucide-icon"></i>
+        <?php if ($count > 0): ?><span class="nav-cart-badge"><?= $count ?></span><?php endif; ?>
+    </a>
+    <?php
+    return ob_get_clean();
+}
+
+// Returns ['ok' => bool, 'error' => ?string] -- never throws, always a
+// reason a caller can flash() straight to the student.
+function addToCart(PDO $pdo, int $studentId, int $courseId): array {
+    $stmt = $pdo->prepare('SELECT price, is_published, moderation_status FROM courses WHERE id = ?');
+    $stmt->execute([$courseId]);
+    $course = $stmt->fetch();
+    if (!$course) return ['ok' => false, 'error' => 'Course not found.'];
+    if ((float) $course['price'] <= 0) return ['ok' => false, 'error' => "Free courses don't need a cart — enroll directly from the course page."];
+    if (!$course['is_published'] || $course['moderation_status'] !== 'approved') return ['ok' => false, 'error' => 'This course is not currently available.'];
+
+    $already = $pdo->prepare('SELECT 1 FROM enrollments WHERE student_id = ? AND course_id = ?');
+    $already->execute([$studentId, $courseId]);
+    if ($already->fetch()) return ['ok' => false, 'error' => 'You are already enrolled in this course.'];
+
+    $pdo->prepare('INSERT IGNORE INTO cart_items (student_id, course_id) VALUES (?, ?)')->execute([$studentId, $courseId]);
+    return ['ok' => true, 'error' => null];
+}
+
+function removeFromCart(PDO $pdo, int $studentId, int $courseId): void {
+    $pdo->prepare('DELETE FROM cart_items WHERE student_id = ? AND course_id = ?')->execute([$studentId, $courseId]);
+}
+
+function clearCartItems(PDO $pdo, int $studentId, array $courseIds): void {
+    if (!$courseIds) return;
+    $placeholders = implode(',', array_fill(0, count($courseIds), '?'));
+    $pdo->prepare("DELETE FROM cart_items WHERE student_id = ? AND course_id IN ($placeholders)")
+        ->execute([$studentId, ...$courseIds]);
+}
+
+function paymentGatewaysConfigured(): array {
+    $available = [];
+    if (defined('STRIPE_PUBLISHABLE_KEY') && defined('STRIPE_SECRET_KEY') && STRIPE_PUBLISHABLE_KEY !== '' && STRIPE_SECRET_KEY !== '') {
+        $available[] = 'stripe';
+    }
+    if (defined('PAYPAL_CLIENT_ID') && defined('PAYPAL_CLIENT_SECRET') && PAYPAL_CLIENT_ID !== '' && PAYPAL_CLIENT_SECRET !== '') {
+        $available[] = 'paypal';
+    }
+    return $available;
+}
+
+function platformCurrency(): string {
+    return defined('PLATFORM_CURRENCY') ? PLATFORM_CURRENCY : 'USD';
+}
+
+// Creates a pending order + its line items (price/teacher_id snapshotted
+// now, so a later course edit or price change never rewrites a past
+// receipt) and returns the new order id.
+function createPendingOrder(PDO $pdo, int $studentId, array $cartItems, string $gateway): int {
+    $total = getCartTotal($cartItems);
+    $stmt = $pdo->prepare('INSERT INTO orders (student_id, total_amount, currency, status, payment_gateway) VALUES (?, ?, ?, ?, ?)');
+    $stmt->execute([$studentId, $total, platformCurrency(), 'pending', $gateway]);
+    $orderId = (int) $pdo->lastInsertId();
+
+    $itemStmt = $pdo->prepare('INSERT INTO order_items (order_id, course_id, teacher_id, price) VALUES (?, ?, ?, ?)');
+    foreach ($cartItems as $item) {
+        $itemStmt->execute([$orderId, $item['id'], $item['teacher_id'], $item['price']]);
+    }
+    return $orderId;
+}
+
+// Marks an order paid, enrolls the student in every course on it, clears
+// those items from their cart, and awards the same enrollment points a
+// free-course enroll already gives (course.php) -- paying for a course
+// is not treated as a "lesser" enrollment.
+function fulfillOrder(PDO $pdo, int $orderId, string $paymentReference): void {
+    $stmt = $pdo->prepare('SELECT * FROM orders WHERE id = ?');
+    $stmt->execute([$orderId]);
+    $order = $stmt->fetch();
+    if (!$order || $order['status'] === 'paid') return; // already fulfilled or doesn't exist -- don't double-enroll
+
+    $pdo->prepare("UPDATE orders SET status = 'paid', payment_reference = ?, paid_at = NOW() WHERE id = ?")
+        ->execute([$paymentReference, $orderId]);
+
+    $items = $pdo->prepare('SELECT * FROM order_items WHERE order_id = ?');
+    $items->execute([$orderId]);
+    $items = $items->fetchAll();
+
+    $courseIds = [];
+    foreach ($items as $item) {
+        $pdo->prepare('INSERT IGNORE INTO enrollments (student_id, course_id) VALUES (?, ?)')
+            ->execute([$order['student_id'], $item['course_id']]);
+        $courseStmt = $pdo->prepare('SELECT title FROM courses WHERE id = ?');
+        $courseStmt->execute([$item['course_id']]);
+        $title = $courseStmt->fetchColumn();
+        awardPoints($pdo, (int) $order['student_id'], 10, 'Enrolled in "' . $title . '"');
+        $courseIds[] = (int) $item['course_id'];
+    }
+    clearCartItems($pdo, (int) $order['student_id'], $courseIds);
+    logActivity($pdo, (int) $order['student_id'], 'Completed purchase: order #' . $orderId . ' (' . count($items) . ' course(s))');
+}
+
+// ── Stripe (REST API directly via cURL -- no SDK/Composer dependency,
+// consistent with how this app calls every other external API) ──────────
+function stripeApiRequest(string $method, string $path, array $params = []): ?array {
+    $ch = curl_init('https://api.stripe.com/v1/' . $path);
+    $opts = [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . STRIPE_SECRET_KEY],
+        CURLOPT_TIMEOUT => 15,
+    ];
+    if ($method === 'POST') {
+        $opts[CURLOPT_POST] = true;
+        $opts[CURLOPT_POSTFIELDS] = http_build_query($params);
+    }
+    curl_setopt_array($ch, $opts);
+    $response = curl_exec($ch);
+    $ok = $response !== false && curl_getinfo($ch, CURLINFO_HTTP_CODE) < 400;
+    curl_close($ch);
+    return $ok ? json_decode($response, true) : null;
+}
+
+// $cartItems: each needs 'title' and 'price'. Returns the Checkout
+// Session's hosted URL to redirect the student to, or null on failure.
+function stripeCreateCheckoutSession(array $cartItems, int $orderId, string $studentEmail): ?string {
+    $params = [
+        'mode' => 'payment',
+        'success_url' => siteBaseUrl() . '/checkout-success.php?gateway=stripe&order_id=' . $orderId . '&session_id={CHECKOUT_SESSION_ID}',
+        'cancel_url' => siteBaseUrl() . '/cart.php',
+        'client_reference_id' => (string) $orderId,
+        'customer_email' => $studentEmail,
+    ];
+    foreach ($cartItems as $i => $item) {
+        $params['line_items'][$i]['price_data']['currency'] = strtolower(platformCurrency());
+        $params['line_items'][$i]['price_data']['product_data']['name'] = $item['title'];
+        $params['line_items'][$i]['price_data']['unit_amount'] = (int) round(((float) $item['price']) * 100);
+        $params['line_items'][$i]['quantity'] = 1;
+    }
+    $session = stripeApiRequest('POST', 'checkout/sessions', $params);
+    return $session['url'] ?? null;
+}
+
+function stripeRetrieveSession(string $sessionId): ?array {
+    return stripeApiRequest('GET', 'checkout/sessions/' . urlencode($sessionId));
+}
+
+// ── PayPal (REST API v2, sandbox or live per PAYPAL_MODE) ───────────────
+function paypalApiBase(): string {
+    return PAYPAL_MODE === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
+}
+
+function paypalGetAccessToken(): ?string {
+    $ch = curl_init(paypalApiBase() . '/v1/oauth2/token');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => 'grant_type=client_credentials',
+        CURLOPT_USERPWD => PAYPAL_CLIENT_ID . ':' . PAYPAL_CLIENT_SECRET,
+        CURLOPT_TIMEOUT => 15,
+    ]);
+    $response = curl_exec($ch);
+    $ok = $response !== false && curl_getinfo($ch, CURLINFO_HTTP_CODE) < 400;
+    curl_close($ch);
+    $data = $ok ? json_decode($response, true) : null;
+    return $data['access_token'] ?? null;
+}
+
+function paypalApiRequest(string $method, string $path, array $body = []): ?array {
+    $token = paypalGetAccessToken();
+    if (!$token) return null;
+    $ch = curl_init(paypalApiBase() . $path);
+    $opts = [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $token, 'Content-Type: application/json'],
+        CURLOPT_TIMEOUT => 15,
+    ];
+    if ($method === 'POST') {
+        $opts[CURLOPT_POST] = true;
+        $opts[CURLOPT_POSTFIELDS] = json_encode($body);
+    }
+    curl_setopt_array($ch, $opts);
+    $response = curl_exec($ch);
+    $ok = $response !== false && curl_getinfo($ch, CURLINFO_HTTP_CODE) < 400;
+    curl_close($ch);
+    return $ok ? json_decode($response, true) : null;
+}
+
+// Returns the PayPal-hosted approval URL to redirect the student to, or
+// null on failure.
+function paypalCreateOrder(array $cartItems, int $orderId): ?string {
+    $total = number_format(getCartTotal($cartItems), 2, '.', '');
+    $order = paypalApiRequest('POST', '/v2/checkout/orders', [
+        'intent' => 'CAPTURE',
+        'purchase_units' => [[
+            'reference_id' => (string) $orderId,
+            'amount' => ['currency_code' => platformCurrency(), 'value' => $total],
+            'description' => count($cartItems) . ' course(s) on ' . SITE_NAME,
+        ]],
+        'application_context' => [
+            'return_url' => siteBaseUrl() . '/checkout-success.php?gateway=paypal&order_id=' . $orderId,
+            'cancel_url' => siteBaseUrl() . '/cart.php',
+        ],
+    ]);
+    if (!$order || !isset($order['id'])) return null;
+    foreach ($order['links'] ?? [] as $link) {
+        if ($link['rel'] === 'approve') return $link['href'];
+    }
+    return null;
+}
+
+function paypalCaptureOrder(string $paypalOrderId): bool {
+    $result = paypalApiRequest('POST', '/v2/checkout/orders/' . urlencode($paypalOrderId) . '/capture');
+    return ($result['status'] ?? '') === 'COMPLETED';
+}
+
 // Security activity log — lets a user see "is this really my recent
 // activity" (logins, password changes, etc.), same idea as Google/
 // Facebook's account activity page. Best-effort: never blocks the action

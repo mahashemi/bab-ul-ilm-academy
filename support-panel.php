@@ -74,6 +74,7 @@ if ($actingAsId) {
         <a href="index.php">Home</a>
         <a href="courses.php">Courses</a>
         <?php if (($user['role'] ?? '') === 'admin'): ?><a href="admin.php">Admin Panel</a><?php endif; ?>
+        <?= renderCartIcon($pdo, $user) ?>
         <div class="nav-account">
             <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="Account menu">
                 <?= renderAvatar($user) ?>

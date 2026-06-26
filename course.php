@@ -136,12 +136,17 @@ if ($course['subject_id_full']) {
 }
 
 $isEnrolled = false;
+$inCart = false;
 $completedLessons = [];
 $myReview = null;
 if ($user && canEnroll($user['role'] ?? null)) {
     $e = $pdo->prepare('SELECT 1 FROM enrollments WHERE student_id = ? AND course_id = ?');
     $e->execute([$user['id'], $id]);
     $isEnrolled = (bool) $e->fetch();
+
+    $ci = $pdo->prepare('SELECT 1 FROM cart_items WHERE student_id = ? AND course_id = ?');
+    $ci->execute([$user['id'], $id]);
+    $inCart = (bool) $ci->fetch();
 
     if ($isEnrolled) {
         $cp = $pdo->prepare('SELECT lesson_id FROM lesson_progress WHERE student_id = ?');
@@ -157,7 +162,10 @@ if ($user && canEnroll($user['role'] ?? null)) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['enroll'])) {
     requireAuth();
     verifyCsrf();
-    if (canEnroll($user['role'] ?? null) && !$isEnrolled) {
+    // Free courses only -- paid courses must go through cart/checkout
+    // (add_to_cart/buy_now below). This used to have no price check at
+    // all, meaning a paid course could be "enrolled" for free; fixed here.
+    if (canEnroll($user['role'] ?? null) && !$isEnrolled && (float) $course['price'] <= 0) {
         $pdo->prepare('INSERT IGNORE INTO enrollments (student_id, course_id) VALUES (?, ?)')->execute([$user['id'], $id]);
         awardPoints($pdo, $user['id'], 10, 'Enrolled in "' . $course['title'] . '"');
 
@@ -179,9 +187,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['enroll'])) {
             });
         }
 
-        flash('success', 'Enrolled successfully! Start learning below.');
+        redirect('enrollment-success.php?course_id=' . $id);
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['add_to_cart']) || isset($_POST['buy_now']))) {
+    requireAuth();
+    verifyCsrf();
+    if (!canEnroll($user['role'] ?? null)) {
+        flash('error', 'Teacher and admin accounts cannot enroll in courses.');
         redirect('course.php?id=' . $id);
     }
+    if ($isEnrolled) {
+        flash('error', 'You are already enrolled in this course.');
+        redirect('course.php?id=' . $id);
+    }
+    $result = addToCart($pdo, $user['id'], $id);
+    if (!$result['ok']) {
+        flash('error', $result['error']);
+        redirect('course.php?id=' . $id);
+    }
+    redirect(isset($_POST['buy_now']) ? 'checkout.php' : 'cart.php');
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_lesson'])) {
@@ -265,6 +291,7 @@ function starString(float $rating): string {
         <?php if ($user): ?>
             <a href="chat.php">Messages</a>
             <?php if (($user['role'] ?? '') === 'teacher'): ?><a href="add-course.php">+ New Course</a><?php endif; ?>
+            <?= renderCartIcon($pdo, $user) ?>
             <div class="nav-account">
                 <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="Account menu">
                     <?= renderAvatar($user) ?>
@@ -617,11 +644,22 @@ function starString(float $rating): string {
                         <div class="alert alert-success"><i data-lucide="check" class="lucide-icon"></i> You are enrolled</div>
                         <div class="progress-bar"><div class="progress-fill" style="width:<?= $progressPct ?>%"></div></div>
                         <p style="font-size:.85rem;color:var(--text-light);margin-top:.4rem"><?= $progressPct ?>% complete (<?= count($completedLessons) ?>/<?= count($lessons) ?> lessons)</p>
-                    <?php else: ?>
+                    <?php elseif ((float) $course['price'] <= 0): ?>
                         <form method="post">
                             <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
-                            <button type="submit" name="enroll" value="1" class="btn btn-primary btn-full">Enroll Now <?= $course['price'] > 0 ? '— $' . number_format((float) $course['price']) : '— Free' ?></button>
+                            <button type="submit" name="enroll" value="1" class="btn btn-primary btn-full">Enroll Now — Free</button>
                         </form>
+                    <?php elseif ($inCart): ?>
+                        <a href="cart.php" class="btn btn-primary btn-full"><i data-lucide="shopping-cart" class="lucide-icon"></i> Go to Cart</a>
+                    <?php elseif (!paymentGatewaysConfigured()): ?>
+                        <div class="alert alert-info" style="font-size:.82rem">Online checkout isn't set up yet. <a href="feedback.php">Contact us</a> to arrange payment for this course.</div>
+                    <?php else: ?>
+                        <form method="post" style="display:flex;flex-direction:column;gap:.6rem">
+                            <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+                            <button type="submit" name="buy_now" value="1" class="btn btn-primary btn-full">Buy Now</button>
+                            <button type="submit" name="add_to_cart" value="1" class="btn btn-outline btn-full"><i data-lucide="shopping-cart" class="lucide-icon"></i> Add to Cart</button>
+                        </form>
+                        <p style="font-size:.78rem;color:var(--text-light);text-align:center;margin-top:.6rem"><i data-lucide="shield-check" class="lucide-icon"></i> Full lifetime access</p>
                     <?php endif; ?>
                 </div>
             </div>

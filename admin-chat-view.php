@@ -68,6 +68,7 @@ function chatTime(string $dt): string {
         <a href="dashboard.php">Dashboard</a>
         <a href="about.php">About</a>
         <a href="feedback.php">Feedback</a>
+        <?= renderCartIcon($pdo, $user) ?>
         <div class="nav-account">
             <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="Account menu">
                 <?= renderAvatar($user) ?>

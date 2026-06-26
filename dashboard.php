@@ -81,6 +81,7 @@ $dashBg = siteSetting($pdo, 'dashboard_banner_bg');
         <?php if ($user): ?>
             <a href="chat.php">Messages</a>
             <?php if (($user['role'] ?? '') === 'teacher'): ?><a href="add-course.php">+ New Course</a><?php endif; ?>
+            <?= renderCartIcon($pdo, $user) ?>
             <div class="nav-account">
                 <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="Account menu">
                     <?= renderAvatar($user) ?>

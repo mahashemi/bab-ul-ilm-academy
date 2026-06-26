@@ -112,6 +112,7 @@ $bestAttempt = $bestAttempt->fetch();
         <a href="about.php">About</a>
         <a href="feedback.php">Feedback</a>
         <a href="chat.php">Messages</a>
+        <?= renderCartIcon($pdo, $user) ?>
         <div class="nav-account">
             <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="Account menu">
                 <?= renderAvatar($user) ?>

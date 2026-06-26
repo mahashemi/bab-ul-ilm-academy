@@ -203,6 +203,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $lessonCount > 0) {
         <a href="feedback.php">Feedback</a>
         <a href="chat.php">Messages</a>
         <a href="add-course.php">+ New Course</a>
+        <?= renderCartIcon($pdo, $user) ?>
         <div class="nav-account">
             <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="Account menu">
                 <?= renderAvatar($user) ?>

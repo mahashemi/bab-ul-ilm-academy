@@ -581,6 +581,50 @@ ALTER TABLE users ADD COLUMN oauth_provider VARCHAR(20) NULL AFTER password;
 ALTER TABLE users ADD COLUMN oauth_id VARCHAR(255) NULL AFTER oauth_provider;
 ALTER TABLE users ADD UNIQUE KEY uniq_oauth (oauth_provider, oauth_id);
 
+-- ── Cart & Checkout (Stripe / PayPal) ──
+-- Revenue model: the platform's own gateway account collects 100% of every
+-- payment (same approach Udemy itself uses internally -- see
+-- support.udemy.com/hc/en-us/articles/229604008 -- their instructor payouts
+-- are a separate, manually-batched accounting step, not a real-time
+-- split-payment gateway either). Teacher payouts happen outside this system
+-- for now. order_items snapshots price/teacher_id at purchase time so a
+-- later price change or the course being edited never rewrites history.
+CREATE TABLE IF NOT EXISTS cart_items (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    student_id  INT UNSIGNED NOT NULL,
+    course_id   INT UNSIGNED NOT NULL,
+    added_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+    UNIQUE KEY uniq_cart_item (student_id, course_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS orders (
+    id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    student_id        INT UNSIGNED NOT NULL,
+    total_amount      DECIMAL(10,2) NOT NULL,
+    currency          VARCHAR(3) NOT NULL DEFAULT 'USD',
+    status            ENUM('pending','paid','failed','refunded') NOT NULL DEFAULT 'pending',
+    payment_gateway   ENUM('stripe','paypal') NOT NULL,
+    payment_reference VARCHAR(255) NULL,  -- Stripe Checkout Session id, or PayPal Order id
+    created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    paid_at           TIMESTAMP NULL,
+    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_student (student_id),
+    INDEX idx_reference (payment_reference)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS order_items (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    order_id    INT UNSIGNED NOT NULL,
+    course_id   INT UNSIGNED NOT NULL,
+    teacher_id  INT UNSIGNED NOT NULL,
+    price       DECIMAL(10,2) NOT NULL,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+    FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ── Initial Admin Account ───────────────────────────────────────────────
 -- Default password: Admin@123
 -- IMPORTANT: Log in immediately and change this password via your profile.

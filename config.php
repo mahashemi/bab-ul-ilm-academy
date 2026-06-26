@@ -72,6 +72,19 @@ define('OAUTH_PROVIDERS', [
     ],
 ]);
 
+// ── Payment Gateways (Cart & Checkout) ───────────────────────────────────
+// Empty until filled in -- see paymentGatewaysConfigured() in db.php.
+// "Pay with Stripe/PayPal" only renders for a gateway that's actually
+// configured, same pattern as the OAuth buttons above. The platform's own
+// account collects 100% of every payment; teacher payouts are handled
+// outside this system (see schema.sql's note on Udemy's own model).
+define('PLATFORM_CURRENCY', 'USD');
+define('STRIPE_PUBLISHABLE_KEY', '');
+define('STRIPE_SECRET_KEY', '');
+define('PAYPAL_CLIENT_ID', '');
+define('PAYPAL_CLIENT_SECRET', '');
+define('PAYPAL_MODE', 'sandbox'); // 'sandbox' for testing, 'live' once ready for real payments
+
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params(['httponly' => true, 'samesite' => 'Lax']);
     session_start();

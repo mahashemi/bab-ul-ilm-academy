@@ -52,7 +52,7 @@ if ($myFieldIds) {
 $dashBg = siteSetting($pdo, 'dashboard_banner_bg');
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= currentLocale() ?>" dir="<?= isRtl(currentLocale()) ? 'rtl' : 'ltr' ?>">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -71,16 +71,28 @@ $dashBg = siteSetting($pdo, 'dashboard_banner_bg');
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <form class="nav-search" action="courses.php" method="get">
         <i data-lucide="search" class="lucide-icon"></i>
-        <input type="text" name="q" placeholder="Search for courses, teachers, subjects...">
+        <input type="text" name="q" placeholder="<?= e(t('nav_search_placeholder')) ?>">
     </form>
     <div class="nav-links">
-        <a href="index.php">Home</a>
-        <a href="courses.php">Courses</a>
-        <a href="about.php">About</a>
-        <a href="feedback.php">Feedback</a>
+        <a href="index.php"><?= t('nav_home') ?></a>
+        <a href="courses.php"><?= t('nav_courses') ?></a>
+        <a href="about.php"><?= t('nav_about') ?></a>
+        <a href="feedback.php"><?= t('nav_feedback') ?></a>
+        <div class="nav-account">
+            <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="<?= e(t('nav_language')) ?>">
+                <i data-lucide="globe" class="lucide-icon"></i>
+            </button>
+            <div class="nav-account-menu">
+                <a href="set-language.php?lang=en&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'index.php')) ?>">English</a>
+                <a href="set-language.php?lang=ur&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'index.php')) ?>">اردو</a>
+                <a href="set-language.php?lang=fa&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'index.php')) ?>">فارسی</a>
+                <a href="set-language.php?lang=ar&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'index.php')) ?>">العربية</a>
+            </div>
+        </div>
+
         <?php if ($user): ?>
-            <a href="chat.php">Messages</a>
-            <?php if (isApprovedTeacher($user)): ?><a href="add-course.php">+ New Course</a><?php endif; ?>
+            <a href="chat.php"><?= t('nav_messages') ?></a>
+            <?php if (isApprovedTeacher($user)): ?><a href="add-course.php"><?= t('nav_new_course') ?></a><?php endif; ?>
             <?= renderCartIcon($pdo, $user) ?>
             <div class="nav-account">
                 <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="Account menu">
@@ -96,36 +108,36 @@ $dashBg = siteSetting($pdo, 'dashboard_banner_bg');
                         </div>
                     </div>
                     <div class="nav-menu-divider"></div>
-                    <a href="dashboard.php"><i data-lucide="layout-dashboard" class="lucide-icon"></i> Dashboard</a>
-                    <a href="chat.php"><i data-lucide="message-circle" class="lucide-icon"></i> Messages</a>
-                    <?php if (isApprovedTeacher($user)): ?><a href="add-course.php"><i data-lucide="plus" class="lucide-icon"></i> New Course</a><?php endif; ?>
-                    <?php if (!isApprovedTeacher($user) && ($user['teacher_status'] ?? 'none') !== 'pending'): ?><a href="become-instructor.php"><i data-lucide="presentation" class="lucide-icon"></i> Become an Instructor</a><?php endif; ?>
+                    <a href="dashboard.php"><i data-lucide="layout-dashboard" class="lucide-icon"></i> <?= t('nav_dashboard') ?></a>
+                    <a href="chat.php"><i data-lucide="message-circle" class="lucide-icon"></i> <?= t('nav_messages') ?></a>
+                    <?php if (isApprovedTeacher($user)): ?><a href="add-course.php"><i data-lucide="plus" class="lucide-icon"></i> <?= t('nav_new_course_plain') ?></a><?php endif; ?>
+                    <?php if (!isApprovedTeacher($user) && ($user['teacher_status'] ?? 'none') !== 'pending'): ?><a href="become-instructor.php"><i data-lucide="presentation" class="lucide-icon"></i> <?= t('nav_become_instructor') ?></a><?php endif; ?>
                     <div class="nav-menu-divider"></div>
-                    <a href="edit-profile.php"><i data-lucide="user-cog" class="lucide-icon"></i> Edit Profile</a>
-                    <a href="activity-log.php"><i data-lucide="shield-check" class="lucide-icon"></i> Account Activity</a>
-                    <?php if (($user['role'] ?? '') === 'admin'): ?><a href="admin.php"><i data-lucide="shield-check" class="lucide-icon"></i> Admin Panel</a><?php endif; ?>
+                    <a href="edit-profile.php"><i data-lucide="user-cog" class="lucide-icon"></i> <?= t('nav_edit_profile') ?></a>
+                    <a href="activity-log.php"><i data-lucide="shield-check" class="lucide-icon"></i> <?= t('nav_account_activity') ?></a>
+                    <?php if (($user['role'] ?? '') === 'admin'): ?><a href="admin.php"><i data-lucide="shield-check" class="lucide-icon"></i> <?= t('nav_admin_panel') ?></a><?php endif; ?>
                     <div class="nav-menu-divider"></div>
-                    <a href="logout.php"><i data-lucide="log-out" class="lucide-icon"></i> Logout</a>
+                    <a href="logout.php"><i data-lucide="log-out" class="lucide-icon"></i> <?= t('nav_logout') ?></a>
                 </div>
             </div>
         <?php else: ?>
-            <a href="login.php" class="nav-btn">Login</a>
+            <a href="login.php" class="nav-btn"><?= t('nav_login') ?></a>
         <?php endif; ?>
     </div>
 </nav>
 
 <div class="dashboard-wrap">
     <div class="dashboard-header" <?php if ($dashBg): ?>style="background-image:linear-gradient(90deg, rgba(10,61,31,.95) 0%, rgba(10,61,31,.65) 60%, rgba(10,61,31,.35) 100%), url('<?= e($dashBg) ?>');background-size:cover;background-position:center"<?php endif; ?>>
-        <h2>Welcome, <?= e(displayNameOf($user)) ?></h2>
+        <h2><?= e(t('dash_welcome', ['name' => displayNameOf($user)])) ?></h2>
         <?php if ($me['occupation'] || $myFieldNames): ?>
             <p style="margin-bottom:.3rem">
                 <?= e(trim(($me['occupation'] ? $me['occupation'] : '') . ($me['occupation'] && $myFieldNames ? ', ' : '') . implode(', ', $myFieldNames))) ?>
                 &nbsp;·&nbsp; <a href="personalize.php" class="dashboard-header-link">Edit occupation and interests</a>
             </p>
         <?php else: ?>
-            <p style="margin-bottom:.3rem"><a href="personalize.php" class="dashboard-header-link"><i data-lucide="sparkles" class="lucide-icon"></i> Add occupation and interests</a></p>
+            <p style="margin-bottom:.3rem"><a href="personalize.php" class="dashboard-header-link"><i data-lucide="sparkles" class="lucide-icon"></i> <?= e(t('dash_add_interests')) ?></a></p>
         <?php endif; ?>
-        <p><?= isApprovedTeacher($user) ? 'Manage your courses and track your students.' : 'Continue your learning journey.' ?></p>
+        <p><?= isApprovedTeacher($user) ? e(t('dash_teacher_tagline')) : e(t('dash_student_tagline')) ?></p>
         <span class="dashboard-role"><?= e(isApprovedTeacher($user) ? 'Teacher' : roleLabel($user['role'] ?? 'student')) ?></span>
     </div>
 
@@ -142,8 +154,8 @@ $dashBg = siteSetting($pdo, 'dashboard_banner_bg');
 
     <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.6rem;margin-bottom:<?= $myBadges ? '1rem' : '0' ?>">
-            <strong style="font-size:.92rem"><i data-lucide="zap" class="lucide-icon"></i> <?= number_format($myPoints) ?> Points</strong>
-            <span style="font-size:.78rem;color:var(--text-light)"><?= count($myBadges) ?> badge<?= count($myBadges) === 1 ? '' : 's' ?> earned</span>
+            <strong style="font-size:.92rem"><i data-lucide="zap" class="lucide-icon"></i> <?= e(t('dash_points', ['points' => number_format($myPoints)])) ?></strong>
+            <span style="font-size:.78rem;color:var(--text-light)"><?= e(t('dash_badges_earned', ['count' => count($myBadges)])) ?></span>
         </div>
         <?php if ($myBadges): ?>
         <div style="display:flex;flex-wrap:wrap;gap:.8rem">
@@ -205,7 +217,7 @@ $dashBg = siteSetting($pdo, 'dashboard_banner_bg');
         $myTeachingCourses = $stmt->fetchAll();
         ?>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
-            <h3 style="font-size:1.1rem;color:var(--green-deep)">My Courses (<?= count($myTeachingCourses) ?>)</h3>
+            <h3 style="font-size:1.1rem;color:var(--green-deep)"><?= e(t('dash_my_courses', ['count' => count($myTeachingCourses)])) ?></h3>
             <div style="display:flex;gap:.5rem">
                 <a href="single-upload.php" class="btn btn-outline btn-sm"><i data-lucide="upload" class="lucide-icon"></i> Single Upload</a>
                 <a href="add-course.php" class="btn btn-primary btn-sm">+ New Course</a>
@@ -267,7 +279,7 @@ $dashBg = siteSetting($pdo, 'dashboard_banner_bg');
     $stmt->execute([$user['id'], $user['id']]);
     $myEnrolledCourses = $stmt->fetchAll();
     ?>
-    <h3 style="font-size:1.1rem;color:var(--green-deep);margin-bottom:1rem">My Enrolled Courses (<?= count($myEnrolledCourses) ?>)</h3>
+    <h3 style="font-size:1.1rem;color:var(--green-deep);margin-bottom:1rem"><?= e(t('dash_my_enrolled', ['count' => count($myEnrolledCourses)])) ?></h3>
 
     <?php if (!$myEnrolledCourses): ?>
         <div class="empty-state">

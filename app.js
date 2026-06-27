@@ -3,16 +3,20 @@ function toggleNav() {
     document.querySelector('.nav-scrim').classList.toggle('show');
 }
 
+// Scoped to whichever trigger was actually clicked (closest .nav-account
+// ancestor) rather than a global "the first .nav-account on the page"
+// lookup, since pages can now have two of these (account menu + language
+// switcher) -- the old global-querySelector version only ever opened/closed
+// the first one regardless of which button was pressed.
 function toggleAccountMenu(e) {
     if (e) e.stopPropagation();
-    var el = document.querySelector('.nav-account');
+    var el = (e && e.currentTarget) ? e.currentTarget.closest('.nav-account') : document.querySelector('.nav-account');
     if (el) el.classList.toggle('open');
 }
 document.addEventListener('click', function (e) {
-    var el = document.querySelector('.nav-account');
-    if (el && el.classList.contains('open') && !el.contains(e.target)) {
-        el.classList.remove('open');
-    }
+    document.querySelectorAll('.nav-account.open').forEach(function (el) {
+        if (!el.contains(e.target)) el.classList.remove('open');
+    });
 });
 
 document.addEventListener('DOMContentLoaded', function () {

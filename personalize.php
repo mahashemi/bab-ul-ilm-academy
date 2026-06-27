@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= currentLocale() ?>" dir="<?= isRtl(currentLocale()) ? 'rtl' : 'ltr' ?>">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -78,13 +78,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <form class="nav-search" action="courses.php" method="get">
         <i data-lucide="search" class="lucide-icon"></i>
-        <input type="text" name="q" placeholder="Search for courses, teachers, subjects...">
+        <input type="text" name="q" placeholder="<?= e(t('nav_search_placeholder')) ?>">
     </form>
     <div class="nav-links">
-        <a href="index.php">Home</a>
-        <a href="courses.php">Courses</a>
-        <a href="about.php">About</a>
-        <a href="feedback.php">Feedback</a>
+        <a href="index.php"><?= t('nav_home') ?></a>
+        <a href="courses.php"><?= t('nav_courses') ?></a>
+        <a href="about.php"><?= t('nav_about') ?></a>
+        <a href="feedback.php"><?= t('nav_feedback') ?></a>
+        <div class="nav-account">
+            <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="<?= e(t('nav_language')) ?>">
+                <i data-lucide="globe" class="lucide-icon"></i>
+            </button>
+            <div class="nav-account-menu">
+                <a href="set-language.php?lang=en&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'index.php')) ?>">English</a>
+                <a href="set-language.php?lang=ur&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'index.php')) ?>">اردو</a>
+                <a href="set-language.php?lang=fa&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'index.php')) ?>">فارسی</a>
+                <a href="set-language.php?lang=ar&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'index.php')) ?>">العربية</a>
+            </div>
+        </div>
+
         <a href="dashboard.php">Dashboard</a>
     </div>
 </nav>

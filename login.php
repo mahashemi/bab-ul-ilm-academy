@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email    = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
 
-    $stmt = $pdo->prepare('SELECT id, name, display_name, email, password, role, teacher_status, avatar, is_approved, is_verified FROM users WHERE email = ?');
+    $stmt = $pdo->prepare('SELECT id, name, display_name, email, password, role, teacher_status, ui_locale, avatar, is_approved, is_verified FROM users WHERE email = ?');
     $stmt->execute([$email]);
     $u = $stmt->fetch();
 
@@ -23,18 +23,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!$u['is_verified']) {
         $unverifiedEmail = $email;
     } else {
-        $_SESSION['user'] = ['id' => $u['id'], 'name' => $u['name'], 'display_name' => $u['display_name'], 'email' => $u['email'], 'role' => $u['role'], 'teacher_status' => $u['teacher_status'], 'avatar' => $u['avatar']];
+        $_SESSION['user'] = ['id' => $u['id'], 'name' => $u['name'], 'display_name' => $u['display_name'], 'email' => $u['email'], 'role' => $u['role'], 'teacher_status' => $u['teacher_status'], 'ui_locale' => $u['ui_locale'], 'avatar' => $u['avatar']];
         logActivity($pdo, (int) $u['id'], 'Logged in');
         redirect('dashboard.php');
     }
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= currentLocale() ?>" dir="<?= isRtl(currentLocale()) ? 'rtl' : 'ltr' ?>">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Login — <?= e(SITE_NAME) ?></title>
+<title><?= e(t('login_title')) ?> — <?= e(SITE_NAME) ?></title>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="assets/icon-green-180.png">
@@ -45,6 +45,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
 <div class="auth-wrap">
     <div class="auth-box">
+        <div style="display:flex;justify-content:flex-end;gap:.8rem;font-size:.8rem;margin-bottom:.6rem">
+            <a href="set-language.php?lang=en&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'login.php')) ?>">English</a>
+            <a href="set-language.php?lang=ur&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'login.php')) ?>">اردو</a>
+            <a href="set-language.php?lang=fa&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'login.php')) ?>">فارسی</a>
+            <a href="set-language.php?lang=ar&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'login.php')) ?>">العربية</a>
+        </div>
         <div class="auth-logo">
             <img src="assets/lockup-green.svg" alt="<?= e(SITE_NAME) ?>" class="auth-logo-img">
             <p><?= e(SITE_TAGLINE) ?></p>
@@ -70,19 +76,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
 
             <div class="form-group">
-                <label class="form-label">Email Address</label>
+                <label class="form-label"><?= e(t('login_email')) ?></label>
                 <input type="email" name="email" class="form-control" placeholder="you@example.com" value="<?= e($_POST['email'] ?? '') ?>" required autofocus>
             </div>
 
             <div class="form-group">
                 <div style="display:flex;justify-content:space-between;align-items:baseline">
-                    <label class="form-label">Password</label>
-                    <a href="forgot-password.php" style="font-size:.8rem">Forgot password?</a>
+                    <label class="form-label"><?= e(t('login_password')) ?></label>
+                    <a href="forgot-password.php" style="font-size:.8rem"><?= e(t('login_forgot')) ?></a>
                 </div>
                 <input type="password" name="password" class="form-control" placeholder="Your password" required>
             </div>
 
-            <button type="submit" class="btn btn-primary btn-full">Log In</button>
+            <button type="submit" class="btn btn-primary btn-full"><?= e(t('login_submit')) ?></button>
         </form>
 
         <div style="display:flex;align-items:center;gap:.8rem;margin:1.4rem 0;color:var(--text-light);font-size:.8rem">
@@ -90,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             NEW TO <?= e(mb_strtoupper(SITE_NAME)) ?>?
             <div style="flex:1;border-top:1px solid var(--border)"></div>
         </div>
-        <a href="register.php" class="btn btn-outline btn-full"><i data-lucide="sparkles" class="lucide-icon"></i> Create a Free Account</a>
+        <a href="register.php" class="btn btn-outline btn-full"><i data-lucide="sparkles" class="lucide-icon"></i> <?= e(t('login_register_link')) ?></a>
     </div>
 </div>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>

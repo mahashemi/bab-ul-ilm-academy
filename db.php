@@ -72,6 +72,56 @@ function e(string $s): string {
     return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
 }
 
+// ── Internationalization (English / Urdu / Persian / Arabic) ─────────────
+const SUPPORTED_LOCALES = ['en', 'ur', 'fa', 'ar'];
+
+// Resolution order: explicit ?lang= on this request (persisted for next
+// time) -> session (set by a previous ?lang= or set-language.php) ->
+// the logged-in user's saved preference -> English. Deliberately separate
+// from users.preferred_language, which is a free-text "what language do
+// you want to LEARN in" personalization hint with different meaning/data.
+function currentLocale(): string {
+    $requested = $_GET['lang'] ?? null;
+    if ($requested !== null && in_array($requested, SUPPORTED_LOCALES, true)) {
+        $_SESSION['locale'] = $requested;
+        return $requested;
+    }
+    if (!empty($_SESSION['locale']) && in_array($_SESSION['locale'], SUPPORTED_LOCALES, true)) {
+        return $_SESSION['locale'];
+    }
+    $user = $_SESSION['user'] ?? null;
+    if ($user && !empty($user['ui_locale']) && in_array($user['ui_locale'], SUPPORTED_LOCALES, true)) {
+        return $user['ui_locale'];
+    }
+    return 'en';
+}
+
+function isRtl(string $locale): bool {
+    return in_array($locale, ['ur', 'fa', 'ar'], true);
+}
+
+// Loads lang/{locale}.php once per request (static cache) and looks up
+// $key, falling back to English so a missing translation NEVER renders
+// blank/broken -- it just silently shows English until someone fills it in.
+function t(string $key, array $vars = []): string {
+    static $cache = [];
+    $locale = currentLocale();
+
+    if (!isset($cache[$locale])) {
+        $path = __DIR__ . '/lang/' . $locale . '.php';
+        $cache[$locale] = is_file($path) ? require $path : [];
+    }
+    if (!isset($cache['en'])) {
+        $cache['en'] = require __DIR__ . '/lang/en.php';
+    }
+
+    $str = $cache[$locale][$key] ?? $cache['en'][$key] ?? $key;
+    foreach ($vars as $k => $v) {
+        $str = str_replace('{' . $k . '}', (string) $v, $str);
+    }
+    return $str;
+}
+
 function auth(): ?array {
     if (!isset($_SESSION['user'])) {
         return null;
@@ -774,6 +824,7 @@ function oauthLoginOrRegister(PDO $pdo, string $provider, array $profile): array
     $_SESSION['user'] = [
         'id' => $user['id'], 'name' => $user['name'], 'display_name' => $user['display_name'] ?? null,
         'email' => $user['email'], 'role' => $user['role'], 'teacher_status' => $user['teacher_status'] ?? 'none',
+        'ui_locale' => $user['ui_locale'] ?? 'en',
         'avatar' => $user['avatar'],
     ];
     $_SESSION['last_activity'] = time();

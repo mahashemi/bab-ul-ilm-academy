@@ -55,11 +55,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= currentLocale() ?>" dir="<?= isRtl(currentLocale()) ? 'rtl' : 'ltr' ?>">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Register — <?= e(SITE_NAME) ?></title>
+<title><?= e(t('register_title')) ?> — <?= e(SITE_NAME) ?></title>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="assets/icon-green-180.png">
@@ -70,6 +70,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
 <div class="auth-wrap">
     <div class="auth-box" style="max-width:520px">
+        <div style="display:flex;justify-content:flex-end;gap:.8rem;font-size:.8rem;margin-bottom:.6rem">
+            <a href="set-language.php?lang=en&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'register.php')) ?>">English</a>
+            <a href="set-language.php?lang=ur&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'register.php')) ?>">اردو</a>
+            <a href="set-language.php?lang=fa&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'register.php')) ?>">فارسی</a>
+            <a href="set-language.php?lang=ar&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'register.php')) ?>">العربية</a>
+        </div>
         <div class="auth-logo">
             <img src="assets/lockup-green.svg" alt="<?= e(SITE_NAME) ?>" class="auth-logo-img">
             <p><?= e(SITE_TAGLINE) ?></p>
@@ -93,17 +99,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
 
             <div class="form-group">
-                <label class="form-label">Full Name</label>
+                <label class="form-label"><?= e(t('register_name')) ?></label>
                 <input type="text" name="name" class="form-control" placeholder="e.g. Ahmad Hassan" value="<?= e($_POST['name'] ?? '') ?>" required>
             </div>
             <div class="form-group">
-                <label class="form-label">Email Address</label>
+                <label class="form-label"><?= e(t('register_email')) ?></label>
                 <input type="email" name="email" class="form-control" placeholder="you@example.com" value="<?= e($_POST['email'] ?? '') ?>" required>
                 <div class="form-hint">We'll send a verification link here before your account is active.</div>
             </div>
 
             <div class="form-group">
-                <label class="form-label">Country</label>
+                <label class="form-label"><?= e(t('register_country')) ?></label>
                 <select name="country" id="countrySelect" class="form-control" onchange="updateDialCode()" required>
                     <option value="">Select country</option>
                     <?php foreach (['Pakistan','India','Bangladesh','Saudi Arabia','United Arab Emirates','Qatar','Kuwait','Bahrain','Oman','Turkey','Egypt','Indonesia','Malaysia','Afghanistan','Iran','Iraq','Jordan','Lebanon','Morocco','Tunisia','Algeria','Nigeria','South Africa','Sri Lanka','United Kingdom','United States','Canada','Australia','Germany','France','Other'] as $c): ?>
@@ -113,7 +119,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div class="form-group">
-                <label class="form-label">Phone Number (optional)</label>
+                <label class="form-label"><?= e(t('register_phone')) ?></label>
                 <div style="display:grid;grid-template-columns:90px 1fr;gap:.6rem">
                     <input type="text" id="dialCode" name="dial_code" class="form-control" placeholder="+92" value="<?= e($_POST['dial_code'] ?? '') ?>">
                     <input type="text" name="phone_number" class="form-control" placeholder="3001234567" maxlength="10" inputmode="numeric" oninput="cleanPhoneInput(this)" value="<?= e($_POST['phone_number'] ?? '') ?>">
@@ -122,18 +128,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div class="form-group">
-                <label class="form-label">Password</label>
+                <label class="form-label"><?= e(t('register_password')) ?></label>
                 <div style="position:relative">
                     <input type="password" name="password" id="pwInput" class="form-control" placeholder="At least 8 characters" required>
                     <button type="button" onclick="togglePw('pwInput',this)" class="pw-toggle" aria-label="Show password"><i data-lucide="eye" class="lucide-icon"></i></button>
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-primary btn-full">Create My Account</button>
+            <button type="submit" class="btn btn-primary btn-full"><?= e(t('register_submit')) ?></button>
         </form>
 
         <p style="text-align:center;margin-top:1.2rem;font-size:.88rem;color:var(--text-light)">
-            Already have an account? <a href="login.php">Log in</a>
+            <?= e(t('register_have_account')) ?> <a href="login.php"><?= e(t('register_login_link')) ?></a>
         </p>
     </div>
 </div>

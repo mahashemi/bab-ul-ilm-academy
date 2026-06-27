@@ -125,7 +125,7 @@ if ($canModerate) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= currentLocale() ?>" dir="<?= isRtl(currentLocale()) ? 'rtl' : 'ltr' ?>">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -145,16 +145,28 @@ if ($canModerate) {
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <form class="nav-search" action="courses.php" method="get">
         <i data-lucide="search" class="lucide-icon"></i>
-        <input type="text" name="q" placeholder="Search for courses, teachers, subjects...">
+        <input type="text" name="q" placeholder="<?= e(t('nav_search_placeholder')) ?>">
     </form>
     <div class="nav-links">
-        <a href="index.php">Home</a>
-        <a href="courses.php">Courses</a>
-        <a href="about.php">About</a>
-        <a href="feedback.php">Feedback</a>
-        <a href="chat.php">Messages</a>
-        <?php if (isApprovedTeacher($user)): ?><a href="add-course.php">+ New Course</a><?php endif; ?>
-        <?php if (!isApprovedTeacher($user) && ($user['teacher_status'] ?? 'none') !== 'pending'): ?><a href="become-instructor.php">Become an Instructor</a><?php endif; ?>
+        <a href="index.php"><?= t('nav_home') ?></a>
+        <a href="courses.php"><?= t('nav_courses') ?></a>
+        <a href="about.php"><?= t('nav_about') ?></a>
+        <a href="feedback.php"><?= t('nav_feedback') ?></a>
+        <div class="nav-account">
+            <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="<?= e(t('nav_language')) ?>">
+                <i data-lucide="globe" class="lucide-icon"></i>
+            </button>
+            <div class="nav-account-menu">
+                <a href="set-language.php?lang=en&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'index.php')) ?>">English</a>
+                <a href="set-language.php?lang=ur&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'index.php')) ?>">اردو</a>
+                <a href="set-language.php?lang=fa&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'index.php')) ?>">فارسی</a>
+                <a href="set-language.php?lang=ar&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'index.php')) ?>">العربية</a>
+            </div>
+        </div>
+
+        <a href="chat.php"><?= t('nav_messages') ?></a>
+        <?php if (isApprovedTeacher($user)): ?><a href="add-course.php"><?= t('nav_new_course') ?></a><?php endif; ?>
+        <?php if (!isApprovedTeacher($user) && ($user['teacher_status'] ?? 'none') !== 'pending'): ?><a href="become-instructor.php"><?= t('nav_become_instructor') ?></a><?php endif; ?>
         <?= renderCartIcon($pdo, $user) ?>
         <div class="nav-account">
             <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="Account menu">
@@ -170,12 +182,12 @@ if ($canModerate) {
                     </div>
                 </div>
                 <div class="nav-menu-divider"></div>
-                <a href="dashboard.php"><i data-lucide="layout-dashboard" class="lucide-icon"></i> Dashboard</a>
-                <a href="edit-profile.php"><i data-lucide="user-cog" class="lucide-icon"></i> Edit Profile</a>
-                <a href="activity-log.php"><i data-lucide="shield-check" class="lucide-icon"></i> Account Activity</a>
-                <?php if (($user['role'] ?? '') === 'admin'): ?><a href="admin.php"><i data-lucide="shield-check" class="lucide-icon"></i> Admin Panel</a><?php endif; ?>
+                <a href="dashboard.php"><i data-lucide="layout-dashboard" class="lucide-icon"></i> <?= t('nav_dashboard') ?></a>
+                <a href="edit-profile.php"><i data-lucide="user-cog" class="lucide-icon"></i> <?= t('nav_edit_profile') ?></a>
+                <a href="activity-log.php"><i data-lucide="shield-check" class="lucide-icon"></i> <?= t('nav_account_activity') ?></a>
+                <?php if (($user['role'] ?? '') === 'admin'): ?><a href="admin.php"><i data-lucide="shield-check" class="lucide-icon"></i> <?= t('nav_admin_panel') ?></a><?php endif; ?>
                 <div class="nav-menu-divider"></div>
-                <a href="logout.php"><i data-lucide="log-out" class="lucide-icon"></i> Logout</a>
+                <a href="logout.php"><i data-lucide="log-out" class="lucide-icon"></i> <?= t('nav_logout') ?></a>
             </div>
         </div>
     </div>

@@ -2,7 +2,7 @@
 require_once __DIR__ . '/db.php';
 
 $token = $_GET['token'] ?? '';
-$stmt = $pdo->prepare('SELECT id, name, email, role, teacher_status FROM users WHERE verification_token = ? AND verification_expires > NOW()');
+$stmt = $pdo->prepare('SELECT id, name, email, role, teacher_status, ui_locale FROM users WHERE verification_token = ? AND verification_expires > NOW()');
 $stmt->execute([$token]);
 $u = $stmt->fetch();
 
@@ -12,13 +12,13 @@ if (!$u) {
 } else {
     $pdo->prepare('UPDATE users SET is_verified = 1, verification_token = NULL, verification_expires = NULL WHERE id = ?')
         ->execute([$u['id']]);
-    $_SESSION['user'] = ['id' => $u['id'], 'name' => $u['name'], 'email' => $u['email'], 'role' => $u['role'], 'teacher_status' => $u['teacher_status']];
+    $_SESSION['user'] = ['id' => $u['id'], 'name' => $u['name'], 'email' => $u['email'], 'role' => $u['role'], 'teacher_status' => $u['teacher_status'], 'ui_locale' => $u['ui_locale']];
     $message = 'Your email has been verified! Welcome to ' . SITE_NAME . '.';
     $success = true;
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= currentLocale() ?>" dir="<?= isRtl(currentLocale()) ? 'rtl' : 'ltr' ?>">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">

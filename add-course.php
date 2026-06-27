@@ -24,6 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $subjectId   = (int) ($_POST['subject_id'] ?? 0);
     $level       = $_POST['level'] ?? 'beginner';
     $language    = trim($_POST['language'] ?? 'English');
+    if ($language === 'Other') $language = trim($_POST['language_other'] ?? '') ?: 'Other';
 
     if (mb_strlen($title) < 5) $errors[] = 'Title must be at least 5 characters.';
     if (!in_array($level, ['beginner','intermediate','advanced'], true)) $errors[] = 'Invalid level.';
@@ -50,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= currentLocale() ?>" dir="<?= isRtl(currentLocale()) ? 'rtl' : 'ltr' ?>">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -69,16 +70,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <form class="nav-search" action="courses.php" method="get">
         <i data-lucide="search" class="lucide-icon"></i>
-        <input type="text" name="q" placeholder="Search for courses, teachers, subjects...">
+        <input type="text" name="q" placeholder="<?= e(t('nav_search_placeholder')) ?>">
     </form>
     <div class="nav-links">
-        <a href="index.php">Home</a>
-        <a href="courses.php">Courses</a>
-        <a href="about.php">About</a>
-        <a href="feedback.php">Feedback</a>
+        <a href="index.php"><?= t('nav_home') ?></a>
+        <a href="courses.php"><?= t('nav_courses') ?></a>
+        <a href="about.php"><?= t('nav_about') ?></a>
+        <a href="feedback.php"><?= t('nav_feedback') ?></a>
+        <div class="nav-account">
+            <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="<?= e(t('nav_language')) ?>">
+                <i data-lucide="globe" class="lucide-icon"></i>
+            </button>
+            <div class="nav-account-menu">
+                <a href="set-language.php?lang=en&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'index.php')) ?>">English</a>
+                <a href="set-language.php?lang=ur&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'index.php')) ?>">اردو</a>
+                <a href="set-language.php?lang=fa&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'index.php')) ?>">فارسی</a>
+                <a href="set-language.php?lang=ar&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'index.php')) ?>">العربية</a>
+            </div>
+        </div>
+
         <?php if ($user): ?>
-            <a href="chat.php">Messages</a>
-            <?php if (isApprovedTeacher($user)): ?><a href="add-course.php">+ New Course</a><?php endif; ?>
+            <a href="chat.php"><?= t('nav_messages') ?></a>
+            <?php if (isApprovedTeacher($user)): ?><a href="add-course.php"><?= t('nav_new_course') ?></a><?php endif; ?>
             <?= renderCartIcon($pdo, $user) ?>
             <div class="nav-account">
                 <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="Account menu">
@@ -94,20 +107,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                     </div>
                     <div class="nav-menu-divider"></div>
-                    <a href="dashboard.php"><i data-lucide="layout-dashboard" class="lucide-icon"></i> Dashboard</a>
-                    <a href="chat.php"><i data-lucide="message-circle" class="lucide-icon"></i> Messages</a>
-                    <?php if (isApprovedTeacher($user)): ?><a href="add-course.php"><i data-lucide="plus" class="lucide-icon"></i> New Course</a><?php endif; ?>
-                    <?php if (!isApprovedTeacher($user) && ($user['teacher_status'] ?? 'none') !== 'pending'): ?><a href="become-instructor.php"><i data-lucide="presentation" class="lucide-icon"></i> Become an Instructor</a><?php endif; ?>
+                    <a href="dashboard.php"><i data-lucide="layout-dashboard" class="lucide-icon"></i> <?= t('nav_dashboard') ?></a>
+                    <a href="chat.php"><i data-lucide="message-circle" class="lucide-icon"></i> <?= t('nav_messages') ?></a>
+                    <?php if (isApprovedTeacher($user)): ?><a href="add-course.php"><i data-lucide="plus" class="lucide-icon"></i> <?= t('nav_new_course_plain') ?></a><?php endif; ?>
+                    <?php if (!isApprovedTeacher($user) && ($user['teacher_status'] ?? 'none') !== 'pending'): ?><a href="become-instructor.php"><i data-lucide="presentation" class="lucide-icon"></i> <?= t('nav_become_instructor') ?></a><?php endif; ?>
                     <div class="nav-menu-divider"></div>
-                    <a href="edit-profile.php"><i data-lucide="user-cog" class="lucide-icon"></i> Edit Profile</a>
-                    <a href="activity-log.php"><i data-lucide="shield-check" class="lucide-icon"></i> Account Activity</a>
-                    <?php if (($user['role'] ?? '') === 'admin'): ?><a href="admin.php"><i data-lucide="shield-check" class="lucide-icon"></i> Admin Panel</a><?php endif; ?>
+                    <a href="edit-profile.php"><i data-lucide="user-cog" class="lucide-icon"></i> <?= t('nav_edit_profile') ?></a>
+                    <a href="activity-log.php"><i data-lucide="shield-check" class="lucide-icon"></i> <?= t('nav_account_activity') ?></a>
+                    <?php if (($user['role'] ?? '') === 'admin'): ?><a href="admin.php"><i data-lucide="shield-check" class="lucide-icon"></i> <?= t('nav_admin_panel') ?></a><?php endif; ?>
                     <div class="nav-menu-divider"></div>
-                    <a href="logout.php"><i data-lucide="log-out" class="lucide-icon"></i> Logout</a>
+                    <a href="logout.php"><i data-lucide="log-out" class="lucide-icon"></i> <?= t('nav_logout') ?></a>
                 </div>
             </div>
         <?php else: ?>
-            <a href="login.php" class="nav-btn">Login</a>
+            <a href="login.php" class="nav-btn"><?= t('nav_login') ?></a>
         <?php endif; ?>
     </div>
 </nav>
@@ -163,7 +176,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <div class="form-group">
                 <label class="form-label">Language</label>
-                <input type="text" name="language" class="form-control" value="English" placeholder="English">
+                <select name="language" id="languageSelect" class="form-control" onchange="document.getElementById('languageOtherWrap').style.display = this.value === 'Other' ? 'block' : 'none'">
+                    <option value="English">English</option>
+                    <option value="Urdu">Urdu</option>
+                    <option value="Persian">Persian</option>
+                    <option value="Arabic">Arabic</option>
+                    <option value="Other">Other</option>
+                </select>
+                <div id="languageOtherWrap" style="display:none;margin-top:.6rem">
+                    <input type="text" name="language_other" class="form-control" placeholder="Enter language name">
+                </div>
             </div>
 
             <button type="submit" class="btn btn-primary btn-full">Save &amp; Continue</button>

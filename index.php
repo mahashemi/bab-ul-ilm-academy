@@ -98,7 +98,7 @@ $heroBg = siteSetting($pdo, 'home_hero_bg');
 $categoryNav = renderCategoryNav($pdo);
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= currentLocale() ?>" dir="<?= isRtl(currentLocale()) ? 'rtl' : 'ltr' ?>">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -122,17 +122,29 @@ $categoryNav = renderCategoryNav($pdo);
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <form class="nav-search" action="courses.php" method="get">
         <i data-lucide="search" class="lucide-icon"></i>
-        <input type="text" name="q" placeholder="Search for courses, teachers, subjects...">
+        <input type="text" name="q" placeholder="<?= e(t('nav_search_placeholder')) ?>">
     </form>
     <div class="nav-links">
-        <a href="index.php">Home</a>
-        <a href="courses.php">Courses</a>
+        <a href="index.php"><?= t('nav_home') ?></a>
+        <a href="courses.php"><?= t('nav_courses') ?></a>
         <?= $categoryNav['mobile'] ?>
-        <a href="about.php">About</a>
-        <a href="feedback.php">Feedback</a>
+        <a href="about.php"><?= t('nav_about') ?></a>
+        <a href="feedback.php"><?= t('nav_feedback') ?></a>
+        <div class="nav-account">
+            <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="<?= e(t('nav_language')) ?>">
+                <i data-lucide="globe" class="lucide-icon"></i>
+            </button>
+            <div class="nav-account-menu">
+                <a href="set-language.php?lang=en&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'index.php')) ?>">English</a>
+                <a href="set-language.php?lang=ur&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'index.php')) ?>">اردو</a>
+                <a href="set-language.php?lang=fa&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'index.php')) ?>">فارسی</a>
+                <a href="set-language.php?lang=ar&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'index.php')) ?>">العربية</a>
+            </div>
+        </div>
+
         <?php if ($user): ?>
-            <a href="chat.php">Messages</a>
-            <?php if (isApprovedTeacher($user)): ?><a href="add-course.php">+ New Course</a><?php endif; ?>
+            <a href="chat.php"><?= t('nav_messages') ?></a>
+            <?php if (isApprovedTeacher($user)): ?><a href="add-course.php"><?= t('nav_new_course') ?></a><?php endif; ?>
             <?= renderCartIcon($pdo, $user) ?>
             <div class="nav-account">
                 <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="Account menu">
@@ -148,20 +160,20 @@ $categoryNav = renderCategoryNav($pdo);
                         </div>
                     </div>
                     <div class="nav-menu-divider"></div>
-                    <a href="dashboard.php"><i data-lucide="layout-dashboard" class="lucide-icon"></i> Dashboard</a>
-                    <a href="chat.php"><i data-lucide="message-circle" class="lucide-icon"></i> Messages</a>
-                    <?php if (isApprovedTeacher($user)): ?><a href="add-course.php"><i data-lucide="plus" class="lucide-icon"></i> New Course</a><?php endif; ?>
-                    <?php if (!isApprovedTeacher($user) && ($user['teacher_status'] ?? 'none') !== 'pending'): ?><a href="become-instructor.php"><i data-lucide="presentation" class="lucide-icon"></i> Become an Instructor</a><?php endif; ?>
+                    <a href="dashboard.php"><i data-lucide="layout-dashboard" class="lucide-icon"></i> <?= t('nav_dashboard') ?></a>
+                    <a href="chat.php"><i data-lucide="message-circle" class="lucide-icon"></i> <?= t('nav_messages') ?></a>
+                    <?php if (isApprovedTeacher($user)): ?><a href="add-course.php"><i data-lucide="plus" class="lucide-icon"></i> <?= t('nav_new_course_plain') ?></a><?php endif; ?>
+                    <?php if (!isApprovedTeacher($user) && ($user['teacher_status'] ?? 'none') !== 'pending'): ?><a href="become-instructor.php"><i data-lucide="presentation" class="lucide-icon"></i> <?= t('nav_become_instructor') ?></a><?php endif; ?>
                     <div class="nav-menu-divider"></div>
-                    <a href="edit-profile.php"><i data-lucide="user-cog" class="lucide-icon"></i> Edit Profile</a>
-                    <a href="activity-log.php"><i data-lucide="shield-check" class="lucide-icon"></i> Account Activity</a>
-                    <?php if (($user['role'] ?? '') === 'admin'): ?><a href="admin.php"><i data-lucide="shield-check" class="lucide-icon"></i> Admin Panel</a><?php endif; ?>
+                    <a href="edit-profile.php"><i data-lucide="user-cog" class="lucide-icon"></i> <?= t('nav_edit_profile') ?></a>
+                    <a href="activity-log.php"><i data-lucide="shield-check" class="lucide-icon"></i> <?= t('nav_account_activity') ?></a>
+                    <?php if (($user['role'] ?? '') === 'admin'): ?><a href="admin.php"><i data-lucide="shield-check" class="lucide-icon"></i> <?= t('nav_admin_panel') ?></a><?php endif; ?>
                     <div class="nav-menu-divider"></div>
-                    <a href="logout.php"><i data-lucide="log-out" class="lucide-icon"></i> Logout</a>
+                    <a href="logout.php"><i data-lucide="log-out" class="lucide-icon"></i> <?= t('nav_logout') ?></a>
                 </div>
             </div>
         <?php else: ?>
-            <a href="login.php" class="nav-btn">Login</a>
+            <a href="login.php" class="nav-btn"><?= t('nav_login') ?></a>
         <?php endif; ?>
     </div>
 </nav>
@@ -184,9 +196,9 @@ $categoryNav = renderCategoryNav($pdo);
             <a href="getting-started.php" class="btn btn-secondary">How It Works</a>
         </div>
         <div class="hero-stats">
-            <div class="hero-stat"><div class="num"><?= (int) $stats['teachers'] ?></div><div class="lbl">Teachers</div></div>
-            <div class="hero-stat"><div class="num"><?= (int) $stats['students'] ?></div><div class="lbl">Students</div></div>
-            <div class="hero-stat"><div class="num"><?= (int) $stats['courses'] ?></div><div class="lbl">Courses</div></div>
+            <div class="hero-stat"><div class="num"><?= (int) $stats['teachers'] ?></div><div class="lbl"><?= e(t('home_stat_teachers')) ?></div></div>
+            <div class="hero-stat"><div class="num"><?= (int) $stats['students'] ?></div><div class="lbl"><?= e(t('home_stat_students')) ?></div></div>
+            <div class="hero-stat"><div class="num"><?= (int) $stats['courses'] ?></div><div class="lbl"><?= e(t('home_stat_courses')) ?></div></div>
         </div>
     </div>
 </header>
@@ -219,12 +231,12 @@ $categoryNav = renderCategoryNav($pdo);
         <?php foreach ($subjects as $s): ?>
             <a href="courses.php?subject=<?= (int) $s['id'] ?>" class="cat-chip"><?= catIcon($s['icon']) ?> <?= e($s['name']) ?></a>
         <?php endforeach; ?>
-        <a href="courses.php" class="chip-view-all">View All Subjects <i data-lucide="arrow-right" class="lucide-icon"></i></a>
+        <a href="courses.php" class="chip-view-all"><?= e(t('home_view_all_subjects')) ?> <i data-lucide="arrow-right" class="lucide-icon icon-flip-rtl"></i></a>
     </div>
 
     <?php if ($trendingCourses): ?>
-    <h2 class="section-title">What to <span>Explore Next</span></h2>
-    <p class="section-sub">Trending across the whole platform right now<?= $user ? ' — personalized recommendations are coming soon' : '' ?></p>
+    <h2 class="section-title"><?= e(t('home_explore_next')) ?></h2>
+    <p class="section-sub"><?= e(t('home_explore_sub')) ?><?= $user ? ' — personalized recommendations are coming soon' : '' ?></p>
     <div class="carousel-row" style="margin-bottom:2.5rem">
         <?php foreach ($trendingCourses as $c): ?><?= renderCourseCard($c, $bestsellerIds) ?><?php endforeach; ?>
     </div>
@@ -232,25 +244,25 @@ $categoryNav = renderCategoryNav($pdo);
 
     <?php if ($recommendedCourses): ?>
     <div class="carousel-head">
-        <h2 class="section-title">Recommended for <span><?= e(implode(', ', $myFieldNames)) ?></span></h2>
+        <h2 class="section-title"><?= e(t('home_recommended_for', ['fields' => implode(', ', $myFieldNames)])) ?></h2>
     </div>
-    <p class="section-sub">Based on the fields you told us you're learning for</p>
+    <p class="section-sub"><?= e(t('home_recommended_sub')) ?></p>
     <div class="carousel-row" style="margin-bottom:2.5rem">
         <?php foreach ($recommendedCourses as $c): ?><?= renderCourseCard($c, $bestsellerIds) ?><?php endforeach; ?>
     </div>
     <?php endif; ?>
 
     <?php foreach ($topByField as $row): ?>
-    <h2 class="section-title">Top Courses in <span><?= e($row['name']) ?></span></h2>
+    <h2 class="section-title"><?= e(t('home_top_in', ['field' => $row['name']])) ?></h2>
     <div class="carousel-row" style="margin-bottom:2.5rem">
         <?php foreach ($row['courses'] as $c): ?><?= renderCourseCard($c, $bestsellerIds) ?><?php endforeach; ?>
     </div>
     <?php endforeach; ?>
 
-    <h2 class="section-title">Newest <span>Courses</span></h2>
-    <p class="section-sub">Taught by qualified Islamic scholars and educators</p>
+    <h2 class="section-title"><?= e(t('home_newest')) ?></h2>
+    <p class="section-sub"><?= e(t('home_newest_sub')) ?></p>
     <?php if (!$newCourses): ?>
-        <div class="empty-state"><div class="icon"><i data-lucide="book-open" class="lucide-icon"></i></div><h3>No courses published yet</h3></div>
+        <div class="empty-state"><div class="icon"><i data-lucide="book-open" class="lucide-icon"></i></div><h3><?= e(t('home_no_courses_yet')) ?></h3></div>
     <?php else: ?>
     <div class="carousel-row" style="margin-bottom:2.5rem">
         <?php foreach ($newCourses as $c): ?><?= renderCourseCard($c, $bestsellerIds) ?><?php endforeach; ?>
@@ -260,19 +272,19 @@ $categoryNav = renderCategoryNav($pdo);
     <?php if (!$user || !isApprovedTeacher($user)): ?>
     <div class="teach-cta-band">
         <div>
-            <h3><i data-lucide="presentation" class="lucide-icon"></i> Teach on <?= e(SITE_NAME) ?></h3>
-            <p>Share your knowledge, reach students anywhere in the world, and earn teaching what you know.</p>
+            <h3><i data-lucide="presentation" class="lucide-icon"></i> <?= e(t('home_teach_cta_title', ['site' => SITE_NAME])) ?></h3>
+            <p><?= e(t('home_teach_cta_body')) ?></p>
         </div>
-        <a href="<?= $user ? 'become-instructor.php' : 'register.php' ?>" class="btn btn-primary">Become a Teacher</a>
+        <a href="<?= $user ? 'become-instructor.php' : 'register.php' ?>" class="btn btn-primary"><?= e(t('home_teach_cta_button')) ?></a>
     </div>
     <?php endif; ?>
 </div>
 
 <div class="trust-strip">
-    <div><div class="num"><?= (int) $stats['teachers'] ?></div><div class="lbl">Qualified Teachers</div></div>
-    <div><div class="num"><?= (int) $stats['students'] ?></div><div class="lbl">Students Learning</div></div>
-    <div><div class="num"><?= (int) $stats['courses'] ?></div><div class="lbl">Published Courses</div></div>
-    <div><div class="num"><?= e(SITE_AFFILIATION) ?></div><div class="lbl">Academic Affiliation</div></div>
+    <div><div class="num"><?= (int) $stats['teachers'] ?></div><div class="lbl"><?= e(t('home_stat_teachers')) ?></div></div>
+    <div><div class="num"><?= (int) $stats['students'] ?></div><div class="lbl"><?= e(t('home_stat_students')) ?></div></div>
+    <div><div class="num"><?= (int) $stats['courses'] ?></div><div class="lbl"><?= e(t('home_stat_courses')) ?></div></div>
+    <div><div class="num"><?= e(SITE_AFFILIATION) ?></div><div class="lbl"><?= e(t('home_stat_affiliation')) ?></div></div>
 </div>
 
 <?= renderFooter($pdo) ?>

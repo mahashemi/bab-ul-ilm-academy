@@ -261,7 +261,7 @@ function starString(float $rating): string {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= currentLocale() ?>" dir="<?= isRtl(currentLocale()) ? 'rtl' : 'ltr' ?>">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -281,16 +281,28 @@ function starString(float $rating): string {
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <form class="nav-search" action="courses.php" method="get">
         <i data-lucide="search" class="lucide-icon"></i>
-        <input type="text" name="q" placeholder="Search for courses, teachers, subjects...">
+        <input type="text" name="q" placeholder="<?= e(t('nav_search_placeholder')) ?>">
     </form>
     <div class="nav-links">
-        <a href="index.php">Home</a>
-        <a href="courses.php">Courses</a>
-        <a href="about.php">About</a>
-        <a href="feedback.php">Feedback</a>
+        <a href="index.php"><?= t('nav_home') ?></a>
+        <a href="courses.php"><?= t('nav_courses') ?></a>
+        <a href="about.php"><?= t('nav_about') ?></a>
+        <a href="feedback.php"><?= t('nav_feedback') ?></a>
+        <div class="nav-account">
+            <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="<?= e(t('nav_language')) ?>">
+                <i data-lucide="globe" class="lucide-icon"></i>
+            </button>
+            <div class="nav-account-menu">
+                <a href="set-language.php?lang=en&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'index.php')) ?>">English</a>
+                <a href="set-language.php?lang=ur&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'index.php')) ?>">اردو</a>
+                <a href="set-language.php?lang=fa&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'index.php')) ?>">فارسی</a>
+                <a href="set-language.php?lang=ar&return=<?= e(urlencode($_SERVER['REQUEST_URI'] ?? 'index.php')) ?>">العربية</a>
+            </div>
+        </div>
+
         <?php if ($user): ?>
-            <a href="chat.php">Messages</a>
-            <?php if (isApprovedTeacher($user)): ?><a href="add-course.php">+ New Course</a><?php endif; ?>
+            <a href="chat.php"><?= t('nav_messages') ?></a>
+            <?php if (isApprovedTeacher($user)): ?><a href="add-course.php"><?= t('nav_new_course') ?></a><?php endif; ?>
             <?= renderCartIcon($pdo, $user) ?>
             <div class="nav-account">
                 <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="Account menu">
@@ -306,20 +318,20 @@ function starString(float $rating): string {
                         </div>
                     </div>
                     <div class="nav-menu-divider"></div>
-                    <a href="dashboard.php"><i data-lucide="layout-dashboard" class="lucide-icon"></i> Dashboard</a>
-                    <a href="chat.php"><i data-lucide="message-circle" class="lucide-icon"></i> Messages</a>
-                    <?php if (isApprovedTeacher($user)): ?><a href="add-course.php"><i data-lucide="plus" class="lucide-icon"></i> New Course</a><?php endif; ?>
-                    <?php if (!isApprovedTeacher($user) && ($user['teacher_status'] ?? 'none') !== 'pending'): ?><a href="become-instructor.php"><i data-lucide="presentation" class="lucide-icon"></i> Become an Instructor</a><?php endif; ?>
+                    <a href="dashboard.php"><i data-lucide="layout-dashboard" class="lucide-icon"></i> <?= t('nav_dashboard') ?></a>
+                    <a href="chat.php"><i data-lucide="message-circle" class="lucide-icon"></i> <?= t('nav_messages') ?></a>
+                    <?php if (isApprovedTeacher($user)): ?><a href="add-course.php"><i data-lucide="plus" class="lucide-icon"></i> <?= t('nav_new_course_plain') ?></a><?php endif; ?>
+                    <?php if (!isApprovedTeacher($user) && ($user['teacher_status'] ?? 'none') !== 'pending'): ?><a href="become-instructor.php"><i data-lucide="presentation" class="lucide-icon"></i> <?= t('nav_become_instructor') ?></a><?php endif; ?>
                     <div class="nav-menu-divider"></div>
-                    <a href="edit-profile.php"><i data-lucide="user-cog" class="lucide-icon"></i> Edit Profile</a>
-                    <a href="activity-log.php"><i data-lucide="shield-check" class="lucide-icon"></i> Account Activity</a>
-                    <?php if (($user['role'] ?? '') === 'admin'): ?><a href="admin.php"><i data-lucide="shield-check" class="lucide-icon"></i> Admin Panel</a><?php endif; ?>
+                    <a href="edit-profile.php"><i data-lucide="user-cog" class="lucide-icon"></i> <?= t('nav_edit_profile') ?></a>
+                    <a href="activity-log.php"><i data-lucide="shield-check" class="lucide-icon"></i> <?= t('nav_account_activity') ?></a>
+                    <?php if (($user['role'] ?? '') === 'admin'): ?><a href="admin.php"><i data-lucide="shield-check" class="lucide-icon"></i> <?= t('nav_admin_panel') ?></a><?php endif; ?>
                     <div class="nav-menu-divider"></div>
-                    <a href="logout.php"><i data-lucide="log-out" class="lucide-icon"></i> Logout</a>
+                    <a href="logout.php"><i data-lucide="log-out" class="lucide-icon"></i> <?= t('nav_logout') ?></a>
                 </div>
             </div>
         <?php else: ?>
-            <a href="login.php" class="nav-btn">Login</a>
+            <a href="login.php" class="nav-btn"><?= t('nav_login') ?></a>
         <?php endif; ?>
     </div>
 </nav>
@@ -383,7 +395,7 @@ function starString(float $rating): string {
 
             <?php if ($objectives): ?>
             <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
-                <h3 style="font-size:1.1rem;margin-bottom:.8rem;color:var(--green-deep)">What you'll learn</h3>
+                <h3 style="font-size:1.1rem;margin-bottom:.8rem;color:var(--green-deep)"><?= e(t('course_what_learn')) ?></h3>
                 <div class="objectives-grid">
                     <?php foreach ($objectives as $obj): ?>
                         <div class="objective-item"><i data-lucide="check" class="lucide-icon"></i><span><?= e($obj) ?></span></div>
@@ -405,7 +417,7 @@ function starString(float $rating): string {
 
             <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
                 <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem">
-                    <h3 style="font-size:1.1rem;color:var(--green-deep)"><i data-lucide="clipboard-list" class="lucide-icon"></i> Curriculum (<?= count($lessons) ?> lessons<?= $totalMinutes > 0 ? ', ' . round($totalMinutes / 60, 1) . ' hours' : '' ?>)</h3>
+                    <h3 style="font-size:1.1rem;color:var(--green-deep)"><i data-lucide="clipboard-list" class="lucide-icon"></i> <?= e(t('course_curriculum')) ?> (<?= count($lessons) ?> lessons<?= $totalMinutes > 0 ? ', ' . round($totalMinutes / 60, 1) . ' hours' : '' ?>)</h3>
                     <button type="button" onclick="toggleAllSections()" id="expandAllBtn" class="btn btn-sm btn-outline">Collapse all sections</button>
                 </div>
                 <?php foreach ($curriculum as $sectionTitle => $sectionLessons): ?>
@@ -488,7 +500,7 @@ function starString(float $rating): string {
 
             <?php if ($requirements): ?>
             <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
-                <h3 style="font-size:1.1rem;margin-bottom:.8rem;color:var(--green-deep)">Requirements</h3>
+                <h3 style="font-size:1.1rem;margin-bottom:.8rem;color:var(--green-deep)"><?= e(t('course_requirements')) ?></h3>
                 <ul class="requirements-list">
                     <?php foreach ($requirements as $req): ?><li><?= e($req) ?></li><?php endforeach; ?>
                 </ul>
@@ -496,7 +508,7 @@ function starString(float $rating): string {
             <?php endif; ?>
 
             <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
-                <h3 style="font-size:1.1rem;margin-bottom:.8rem;color:var(--green-deep)">Description</h3>
+                <h3 style="font-size:1.1rem;margin-bottom:.8rem;color:var(--green-deep)"><?= e(t('course_description')) ?></h3>
                 <p style="color:var(--text-mid);white-space:pre-line"><?= e($course['description']) ?></p>
                 <?php if ($course['editor_name']): ?>
                     <div style="font-size:.78rem;color:var(--text-light);margin-top:1rem">
@@ -507,7 +519,7 @@ function starString(float $rating): string {
             </div></div>
 
             <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
-                <h3 style="font-size:1.1rem;margin-bottom:1rem;color:var(--green-deep)">Instructor</h3>
+                <h3 style="font-size:1.1rem;margin-bottom:1rem;color:var(--green-deep)"><?= e(t('course_instructor')) ?></h3>
                 <div class="instructor-card">
                     <div class="profile-avatar"><?= e(mb_substr($course['teacher_name'], 0, 1)) ?></div>
                     <div>
@@ -538,7 +550,7 @@ function starString(float $rating): string {
             </div></div>
 
             <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
-                <h3 style="font-size:1.1rem;margin-bottom:1rem;color:var(--green-deep)">Student Reviews</h3>
+                <h3 style="font-size:1.1rem;margin-bottom:1rem;color:var(--green-deep)"><?= e(t('course_reviews')) ?></h3>
 
                 <?php if ($reviewCount > 0): ?>
                 <div class="rating-summary">
@@ -577,7 +589,7 @@ function starString(float $rating): string {
                 <?php endif; ?>
 
                 <?php if (!$reviews): ?>
-                    <p style="color:var(--text-light);font-size:.9rem">No reviews yet.</p>
+                    <p style="color:var(--text-light);font-size:.9rem"><?= e(t('course_no_reviews')) ?></p>
                 <?php else: ?>
                     <?php foreach ($reviews as $r): ?>
                     <div class="review-item">
@@ -648,7 +660,7 @@ function starString(float $rating): string {
                     <?php elseif ((float) $course['price'] <= 0): ?>
                         <form method="post">
                             <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
-                            <button type="submit" name="enroll" value="1" class="btn btn-primary btn-full">Enroll Now — Free</button>
+                            <button type="submit" name="enroll" value="1" class="btn btn-primary btn-full"><?= e(t('course_enroll_now')) ?> — Free</button>
                         </form>
                     <?php elseif ($inCart): ?>
                         <a href="cart.php" class="btn btn-primary btn-full"><i data-lucide="shopping-cart" class="lucide-icon"></i> Go to Cart</a>
@@ -657,8 +669,8 @@ function starString(float $rating): string {
                     <?php else: ?>
                         <form method="post" style="display:flex;flex-direction:column;gap:.6rem">
                             <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
-                            <button type="submit" name="buy_now" value="1" class="btn btn-primary btn-full">Buy Now</button>
-                            <button type="submit" name="add_to_cart" value="1" class="btn btn-outline btn-full"><i data-lucide="shopping-cart" class="lucide-icon"></i> Add to Cart</button>
+                            <button type="submit" name="buy_now" value="1" class="btn btn-primary btn-full"><?= e(t('course_buy_now')) ?></button>
+                            <button type="submit" name="add_to_cart" value="1" class="btn btn-outline btn-full"><i data-lucide="shopping-cart" class="lucide-icon"></i> <?= e(t('course_add_to_cart')) ?></button>
                         </form>
                         <p style="font-size:.78rem;color:var(--text-light);text-align:center;margin-top:.6rem"><i data-lucide="shield-check" class="lucide-icon"></i> Full lifetime access</p>
                     <?php endif; ?>

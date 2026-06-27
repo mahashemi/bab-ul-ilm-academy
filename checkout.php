@@ -18,7 +18,7 @@ if (!$gateways) {
 $total = getCartTotal($cartItems);
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= currentLocale() ?>" dir="<?= isRtl(currentLocale()) ? 'rtl' : 'ltr' ?>">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -37,11 +37,11 @@ $total = getCartTotal($cartItems);
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <form class="nav-search" action="courses.php" method="get">
         <i data-lucide="search" class="lucide-icon"></i>
-        <input type="text" name="q" placeholder="Search for courses, teachers, subjects...">
+        <input type="text" name="q" placeholder="<?= e(t('nav_search_placeholder')) ?>">
     </form>
     <div class="nav-links">
-        <a href="index.php">Home</a>
-        <a href="courses.php">Courses</a>
+        <a href="index.php"><?= t('nav_home') ?></a>
+        <a href="courses.php"><?= t('nav_courses') ?></a>
         <a href="cart.php"><i data-lucide="arrow-left" class="lucide-icon"></i> Back to Cart</a>
         <?= renderCartIcon($pdo, $user) ?>
         <div class="nav-account">
@@ -58,9 +58,9 @@ $total = getCartTotal($cartItems);
                     </div>
                 </div>
                 <div class="nav-menu-divider"></div>
-                <a href="dashboard.php"><i data-lucide="layout-dashboard" class="lucide-icon"></i> Dashboard</a>
+                <a href="dashboard.php"><i data-lucide="layout-dashboard" class="lucide-icon"></i> <?= t('nav_dashboard') ?></a>
                 <div class="nav-menu-divider"></div>
-                <a href="logout.php"><i data-lucide="log-out" class="lucide-icon"></i> Logout</a>
+                <a href="logout.php"><i data-lucide="log-out" class="lucide-icon"></i> <?= t('nav_logout') ?></a>
             </div>
         </div>
     </div>

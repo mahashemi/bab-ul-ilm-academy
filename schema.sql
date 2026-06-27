@@ -40,7 +40,8 @@ CREATE TABLE IF NOT EXISTS users (
     gender       ENUM('male','female','unspecified') DEFAULT 'unspecified',
     date_of_birth DATE NULL,
     education_level VARCHAR(50) NULL,       -- Student/Parent: highest level completed or in progress
-    preferred_language VARCHAR(50) NULL,
+    preferred_language VARCHAR(50) NULL,    -- free-text "what language do you want to learn in" personalization hint, NOT the UI language (see ui_locale)
+    ui_locale    ENUM('en','ur','fa','ar') NOT NULL DEFAULT 'en', -- the interface language -- see currentLocale()/t() in db.php
     organization_name VARCHAR(200) NULL,    -- legacy Institution accounts only
     phone        VARCHAR(30),
     phone_verified TINYINT(1) DEFAULT 0,

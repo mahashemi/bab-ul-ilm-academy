@@ -49,7 +49,7 @@ if ($actingAsId) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= currentLocale() ?>" dir="<?= isRtl(currentLocale()) ? 'rtl' : 'ltr' ?>">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -68,11 +68,11 @@ if ($actingAsId) {
     <div class="nav-scrim" onclick="toggleNav()"></div>
     <form class="nav-search" action="courses.php" method="get">
         <i data-lucide="search" class="lucide-icon"></i>
-        <input type="text" name="q" placeholder="Search for courses, teachers, subjects...">
+        <input type="text" name="q" placeholder="<?= e(t('nav_search_placeholder')) ?>">
     </form>
     <div class="nav-links">
-        <a href="index.php">Home</a>
-        <a href="courses.php">Courses</a>
+        <a href="index.php"><?= t('nav_home') ?></a>
+        <a href="courses.php"><?= t('nav_courses') ?></a>
         <?php if (($user['role'] ?? '') === 'admin'): ?><a href="admin.php">Admin Panel</a><?php endif; ?>
         <?= renderCartIcon($pdo, $user) ?>
         <div class="nav-account">
@@ -89,11 +89,11 @@ if ($actingAsId) {
                     </div>
                 </div>
                 <div class="nav-menu-divider"></div>
-                <?php if (($user['role'] ?? '') === 'admin'): ?><a href="admin.php"><i data-lucide="shield-check" class="lucide-icon"></i> Admin Panel</a><?php endif; ?>
-                <a href="edit-profile.php"><i data-lucide="user-cog" class="lucide-icon"></i> Edit Profile</a>
-                <a href="activity-log.php"><i data-lucide="shield-check" class="lucide-icon"></i> Account Activity</a>
+                <?php if (($user['role'] ?? '') === 'admin'): ?><a href="admin.php"><i data-lucide="shield-check" class="lucide-icon"></i> <?= t('nav_admin_panel') ?></a><?php endif; ?>
+                <a href="edit-profile.php"><i data-lucide="user-cog" class="lucide-icon"></i> <?= t('nav_edit_profile') ?></a>
+                <a href="activity-log.php"><i data-lucide="shield-check" class="lucide-icon"></i> <?= t('nav_account_activity') ?></a>
                 <div class="nav-menu-divider"></div>
-                <a href="logout.php"><i data-lucide="log-out" class="lucide-icon"></i> Logout</a>
+                <a href="logout.php"><i data-lucide="log-out" class="lucide-icon"></i> <?= t('nav_logout') ?></a>
             </div>
         </div>
     </div>
@@ -115,7 +115,7 @@ if ($actingAsId) {
             <h3 style="font-size:1.05rem;color:var(--green-deep)"><?= e(displayNameOf($actingTeacher)) ?>'s Courses (<?= count($teacherCourses) ?>)</h3>
             <div style="display:flex;gap:.5rem">
                 <a href="single-upload.php" class="btn btn-outline btn-sm"><i data-lucide="upload" class="lucide-icon"></i> Single Upload</a>
-                <a href="add-course.php" class="btn btn-primary btn-sm"><i data-lucide="plus" class="lucide-icon"></i> New Course</a>
+                <a href="add-course.php" class="btn btn-primary btn-sm"><i data-lucide="plus" class="lucide-icon"></i> <?= t('nav_new_course_plain') ?></a>
             </div>
         </div>
 

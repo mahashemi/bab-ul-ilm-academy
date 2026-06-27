@@ -1,6 +1,8 @@
 /* Bab ul Ilm Academy — Islamic Academic Design System (Material Design 3 structure) */
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700;800&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Marcellus&family=Jost:wght@500&display=swap');
+/* Arabic-script fonts -- Naskh suits Arabic/Persian, Nastaliq suits Urdu's distinct calligraphic style */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;500;700&family=Noto+Nastaliq+Urdu:wght@400;600;700&display=swap');
 :root {
     --teal-deep:   #083344;
     --teal-mid:    #0e5272;
@@ -32,6 +34,26 @@ body { font-family: 'Roboto', 'Segoe UI', system-ui, sans-serif; background: var
 a { color: var(--teal-mid); text-decoration: none; }
 a:hover { color: var(--gold-dark); }
 img { max-width: 100%; height: auto; display: block; }
+
+/* ── Internationalization: RTL (Urdu/Persian/Arabic) ──
+   Layout-primitives pass, not a pixel-perfect mirror of every page yet --
+   covers the chrome shared everywhere (nav, footer, forms, cards) so
+   nothing reads backwards while individual pages get translated. */
+html[lang="ur"] body, html[lang="ur"] input, html[lang="ur"] textarea, html[lang="ur"] select { font-family: 'Noto Nastaliq Urdu', 'Roboto', sans-serif; }
+html[lang="fa"] body, html[lang="fa"] input, html[lang="fa"] textarea, html[lang="fa"] select,
+html[lang="ar"] body, html[lang="ar"] input, html[lang="ar"] textarea, html[lang="ar"] select { font-family: 'Noto Naskh Arabic', 'Roboto', sans-serif; }
+
+[dir="rtl"] { text-align: right; }
+[dir="rtl"] .navbar { direction: rtl; }
+[dir="rtl"] .nav-search input { text-align: right; }
+[dir="rtl"] .nav-account-menu { left: 0; right: auto; }
+[dir="rtl"] .footer-grid, [dir="rtl"] .course-meta, [dir="rtl"] .instructor-stats,
+[dir="rtl"] .action-row, [dir="rtl"] .form-row, [dir="rtl"] .wizard-step { direction: rtl; }
+[dir="rtl"] .form-label, [dir="rtl"] .form-hint { text-align: right; }
+[dir="rtl"] .course-wizard-sidebar { direction: rtl; }
+[dir="rtl"] .lesson-num, [dir="rtl"] .curriculum-lecture-check, [dir="rtl"] .step-num { margin-left: 0; }
+/* Directional icons (next/back arrows) need to visually flip in RTL so "continue" still points the reading-forward direction */
+[dir="rtl"] .icon-flip-rtl { transform: scaleX(-1); display: inline-block; }
 
 /* ── Navbar ── */
 .navbar {

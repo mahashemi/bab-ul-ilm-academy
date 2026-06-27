@@ -112,7 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 </nav>
 
-<div class="dashboard-wrap">
+<div class="dashboard-wrap" style="max-width:1300px">
     <div class="dashboard-header"><h2><i data-lucide="book-open" class="lucide-icon"></i> Create a New Course</h2><p>Step 1: the basics. New to this? <a href="tutorial.php" style="color:var(--gold);text-decoration:underline">See the step-by-step tutorial</a>.</p></div>
 
     <?= renderActingAsBanner($pdo) ?>

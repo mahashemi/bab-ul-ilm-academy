@@ -173,13 +173,17 @@ foreach ($lessons as $l) {
     </div>
 </nav>
 
-<div class="dashboard-wrap">
+<div class="dashboard-wrap" style="max-width:1300px">
     <div class="dashboard-header"><h2><i data-lucide="clipboard-list" class="lucide-icon"></i> Curriculum — <?= e($course['title']) ?></h2><p>Create your course in sections, each focused on a single learning objective. Then add video, article, or slide content to each lecture.</p></div>
 
     <?= renderActingAsBanner($pdo) ?>
 
     <?php if (flash('success')): ?><div class="alert alert-success"><?= e(flash('success')) ?></div><?php endif; ?>
     <?php if ($errors): ?><div class="alert alert-error"><?php foreach ($errors as $err): ?><div><?= e($err) ?></div><?php endforeach; ?></div><?php endif; ?>
+
+    <div class="course-wizard-layout">
+    <?= renderCourseWizardSidebar($courseId, 'curriculum') ?>
+    <div style="min-width:0">
 
     <?php if (!$lessons): ?>
     <div class="card" style="margin-bottom:1.5rem;border-color:var(--gold)"><div class="card-body">
@@ -338,6 +342,9 @@ foreach ($lessons as $l) {
     </div></div>
 
     <p style="margin-top:1.5rem"><a href="course.php?id=<?= (int) $courseId ?>" class="btn btn-outline">View Course Page <i data-lucide="arrow-right" class="lucide-icon"></i></a></p>
+
+    </div>
+    </div>
 </div>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <script src="https://unpkg.com/quill@2.0.2/dist/quill.js"></script>

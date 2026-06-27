@@ -324,7 +324,7 @@ $flaggedMessages = $pdo->query(
     </div>
 </section>
 
-<div class="dashboard-wrap" style="max-width:1100px">
+<div class="dashboard-wrap" style="max-width:1500px">
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-bottom:1.5rem">
         <div style="background:var(--white);border-radius:var(--radius-sm);padding:1.2rem;box-shadow:var(--shadow);border:1.5px solid var(--border);text-align:center">
             <div style="font-size:1.8rem;font-weight:800;color:var(--green-deep)"><?= (int) $stats['teachers'] ?></div>
@@ -344,18 +344,25 @@ $flaggedMessages = $pdo->query(
         </div>
     </div>
 
-    <div class="tabs">
-        <a href="?tab=users" class="tab-btn <?= $tab === 'users' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="users" class="lucide-icon"></i> Users (<?= count($users) ?>)</a>
-        <a href="?tab=pending" class="tab-btn <?= $tab === 'pending' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="clock" class="lucide-icon"></i> Pending Review (<?= count($pendingCourses) ?>)</a>
-        <a href="?tab=instructors" class="tab-btn <?= $tab === 'instructors' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="presentation" class="lucide-icon"></i> Instructor Applications (<?= count($pendingInstructors) ?>)</a>
-        <a href="?tab=courses" class="tab-btn <?= $tab === 'courses' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="library" class="lucide-icon"></i> Courses (<?= count($courses) ?>)</a>
-        <a href="?tab=subjects" class="tab-btn <?= $tab === 'subjects' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="tag" class="lucide-icon"></i> Subjects (<?= count($subjects) ?>)</a>
-        <a href="?tab=settings" class="tab-btn <?= $tab === 'settings' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="settings" class="lucide-icon"></i> Settings</a>
-        <a href="?tab=feedback" class="tab-btn <?= $tab === 'feedback' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="message-circle" class="lucide-icon"></i> Feedback (<?= count($feedback) ?>)</a>
-        <a href="?tab=messages" class="tab-btn <?= $tab === 'messages' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="eye" class="lucide-icon"></i> All Chats (<?= count($allConvos) ?>)</a>
-        <a href="?tab=flags" class="tab-btn <?= $tab === 'flags' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="triangle-alert" class="lucide-icon"></i> Flagged Messages (<?= count($flaggedMessages) ?>)</a>
-        <a href="?tab=ai_prompts" class="tab-btn <?= $tab === 'ai_prompts' ? 'active' : '' ?>" style="text-decoration:none;display:block;text-align:center"><i data-lucide="sparkles" class="lucide-icon"></i> AI Prompts</a>
-    </div>
+    <div class="course-wizard-layout">
+    <aside class="course-wizard-sidebar">
+        <div class="wizard-group-label">Review</div>
+        <a href="?tab=pending" class="wizard-step <?= $tab === 'pending' ? 'active' : '' ?>"><i data-lucide="clock" class="lucide-icon"></i> Pending Review (<?= count($pendingCourses) ?>)</a>
+        <a href="?tab=instructors" class="wizard-step <?= $tab === 'instructors' ? 'active' : '' ?>"><i data-lucide="presentation" class="lucide-icon"></i> Instructor Applications (<?= count($pendingInstructors) ?>)</a>
+        <div class="wizard-group-label">Content</div>
+        <a href="?tab=courses" class="wizard-step <?= $tab === 'courses' ? 'active' : '' ?>"><i data-lucide="library" class="lucide-icon"></i> Courses (<?= count($courses) ?>)</a>
+        <a href="?tab=subjects" class="wizard-step <?= $tab === 'subjects' ? 'active' : '' ?>"><i data-lucide="tag" class="lucide-icon"></i> Subjects (<?= count($subjects) ?>)</a>
+        <div class="wizard-group-label">People</div>
+        <a href="?tab=users" class="wizard-step <?= $tab === 'users' ? 'active' : '' ?>"><i data-lucide="users" class="lucide-icon"></i> Users (<?= count($users) ?>)</a>
+        <div class="wizard-group-label">Communication</div>
+        <a href="?tab=feedback" class="wizard-step <?= $tab === 'feedback' ? 'active' : '' ?>"><i data-lucide="message-circle" class="lucide-icon"></i> Feedback (<?= count($feedback) ?>)</a>
+        <a href="?tab=messages" class="wizard-step <?= $tab === 'messages' ? 'active' : '' ?>"><i data-lucide="eye" class="lucide-icon"></i> All Chats (<?= count($allConvos) ?>)</a>
+        <a href="?tab=flags" class="wizard-step <?= $tab === 'flags' ? 'active' : '' ?>"><i data-lucide="triangle-alert" class="lucide-icon"></i> Flagged Messages (<?= count($flaggedMessages) ?>)</a>
+        <div class="wizard-group-label">Configuration</div>
+        <a href="?tab=settings" class="wizard-step <?= $tab === 'settings' ? 'active' : '' ?>"><i data-lucide="settings" class="lucide-icon"></i> Settings</a>
+        <a href="?tab=ai_prompts" class="wizard-step <?= $tab === 'ai_prompts' ? 'active' : '' ?>"><i data-lucide="sparkles" class="lucide-icon"></i> AI Prompts</a>
+    </aside>
+    <div style="min-width:0">
 
     <?php if ($tab === 'pending'): ?>
         <?php if (!$pendingCourses): ?>
@@ -761,6 +768,9 @@ $flaggedMessages = $pdo->query(
             </tbody>
         </table>
     <?php endif; ?>
+
+    </div>
+    </div>
 </div>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <script src="app.js" defer></script>

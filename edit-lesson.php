@@ -143,7 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 </nav>
 
-<div class="dashboard-wrap">
+<div class="dashboard-wrap" style="max-width:1100px">
     <p style="font-size:.85rem;margin-bottom:.6rem"><a href="add-lesson.php?course_id=<?= $courseId ?>"><i data-lucide="arrow-left" class="lucide-icon"></i> Back to Curriculum</a></p>
     <div class="dashboard-header"><h2><i data-lucide="pencil" class="lucide-icon"></i> Edit Lecture</h2><p><?= e($lesson['course_title']) ?></p></div>
 

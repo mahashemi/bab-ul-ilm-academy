@@ -1540,14 +1540,25 @@ function aiPromptDefaults(): array {
             'label' => 'Single Course Upload (no specific course yet)',
             'placeholders_help' => '{{site_name}} -- platform name. {{subject_list}} -- comma-separated list of every valid subject name, generated live from the subjects table.',
             'template_text' => <<<'TXT'
+OUTPUT ONLY A DOWNLOADABLE CSV FILE. NO EXPLANATIONS. NO MARKDOWN. NO CODE FENCES. NO EXTRA COMMENTARY.
+
+<OVERVIEW>
 I'm creating a course for an online learning platform called {{site_name}}. Generate a CSV file I can upload directly.
 
 My course topic: [DESCRIBE YOUR COURSE HERE — e.g. "A beginner course on Tajweed rules for Quran recitation"]
+</OVERVIEW>
 
-Output ONLY raw CSV text (no explanation, no markdown code fences) with EXACTLY these column headers, in this order, and EXACTLY one data row below the header:
+<RULES>
+Output ONLY raw CSV text with EXACTLY these column headers, in this order, and EXACTLY one data row below the header:
 title,description,subject,level,language,price,learning_objectives,requirements,textbook
+</RULES>
 
-Rules for each column:
+<Example>
+title,description,subject,level,language,price,learning_objectives,requirements,textbook
+Tajweed Fundamentals for Beginners,Learn the essential rules of Tajweed for correct Quran recitation including pronunciation rules and practical exercises.,Islamic Studies,beginner,English,0,Master Arabic letter pronunciation;Apply Noon Sakinah rules;Understand Madd letters;Practice basic recitation,None,
+</Example>
+
+<MandatoryCSVColumns>
 - title: 5-80 characters, clear and specific
 - description: at least 20 characters (aim for 100-300), explain what students will learn
 - subject: pick the closest match from this exact list, copied exactly: {{subject_list}}
@@ -1557,73 +1568,125 @@ Rules for each column:
 - learning_objectives: 3-5 short points separated by semicolons
 - requirements: prerequisites, or "None" if there aren't any
 - textbook: a real reference textbook/material this course is based on, or leave blank if none
+</MandatoryCSVColumns>
+
+Generate the single data row now.
+
+OUTPUT ONLY CSV. NO EXPLANATIONS. NO MARKDOWN. NO CODE FENCES.
 TXT,
         ],
         'course_lessons' => [
             'label' => 'Lesson Plan Generation (for one already-created course)',
             'placeholders_help' => '{{site_name}} -- platform name. {{course_title}} -- the course\'s title. {{course_description}} -- the course\'s description. {{textbook}} -- the optional reference textbook the teacher entered, or "None specified" if left blank.',
             'template_text' => <<<'TXT'
+OUTPUT ONLY A DOWNLOADABLE CSV FILE. NO EXPLANATIONS. NO MARKDOWN. NO CODE FENCES. NO EXTRA COMMENTARY.
+
+<OVERVIEW>
 I'm building the full lesson plan for a course on an online learning platform called {{site_name}}.
 
 Course title: {{course_title}}
 Course description: {{course_description}}
 Reference textbook / material: {{textbook}}
 {{schedule_note}}
-Please act as an experienced curriculum designer and write a complete, well-structured set of lessons for this course. You must produce an actual, ready-to-download CSV file — not a description of one, not a sample, not a few example rows with the rest implied. Output ONLY raw CSV text (no explanation, no markdown code fences, no extra commentary) with EXACTLY these column headers, in this order:
-section_title,title,content,video_url,duration_minutes
+</OVERVIEW>
 
-Rules for each column:
+<RULES>
+Please act as an experienced curriculum designer and write a complete, well-structured set of lessons for this course. You must produce an actual, ready-to-download CSV file — not a description of one, not a sample, not a few example rows with the rest implied.
+
+Output ONLY raw CSV text with EXACTLY these column headers, in this order:
+section_title,title,content,video_url,duration_minutes
+</RULES>
+
+<Example>
+section_title,title,content,video_url,duration_minutes
+Week 1,Day 1: Introduction to Tajweed,Welcome to the course! In this lesson we explore the fundamentals of Tajweed... ,,15
+Week 1,Day 2: The Arabic Alphabet,In this lesson we dive deep into the Arabic alphabet and its pronunciation rules... ,,20
+Week 2,Day 1: Noon Sakinah Rules,This lesson covers the rules of Noon Sakinah and Tanween... ,,18
+Week 2,Day 2: Madd Letters,Learn about the different types of Madd (elongation) letters and how to apply them... ,,22
+</Example>
+
+<MandatoryCSVColumns>
 - section_title: group lessons logically into sections, e.g. "Week 1", "Week 2", or named modules that fit the subject. Use the exact same text on every lesson row within the same section.
-- title: a short, specific lesson title (3-80 characters)
+- title: a short, specific lesson title (3-80 characters) — use format like "Day 1: Introduction" or "Day 2: Topic Name" within each section
 - content: REAL educational content the student will actually read and learn from — never a placeholder, summary, outline, or text like "[lesson content here]". Write 150-400 words of substantive, accurate teaching material for EVERY single row: explain concepts clearly, define key terms, and include a short example where useful. If a reference textbook was given above, align the content and terminology with it. Do not shorten or skip this for later rows even if the course has many lessons — every row gets the full treatment.
 - video_url: leave this blank — do not invent a fake video link
 - duration_minutes: a realistic whole number (typically 10-30)
-
+</MandatoryCSVColumns>
 Plan a complete course: decide how many lessons and sections fit the topic and description above (use your judgment — a typical course has 8-20 lessons unless a schedule is specified above), and order them so each lesson builds on the previous one.
 
 Generate one full data row per lesson, in teaching order, with real content in every row — this is the actual file I will upload, not a draft.
+
+OUTPUT ONLY CSV. NO EXPLANATIONS. NO MARKDOWN. NO CODE FENCES.
 TXT,
         ],
         'quiz_questions' => [
             'label' => 'Quiz Question Generation (based on a course\'s actual lessons)',
             'placeholders_help' => '{{site_name}} -- platform name. {{course_title}} -- the course\'s title. {{lesson_summary}} -- auto-generated numbered list of the course\'s lesson titles plus short content snippets.',
             'template_text' => <<<'TXT'
+OUTPUT ONLY A DOWNLOADABLE CSV FILE. NO EXPLANATIONS. NO MARKDOWN. NO CODE FENCES. NO EXTRA COMMENTARY.
+
+<OVERVIEW>
 I'm creating a quiz for a course on {{site_name}} called "{{course_title}}".
 
 Here are the lessons this quiz should test (in order):
 {{lesson_summary}}
+</OVERVIEW>
 
-Please act as an experienced instructor and write quiz questions that genuinely test understanding of the material above — base each question on actual content from the lessons listed, not generic trivia. Output ONLY raw CSV text (no explanation, no markdown code fences) with EXACTLY these column headers, in this order:
+<RULES>
+Output ONLY raw CSV text with EXACTLY these column headers, in this order:
 quiz_title,passing_score,question,option_1,option_2,option_3,option_4,correct_option
+</RULES>
 
-Rules:
+<Example>
+quiz_title,passing_score,question,option_1,option_2,option_3,option_4,correct_option
+Tajweed Basics Quiz,70,What is the primary purpose of Tajweed rules?,To beautify Quran recitation,To ensure correct Quran recitation,To memorize the Quran faster,To learn Arabic grammar,2
+</Example>
+
+<MandatoryCSVColumns>
 - quiz_title: the exact same text on every row (this groups questions into one quiz) — name it after the section/topic it covers
 - passing_score: the same number on every row (a reasonable value, e.g. 70)
 - question: a clear question that tests a real concept from the lessons above
 - option_1, option_2: required answer choices; option_3, option_4 optional (2-4 total per question). Make incorrect options plausible, not obviously wrong.
 - correct_option: which option is correct — just the number 1, 2, 3, or 4
+</MandatoryCSVColumns>
 
 Write one question per important concept covered in the lessons above (a typical quiz has 5-10 questions).
+
+OUTPUT ONLY CSV. NO EXPLANATIONS. NO MARKDOWN. NO CODE FENCES.
 TXT,
         ],
         'assignments' => [
             'label' => 'Assignment Generation (based on a course\'s actual lessons)',
             'placeholders_help' => '{{site_name}} -- platform name. {{course_title}} -- the course\'s title. {{lesson_summary}} -- auto-generated numbered list of the course\'s lesson titles plus short content snippets.',
             'template_text' => <<<'TXT'
+OUTPUT ONLY A DOWNLOADABLE CSV FILE. NO EXPLANATIONS. NO MARKDOWN. NO CODE FENCES. NO EXTRA COMMENTARY.
+
+<OVERVIEW>
 I'm creating assignment(s) for a course on {{site_name}} called "{{course_title}}".
 
 Here are the lessons this assignment should be based on (in order):
 {{lesson_summary}}
+</OVERVIEW>
 
-Please act as an experienced instructor and design a practical assignment that has students apply what's covered in the lessons above — not a generic task unrelated to the material. Output ONLY raw CSV text (no explanation, no markdown code fences) with EXACTLY these column headers, in this order:
+<RULES>
+Output ONLY raw CSV text with EXACTLY these column headers, in this order:
 title,description,due_date
+</RULES>
 
-Rules:
+<Example>
+title,description,due_date
+Tajweed Practice Assignment,Record yourself reciting verses 1-5 of Surah Al-Fatiha with proper Tajweed rules applied. Submit the audio file along with a written reflection on which rules you applied and any challenges you faced.,2025-12-01
+</Example>
+
+<MandatoryCSVColumns>
 - title: short, specific (3-80 characters)
 - description: clear, complete instructions for what the student must do and submit, referencing the actual concepts/skills from the lessons above
 - due_date: a date in YYYY-MM-DD format, or leave blank for no deadline
+</MandatoryCSVColumns>
 
 Generate one row per assignment.
+
+OUTPUT ONLY CSV. NO EXPLANATIONS. NO MARKDOWN. NO CODE FENCES.
 TXT,
         ],
     ];

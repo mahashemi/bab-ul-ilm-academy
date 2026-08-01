@@ -20,6 +20,13 @@ if (isset($_GET['export'])) {
         'courses' => ['sql' => "SELECT c.id, c.title, u.name AS teacher, s.name AS subject, c.level, c.language, c.price, c.is_published,
                                         (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) AS students, c.created_at
                                  FROM courses c JOIN users u ON u.id = c.teacher_id LEFT JOIN subjects s ON s.id = c.subject_id ORDER BY c.id", 'file' => 'babulilm_courses.csv'],
+        'courses_full' => ['sql' => "SELECT c.id, c.title, c.description, c.learning_objectives, c.requirements, c.textbook, c.cover_url, c.level, c.language, c.price, c.is_published, c.moderation_status, c.created_at, c.updated_at, u.name AS teacher, u.email AS teacher_email, s.name AS subject,
+                                            (SELECT COUNT(*) FROM lessons l WHERE l.course_id = c.id) AS lesson_count,
+                                            (SELECT SUM(duration_minutes) FROM lessons l WHERE l.course_id = c.id) AS total_minutes,
+                                            (SELECT COUNT(*) FROM quizzes q WHERE q.course_id = c.id) AS quiz_count,
+                                            (SELECT COUNT(*) FROM assignments a WHERE a.course_id = c.id) AS assignment_count,
+                                            (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) AS enrollment_count
+                                     FROM courses c JOIN users u ON u.id = c.teacher_id LEFT JOIN subjects s ON s.id = c.subject_id ORDER BY c.id", 'file' => 'babulilm_courses_full.csv'],
         'feedback' => ['sql' => 'SELECT id, name, email, message, is_read, created_at FROM feedback ORDER BY id DESC', 'file' => 'babulilm_feedback.csv'],
     ];
     if (isset($map[$type])) {
@@ -27,8 +34,42 @@ if (isset($_GET['export'])) {
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename="' . $map[$type]['file'] . '"');
         $out = fopen('php://output', 'w');
-        if ($rows) fputcsv($out, array_keys($rows[0]));
-        foreach ($rows as $r) fputcsv($out, $r);
+
+        if ($rows) {
+            if ($type === 'courses_full') {
+                // Build a denormalized export: one row per course, with lessons and quizzes joined as structured text blocks
+                $lessonsHeader = ['Lessons (section_title|title|content|video_url|duration_minutes|sort_order)'];
+                $quizzesHeader = ['Quizzes (title|passing_score|question|options|correct_option)'];
+                fputcsv($out, array_merge(array_keys($rows[0]), $lessonsHeader, $quizzesHeader));
+                foreach ($rows as $r) {
+                    $cid = (int) $r['id'];
+                    $lessonStmt = $pdo->prepare('SELECT section_title, title, content, video_url, duration_minutes, sort_order FROM lessons WHERE course_id = ? ORDER BY sort_order ASC');
+                    $lessonStmt->execute([$cid]);
+                    $lessons = $lessonStmt->fetchAll();
+                    $lessonBlock = '';
+                    foreach ($lessons as $l) {
+                        $line = trim(($l['section_title'] ?: '') . '|' . $l['title'] . '|' . str_replace(["\r","\n"], ' ', $l['content']) . '|' . ($l['video_url'] ?: '') . '|' . $l['duration_minutes'] . '|' . $l['sort_order']);
+                        $lessonBlock .= $line . "\n";
+                    }
+
+                    $quizStmt = $pdo->prepare('SELECT q.title AS quiz_title, q.passing_score, qu.question, qu.option_1, qu.option_2, qu.option_3, qu.option_4, qu.correct_option FROM quizzes q JOIN quiz_questions qu ON qu.quiz_id = q.id WHERE q.course_id = ? ORDER BY q.id, qu.id ASC');
+                    $quizStmt->execute([$cid]);
+                    $quizzes = $quizStmt->fetchAll();
+                    $quizBlock = '';
+                    foreach ($quizzes as $q) {
+                        $options = trim(($q['option_1'] ?: '') . '|' . ($q['option_2'] ?: '') . '|' . ($q['option_3'] ?: '') . '|' . ($q['option_4'] ?: ''));
+                        $line = trim(($q['quiz_title'] ?: '') . '|' . $q['passing_score'] . '|' . str_replace(["\r","\n"], ' ', $q['question']) . '|' . $options . '|' . $q['correct_option']);
+                        $quizBlock .= $line . "\n";
+                    }
+
+                    $row = array_merge(array_values($r), [$lessonBlock], [$quizBlock]);
+                    fputcsv($out, $row);
+                }
+            } else {
+                fputcsv($out, array_keys($rows[0]));
+                foreach ($rows as $r) fputcsv($out, $r);
+            }
+        }
         fclose($out);
         exit;
     }

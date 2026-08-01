@@ -54,6 +54,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['move_lesson'])) {
     redirect('add-lesson.php?course_id=' . $courseId);
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_lessons'])) {
+    verifyCsrf();
+    $toDelete = array_map('intval', (array) $_POST['delete_lessons']);
+    if ($toDelete) {
+        $placeholders = implode(',', array_fill(0, count($toDelete), '?'));
+        $stmt = $pdo->prepare("DELETE FROM lessons WHERE id IN ($placeholders) AND course_id = ?");
+        $stmt->execute([...$toDelete, $courseId]);
+        flash('success', count($toDelete) . ' lesson(s) deleted.');
+    }
+    redirect('add-lesson.php?course_id=' . $courseId);
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['title'])) {
     verifyCsrf();
     $sectionTitle = trim($_POST['section_title'] ?? '');
@@ -197,7 +209,6 @@ foreach ($lessons as $l) {
     <?= renderCourseWizardSidebar($courseId, 'curriculum') ?>
     <div style="min-width:0">
 
-    <?php if (!$lessons): ?>
     <div class="card" style="margin-bottom:1.5rem;border-color:var(--gold)"><div class="card-body">
         <h3 style="font-size:1rem;margin-bottom:.6rem"><i data-lucide="sparkles" class="lucide-icon"></i> Don't want to type out every lesson by hand?</h3>
         <p style="font-size:.88rem;margin-bottom:.8rem">Copy this prompt into ChatGPT, Claude, DeepSeek, or any AI assistant. It already knows this course's title and description — just tell it how many lessons you want, and it'll write a complete lesson plan as a CSV you can upload directly below.</p>
@@ -221,24 +232,35 @@ foreach ($lessons as $l) {
         </div>
 
         <div class="ai-prompt-box">
-            <pre id="lessonHelperPrompt"><?= e(renderAiPrompt($pdo, 'course_lessons', [
+            <textarea id="lessonHelperPrompt" class="form-control" rows="12" style="font-family:monospace;font-size:.85rem;resize:vertical"><?= e(renderAiPrompt($pdo, 'course_lessons', [
                 'site_name' => SITE_NAME,
                 'course_title' => $course['title'],
                 'course_description' => $course['description'],
                 'textbook' => $course['textbook'] ?: 'None specified — use your general knowledge of the subject.',
                 'schedule_note' => lessonScheduleNote(),
-            ])) ?></pre>
-            <button type="button" class="btn btn-outline btn-sm copy-prompt-btn" data-target="lessonHelperPrompt"><i data-lucide="copy" class="lucide-icon"></i> Copy Prompt</button>
+            ])) ?></textarea>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem">
+                <button type="button" class="btn btn-outline btn-sm copy-prompt-btn" data-target="lessonHelperPrompt"><i data-lucide="copy" class="lucide-icon"></i> Copy Prompt</button>
+                <?php if ($lessons): ?>
+                <button type="button" class="btn btn-outline btn-sm" onclick="insertPreviousLessons()"><i data-lucide="list" class="lucide-icon"></i> Include Previous Lessons</button>
+                <?php endif; ?>
+                <button type="button" class="btn btn-outline btn-sm" onclick="insertDuration()"><i data-lucide="clock" class="lucide-icon"></i> Set Duration</button>
+            </div>
         </div>
         <a href="bulk-lessons.php?course_id=<?= (int) $courseId ?>" class="btn btn-primary btn-sm" style="margin-top:1rem"><i data-lucide="upload" class="lucide-icon"></i> Upload the Resulting CSV</a>
     </div></div>
-    <?php endif; ?>
 
     <h3 style="margin-bottom:1rem;font-size:1.1rem;color:var(--green-deep)">Curriculum (<?= count($lessons) ?> lecture<?= count($lessons) === 1 ? '' : 's' ?>)</h3>
 
     <?php if (!$lessons): ?>
         <div class="card" style="margin-bottom:1.5rem"><div class="empty-state"><div class="icon"><i data-lucide="notebook-pen" class="lucide-icon"></i></div><h3>No lectures yet</h3><p>Add your first one below.</p></div></div>
     <?php else: ?>
+        <form method="post" id="bulkDeleteForm">
+            <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+                <h3 style="margin:0;font-size:1.1rem;color:var(--green-deep)">Curriculum (<?= count($lessons) ?> lecture<?= count($lessons) === 1 ? '' : 's' ?>)</h3>
+                <button type="submit" class="btn btn-outline btn-sm" onclick="return confirm('Delete selected lessons? This cannot be undone.')"><i data-lucide="trash-2" class="lucide-icon"></i> Delete Selected</button>
+            </div>
         <?php foreach ($sections as $sectionName => $sectionLessons): ?>
         <div class="curriculum-section">
             <div class="curriculum-section-head">
@@ -268,6 +290,7 @@ foreach ($lessons as $l) {
                     </div>
                     <?php if ((int) $l['duration_minutes'] > 0): ?><span class="curriculum-lecture-meta"><?= (int) $l['duration_minutes'] ?> min</span><?php endif; ?>
                     <?php if ($l['is_preview']): ?><span class="badge badge-free">Preview</span><?php endif; ?>
+                    <input type="checkbox" name="delete_lessons[]" value="<?= (int) $l['id'] ?>" style="margin-right:.5rem">
                     <div class="action-row">
                         <?php if ($i > 0): ?>
                         <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><input type="hidden" name="direction" value="up"><button type="submit" name="move_lesson" value="<?= (int) $l['id'] ?>" class="icon-btn" data-tip="Move up" aria-label="Move up"><i data-lucide="chevron-up" class="lucide-icon"></i></button></form>
@@ -283,6 +306,7 @@ foreach ($lessons as $l) {
             </div>
         </div>
         <?php endforeach; ?>
+        </form>
     <?php endif; ?>
 
     <a href="#addLectureForm" onclick="document.getElementById('sectionTitleInput').value=<?= json_encode($suggestedSection) ?>" class="curriculum-add-btn" style="margin-bottom:2rem"><i data-lucide="plus" class="lucide-icon"></i> Section</a>
@@ -402,5 +426,26 @@ document.getElementById('lectureForm').addEventListener('submit', function () {
 });
 </script>
 <script>if (window.lucide) lucide.createIcons();</script>
+<script>
+function insertPreviousLessons() {
+    var textarea = document.getElementById('lessonHelperPrompt');
+    var lessons = <?= json_encode(array_map(function($l) {
+        return ($l['section_title'] ?: 'Untitled') . ': ' . $l['title'];
+    }, $lessons)) ?>;
+    var xml = '\n\n<PREVIOUS_LESSONS>\n' + lessons.join('\n') + '\n</PREVIOUS_LESSONS>\n';
+    textarea.value += xml;
+    textarea.scrollTop = textarea.scrollHeight;
+}
+
+function insertDuration() {
+    var textarea = document.getElementById('lessonHelperPrompt');
+    var minutes = prompt('Enter duration in minutes per lesson (e.g., 15):', '15');
+    if (minutes !== null) {
+        var xml = '\n\n<DURATION>' + minutes + ' minutes per lesson</DURATION>\n';
+        textarea.value += xml;
+        textarea.scrollTop = textarea.scrollHeight;
+    }
+}
+</script>
 </body>
 </html>

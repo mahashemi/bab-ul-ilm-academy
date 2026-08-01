@@ -305,6 +305,7 @@ $dashBg = siteSetting($pdo, 'dashboard_banner_bg');
                     <td data-label="Actions" class="action-row">
                         <a href="edit-course.php?id=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="Edit course" aria-label="Edit course"><i data-lucide="pencil" class="lucide-icon"></i></a>
                         <a href="add-lesson.php?course_id=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="Add lesson" aria-label="Add lesson"><i data-lucide="plus" class="lucide-icon"></i></a>
+                        <a href="bulk-lessons.php?course_id=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="Bulk upload lessons" aria-label="Bulk upload lessons"><i data-lucide="upload" class="lucide-icon"></i></a>
                         <a href="course-students.php?id=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="View students" aria-label="View students">
                             <i data-lucide="users" class="lucide-icon"></i><?php if ((int) $c['student_count'] > 0): ?><span class="count-badge"><?= (int) $c['student_count'] ?></span><?php endif; ?>
                         </a>

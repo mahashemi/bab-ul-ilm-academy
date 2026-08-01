@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/db.php';
-$user = requireApprovedTeacher();
+requireAuth();
+$user = auth();
 
 $quizId = (int) ($_GET['id'] ?? 0);
 $stmt = $pdo->prepare(
@@ -9,7 +10,15 @@ $stmt = $pdo->prepare(
 $stmt->execute([$quizId]);
 $quiz = $stmt->fetch();
 
-if (!$quiz || (int) $quiz['teacher_id'] !== (int) $user['id']) {
+if (!$quiz) {
+    http_response_code(404);
+    die('<p style="font-family:sans-serif;padding:3rem;text-align:center">Quiz not found or not yours. <a href="dashboard.php">Go back</a></p>');
+}
+
+$isOwner = (int) $quiz['teacher_id'] === (int) $user['id'];
+$isAdmin = ($user['role'] ?? '') === 'admin';
+$isActingForThisCourse = effectiveTeacherId($user) === (int) $quiz['teacher_id'];
+if (!$isOwner && !$isAdmin && !$isActingForThisCourse) {
     http_response_code(404);
     die('<p style="font-family:sans-serif;padding:3rem;text-align:center">Quiz not found or not yours. <a href="dashboard.php">Go back</a></p>');
 }

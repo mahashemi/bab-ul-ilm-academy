@@ -135,6 +135,32 @@ See [DEPLOY.md](DEPLOY.md) for the full commit → push → deploy workflow, inc
 - Suspended accounts (`is_approved = 0`) cannot log in
 - `config.php` ships with local XAMPP defaults (`root` / no password) — **you must change these before deploying to production**
 
+## Local Test Users (seeded in schema.sql)
+| User | Email | Password | Role | teacher_status |
+|---|---|---|---|---|
+| Site Admin (main) | admin@babulilmacademy.com | Admin@123 | admin | none |
+| Admin-User | adminuser@test.com | Test@123 | admin | approved |
+| Admin-2 | admin2@test.com | Test@123 | admin | none |
+| Instructor | teacher@test.com | Test@123 | student | approved |
+| Student | student@test.com | Test@123 | student | none |
+
+The "main site admin" is the lowest-id admin (Site Admin). Only it may
+demote/suspend other admins. Other admins have no suspend/role-change
+controls on admin rows (server + UI guarded).
+
+## Regression Scenarios
+1. admin.php?tab=users → main admin sees Admin-User & Admin-2 rows; Admin-2
+   sees NO suspend/role-control on other admin rows (controls hidden + guarded).
+2. Admin-User → dashboard shows "My Courses" teaching section + Approve/Reject
+   buttons on pending courses.
+3. edit-course.php?id=X&step=publish → Approve / Reject buttons appear for admin
+   on a pending course (auto-publishes on approve).
+4. edit-lesson.php?id=X and edit-quiz.php?id=X → Admin-User opens directly,
+   NOT redirected to admin.php.
+5. add-course.php "Description" step → "Save & Continue" + optional "Textbook"
+   field both present.
+6. Pure admin (Admin-2) → lands on admin.php (not teacher dashboard).
+
 ## License
 
 Private project. All rights reserved.

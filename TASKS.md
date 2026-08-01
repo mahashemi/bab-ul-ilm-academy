@@ -100,4 +100,50 @@
 
 ---
 
-*Last updated:* 2026-06-19
+## Regression Test Scenarios & Credentials
+
+### Local Test Users (seeded in `schema.sql`)
+
+| User | Email | Password | Role | teacher_status | Purpose |
+|---|---|---|---|---|---|
+| Site Admin (main) | admin@babulilmacademy.com | Admin@123 | admin | none | The ONLY admin who can demote/suspend other admins |
+| Admin-User | adminuser@test.com | Test@123 | admin | approved | Admin + instructor — dashboard teaching view, approve own courses, edit lessons |
+| Admin-2 | admin2@test.com | Test@123 | admin | none | Pure admin — verifies non-main admin can't touch other admins; redirected to admin.php |
+| Instructor | teacher@test.com | Test@123 | student | approved | Normal teacher flow (create/publish courses) |
+| Student | student@test.com | Test@123 | student | none | Regular learner account |
+
+### Regression Scenarios
+
+1. **Admin visibility in admin panel** — Login as Site Admin → `admin.php?tab=users` → all 5 users visible including Admin-User and Admin-2 rows.
+2. **Main-admin-only demote/suspend** — Login as Admin-2 → `admin.php?tab=users` → Admin-2 sees NO suspend/role-change controls on other admin rows (controls hidden + server-guarded). Login as Site Admin → controls ARE visible on admin rows.
+3. **Admin+instructor dashboard** — Login as Admin-User → `dashboard.php` → sees "My Courses" teaching section with Approve/Reject buttons on pending courses.
+4. **Pure admin redirect** — Login as Admin-2 → `dashboard.php` → redirected to `admin.php` (not the teacher dashboard).
+5. **Edit-course publish step approve/reject** — Login as Site Admin → `edit-course.php?id=1&step=publish` → Approve/Reject buttons appear for admin on a pending course.
+6. **Edit-lesson access for admin** — Login as Admin-User → `edit-lesson.php?id=1` → opens directly, NOT redirected to admin.php.
+7. **Edit-quiz access for admin** — Login as Admin-User → `edit-quiz.php?id=1` → opens directly (if a quiz exists).
+8. **Course description step** — `edit-course.php?id=1&step=details` → "Save & Continue" button + "Textbook / Reference Material (optional)" field both present.
+9. **Course creation flow** — `add-course.php` → fill basics → "Save & Continue" → redirects to `edit-course.php?id=X&step=details` → description + textbook fields visible.
+
+### Local Setup (XAMPP)
+
+```bash
+# 1. Start XAMPP (Apache + MySQL)
+sudo /Applications/XAMPP/xamppfiles/xampp start
+
+# 2. Fix MySQL temp dir permissions (one-time)
+sudo chown -R _mysql:_mysql /Applications/XAMPP/xamppfiles/temp/mysql
+
+# 3. Copy app to htdocs (if not already there)
+sudo cp -r workspace/bab-ul-ilm-academy /Applications/XAMPP/htdocs/
+
+# 4. Create + import the database
+/Applications/XAMPP/xamppfiles/bin/mysql -u root -e "DROP DATABASE IF EXISTS bab_ul_ilm; CREATE DATABASE bab_ul_ilm CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+/Applications/XAMPP/xamppfiles/bin/mysql -u root --default-character-set=utf8mb4 bab_ul_ilm < workspace/bab-ul-ilm-academy/schema.sql
+
+# 5. Open in browser
+open "https://localhost/bab-ul-ilm-academy/"
+```
+
+---
+
+*Last updated:* 2026-08-01

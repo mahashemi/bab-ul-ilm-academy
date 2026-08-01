@@ -2,8 +2,64 @@
 require_once __DIR__ . '/db.php';
 requireAuth();
 $user = auth();
-if (($user['role'] ?? '') === 'admin') redirect('admin.php');
+// Admins who are also approved instructors keep access to the teacher
+// dashboard so they can manage (and, as admins, approve) their own courses.
+// Pure admins (not approved to teach) go straight to the admin panel.
+if (($user['role'] ?? '') === 'admin' && !isApprovedTeacher($user)) redirect('admin.php');
 if (($user['role'] ?? '') === 'customer_service') redirect('support-panel.php');
+
+// Admin course-moderation actions reachable from the teacher dashboard's
+// "My Courses" list — same behavior as admin.php's approve/reject, so an
+// admin+instructor can publish their own pending courses right from here.
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verifyCsrf();
+    $isAdmin = ($user['role'] ?? '') === 'admin';
+    if ($isAdmin && isset($_POST['approve_course'])) {
+        $cid = (int) $_POST['approve_course'];
+        $courseRow = $pdo->prepare('SELECT teacher_id, title, moderation_status FROM courses WHERE id = ?');
+        $courseRow->execute([$cid]);
+        $courseRow = $courseRow->fetch();
+        if ($courseRow) {
+            $pdo->prepare("UPDATE courses SET moderation_status = 'approved', is_published = 1 WHERE id = ?")->execute([$cid]);
+            if ($courseRow['moderation_status'] !== 'approved') {
+                awardPoints($pdo, (int) $courseRow['teacher_id'], 25, 'Course "' . $courseRow['title'] . '" was approved');
+                notifyUser($pdo, (int) $courseRow['teacher_id'], 'course_approved', $cid, 1, function ($u) use ($courseRow, $cid) {
+                    $titleSafe = e($courseRow['title']);
+                    return [
+                        'Your course was approved!',
+                        '<p style="margin:0 0 16px">Great news — "' . $titleSafe . '" has been reviewed and approved. It\'s now live in the course catalog and students can enroll.</p>',
+                        'View Your Course',
+                        siteBaseUrl() . '/course.php?id=' . $cid,
+                    ];
+                });
+            }
+            flash('success', 'Course approved and published.');
+        }
+        redirect('dashboard.php#my-courses');
+    }
+    if ($isAdmin && isset($_POST['reject_course'])) {
+        $cid = (int) $_POST['reject_course'];
+        $courseRow = $pdo->prepare('SELECT teacher_id, title, moderation_status FROM courses WHERE id = ?');
+        $courseRow->execute([$cid]);
+        $courseRow = $courseRow->fetch();
+        if ($courseRow) {
+            $pdo->prepare("UPDATE courses SET moderation_status = 'rejected', is_published = 0 WHERE id = ?")->execute([$cid]);
+            if ($courseRow['moderation_status'] !== 'rejected') {
+                notifyUser($pdo, (int) $courseRow['teacher_id'], 'course_rejected', $cid, 1, function ($u) use ($courseRow, $cid) {
+                    $titleSafe = e($courseRow['title']);
+                    return [
+                        'Your course needs changes',
+                        '<p style="margin:0 0 16px">Your course "' . $titleSafe . '" was reviewed but isn\'t approved yet. Please check it for any guideline issues and update it for re-review.</p>',
+                        'Edit Your Course',
+                        siteBaseUrl() . '/edit-course.php?id=' . $cid,
+                    ];
+                });
+            }
+            flash('success', 'Course rejected.');
+        }
+        redirect('dashboard.php#my-courses');
+    }
+}
 
 $meStmt = $pdo->prepare('SELECT * FROM users WHERE id = ?');
 $meStmt->execute([$user['id']]);
@@ -216,7 +272,7 @@ $dashBg = siteSetting($pdo, 'dashboard_banner_bg');
         $stmt->execute([$user['id']]);
         $myTeachingCourses = $stmt->fetchAll();
         ?>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
+        <div id="my-courses" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
             <h3 style="font-size:1.1rem;color:var(--green-deep)"><?= e(t('dash_my_courses', ['count' => count($myTeachingCourses)])) ?></h3>
             <div style="display:flex;gap:.5rem">
                 <a href="single-upload.php" class="btn btn-outline btn-sm"><i data-lucide="upload" class="lucide-icon"></i> Single Upload</a>
@@ -252,6 +308,10 @@ $dashBg = siteSetting($pdo, 'dashboard_banner_bg');
                         <a href="course-students.php?id=<?= (int) $c['id'] ?>" class="icon-btn" data-tip="View students" aria-label="View students">
                             <i data-lucide="users" class="lucide-icon"></i><?php if ((int) $c['student_count'] > 0): ?><span class="count-badge"><?= (int) $c['student_count'] ?></span><?php endif; ?>
                         </a>
+                        <?php if (($user['role'] ?? '') === 'admin' && $c['moderation_status'] === 'pending'): ?>
+                            <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="approve_course" value="<?= (int) $c['id'] ?>" class="icon-btn" data-tip="Approve & publish" aria-label="Approve & publish"><i data-lucide="check-circle-2" class="lucide-icon" style="color:var(--green-deep)"></i></button></form>
+                            <form method="post" style="display:inline" onsubmit="return confirm('Reject this course? It will not be visible to students.')"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="reject_course" value="<?= (int) $c['id'] ?>" class="icon-btn" data-tip="Reject" aria-label="Reject"><i data-lucide="x" class="lucide-icon" style="color:#c00"></i></button></form>
+                        <?php endif; ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>

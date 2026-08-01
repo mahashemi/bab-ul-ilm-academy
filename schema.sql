@@ -642,3 +642,27 @@ CREATE TABLE IF NOT EXISTS order_items (
 INSERT INTO users (name, email, password, role, is_verified) VALUES
 ('Site Admin', 'admin@babulilmacademy.com',
  '$2y$10$Rn49XbRBi1VaO9H6AnkdfOhBEGhhe.D.4.HYAJaquZDWuHT7qXS2q', 'admin', 1);
+
+-- ── Scenario Test Users (local/manual regression testing) ───────────────
+-- Password for ALL of these: Test@123  (bcrypt hash generated with password_hash()).
+-- No email verification is needed (is_verified = 1), so logging in locally is immediate.
+-- Notes on roles:
+--   * Site Admin (admin@babulilmacademy.com, id=1) is the "main site admin" — the
+--     FIRST admin in the DB. Only it may demote/suspend OTHER admins (see admin.php).
+--   * Admin-User is an admin who is ALSO an approved instructor (teacher_status='approved')
+--     — used to verify the admin+instructor scenarios (dashboard teaching view, approve/reject
+--     own courses, edit lessons/quizzes without being bounced to admin.php).
+--   * Admin-2 is a second admin who is NOT an instructor — used to verify that a
+--     non-main admin CANNOT demote/suspend other admins, and is redirected away from the
+--     teacher dashboard (pure admins go to admin.php).
+--   * Instructor is an approved teacher who is NOT an admin — normal teaching flow.
+--   * Student is a regular learner account.
+INSERT IGNORE INTO users (name, email, password, role, teacher_status, is_verified) VALUES
+('Admin-User (Admin+Instructor)', 'adminuser@test.com',
+ '$2y$10$5GkOlEPPCNVSEjvWdEOz0ukrp2xdpPPuwlKbBxAP.JkpZWbestMw6', 'admin', 'approved', 1),
+('Admin-2 (Admin only)', 'admin2@test.com',
+ '$2y$10$5GkOlEPPCNVSEjvWdEOz0ukrp2xdpPPuwlKbBxAP.JkpZWbestMw6', 'admin', 'none', 1),
+('Instructor (Teacher)', 'teacher@test.com',
+ '$2y$10$5GkOlEPPCNVSEjvWdEOz0ukrp2xdpPPuwlKbBxAP.JkpZWbestMw6', 'student', 'approved', 1),
+('Student (Learner)', 'student@test.com',
+ '$2y$10$5GkOlEPPCNVSEjvWdEOz0ukrp2xdpPPuwlKbBxAP.JkpZWbestMw6', 'student', 'none', 1);

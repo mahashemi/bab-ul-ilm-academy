@@ -128,6 +128,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step === 'pricing') {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step === 'publish') {
     verifyCsrf();
+    $isAdmin = ($user['role'] ?? '') === 'admin';
+    // Admins may approve/reject a course directly from the publish step
+    // (same behavior as admin.php) — for their own courses and anyone else's.
+    if ($isAdmin && isset($_POST['approve_course'])) {
+        $courseRow = $pdo->prepare('SELECT teacher_id, title, moderation_status FROM courses WHERE id = ?');
+        $courseRow->execute([$id]);
+        $courseRow = $courseRow->fetch();
+        $pdo->prepare("UPDATE courses SET moderation_status = 'approved', is_published = 1, updated_by=?, updated_at=NOW() WHERE id = ?")->execute([$user['id'], $id]);
+        if ($courseRow && $courseRow['moderation_status'] !== 'approved') {
+            awardPoints($pdo, (int) $courseRow['teacher_id'], 25, 'Course "' . $courseRow['title'] . '" was approved');
+            notifyUser($pdo, (int) $courseRow['teacher_id'], 'course_approved', $id, 1, function ($u) use ($courseRow) {
+                $titleSafe = e($courseRow['title']);
+                return [
+                    'Your course was approved!',
+                    '<p style="margin:0 0 16px">Great news — "' . $titleSafe . '" has been reviewed and approved. It\'s now live in the course catalog and students can enroll.</p>',
+                    'View Your Course',
+                    siteBaseUrl() . '/course.php?id=' . $id,
+                ];
+            });
+        }
+        flash('success', 'Course approved and published.');
+        redirect('edit-course.php?id=' . $id . '&step=publish');
+    }
+    if ($isAdmin && isset($_POST['reject_course'])) {
+        $courseRow = $pdo->prepare('SELECT teacher_id, title, moderation_status FROM courses WHERE id = ?');
+        $courseRow->execute([$id]);
+        $courseRow = $courseRow->fetch();
+        $pdo->prepare("UPDATE courses SET moderation_status = 'rejected', is_published = 0, updated_by=?, updated_at=NOW() WHERE id = ?")->execute([$user['id'], $id]);
+        if ($courseRow && $courseRow['moderation_status'] !== 'rejected') {
+            notifyUser($pdo, (int) $courseRow['teacher_id'], 'course_rejected', $id, 1, function ($u) use ($courseRow) {
+                $titleSafe = e($courseRow['title']);
+                return [
+                    'Your course needs changes',
+                    '<p style="margin:0 0 16px">Your course "' . $titleSafe . '" was reviewed but isn\'t approved yet. Please check it for any guideline issues and update it for re-review.</p>',
+                    'Edit Your Course',
+                    siteBaseUrl() . '/edit-course.php?id=' . $id,
+                ];
+            });
+        }
+        flash('success', 'Course rejected.');
+        redirect('edit-course.php?id=' . $id . '&step=publish');
+    }
     $isPublished = isset($_POST['is_published']) ? 1 : 0;
     $pdo->prepare('UPDATE courses SET is_published=?, updated_by=?, updated_at=NOW() WHERE id=?')->execute([$isPublished, $user['id'], $id]);
     flash('success', 'Course settings saved.');
@@ -438,6 +480,17 @@ $stepTitles = [
                 <button type="submit" class="btn btn-primary">Save</button>
             </form>
         </div></div>
+
+        <?php if ($isAdmin && $course['moderation_status'] === 'pending'): ?>
+        <div class="card" style="margin-bottom:1.5rem"><div class="card-body">
+            <h3 style="font-size:1.05rem;color:var(--green-deep);margin-bottom:.4rem"><i data-lucide="shield-check" class="lucide-icon"></i> Admin Review</h3>
+            <p style="font-size:.85rem;color:var(--text-mid);margin-bottom:1rem">This course is awaiting moderation. As an admin you can approve it to go live in the catalog, or reject it to send it back to the teacher.</p>
+            <div style="display:flex;gap:.6rem">
+                <form method="post" style="flex:1"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="approve_course" value="1" class="btn btn-green btn-full"><i data-lucide="check-circle-2" class="lucide-icon"></i> Approve & Publish</button></form>
+                <form method="post" style="flex:1" onsubmit="return confirm('Reject this course? It will not be visible to students.')"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="reject_course" value="1" class="btn btn-outline btn-full" style="color:#c00;border-color:#c00"><i data-lucide="x" class="lucide-icon"></i> Reject</button></form>
+            </div>
+        </div></div>
+        <?php endif; ?>
 
         <?php if ($previewCard): ?>
         <div class="card" style="margin-bottom:1.5rem"><div class="card-body">

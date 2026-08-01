@@ -7,6 +7,11 @@ if (($user['role'] ?? '') !== 'admin') {
     die('<p style="font-family:sans-serif;padding:3rem;text-align:center">Access denied. Admins only. <a href="index.php">Go back</a></p>');
 }
 
+// The "main site admin" is the first admin account ever created (the seed
+// Site Admin). Only it may demote/suspend other admins; any other admin
+// cannot touch another admin's account, only their own.
+$isMainAdmin = (int) $user['id'] === (int) $pdo->query("SELECT MIN(id) FROM users WHERE role = 'admin'")->fetchColumn();
+
 // ── CSV Export ─────────────────────────────────────────────────────────
 if (isset($_GET['export'])) {
     $type = $_GET['export'];
@@ -33,7 +38,15 @@ if (isset($_GET['export'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
     if (isset($_POST['toggle_approved'])) {
-        $pdo->prepare('UPDATE users SET is_approved = 1 - is_approved WHERE id = ?')->execute([(int) $_POST['toggle_approved']]);
+        // Admins are now visible in the users list. Only the main site admin
+        // may suspend/reactivate another admin; other admins cannot touch
+        // admin accounts at all.
+        $targetUser = $pdo->prepare('SELECT role FROM users WHERE id = ?');
+        $targetUser->execute([(int) $_POST['toggle_approved']]);
+        $targetRole = $targetUser->fetchColumn();
+        if ($targetRole !== 'admin' || $isMainAdmin) {
+            $pdo->prepare('UPDATE users SET is_approved = 1 - is_approved WHERE id = ?')->execute([(int) $_POST['toggle_approved']]);
+        }
     } elseif (isset($_POST['toggle_verified'])) {
         $pdo->prepare('UPDATE users SET is_verified = 1, verification_token = NULL, verification_expires = NULL WHERE id = ?')->execute([(int) $_POST['toggle_verified']]);
     } elseif (isset($_POST['toggle_published'])) {
@@ -109,7 +122,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['set_role']) && $_POST['set_role'] !== '') {
         $targetId = (int) $_POST['user_id'];
         $newRole = $_POST['set_role'];
-        if ($targetId !== (int) $user['id'] && in_array($newRole, ['student','admin','customer_service'], true)) {
+        // Nobody can change their own role, and only the main site admin can
+        // demote another admin (admins are visible in this list now).
+        $targetRole = $pdo->prepare('SELECT role FROM users WHERE id = ?');
+        $targetRole->execute([$targetId]);
+        $targetIsAdmin = $targetRole->fetchColumn() === 'admin';
+        if ($targetId !== (int) $user['id'] && (!$targetIsAdmin || $isMainAdmin) && in_array($newRole, ['student','admin','customer_service'], true)) {
             $pdo->prepare('UPDATE users SET role = ? WHERE id = ?')->execute([$newRole, $targetId]);
         }
     } elseif (isset($_POST['add_field'])) {
@@ -203,7 +221,7 @@ $stats = $pdo->query(
             (SELECT COUNT(*) FROM enrollments) AS total_enrollments"
 )->fetch();
 
-$users = $pdo->query("SELECT * FROM users WHERE role != 'admin' ORDER BY created_at DESC")->fetchAll();
+$users = $pdo->query("SELECT * FROM users ORDER BY created_at DESC")->fetchAll();
 $courses = $pdo->query(
     "SELECT c.*, COALESCE(u.display_name, u.name) AS teacher_name, u.name AS teacher_legal_name, u.email AS teacher_email, s.name AS subject_name,
             (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) AS student_count,
@@ -758,11 +776,13 @@ $flaggedMessages = $pdo->query(
                     <td><?= date('M j, Y', strtotime($u['created_at'])) ?></td>
                     <td class="action-row">
                         <a href="chat.php?with=<?= (int) $u['id'] ?>" class="icon-btn" data-tip="Message" aria-label="Message"><i data-lucide="message-circle" class="lucide-icon"></i></a>
+                        <?php if ($u['role'] !== 'admin' || $isMainAdmin): ?>
                         <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_approved" value="<?= (int) $u['id'] ?>" class="icon-btn <?= $u['is_approved'] ? 'icon-btn-danger' : '' ?>" data-tip="<?= $u['is_approved'] ? 'Suspend' : 'Reactivate' ?>" aria-label="<?= $u['is_approved'] ? 'Suspend' : 'Reactivate' ?>"><?= $u['is_approved'] ? '<i data-lucide="pause" class="lucide-icon"></i>' : '<i data-lucide="play" class="lucide-icon"></i>' ?></button></form>
+                        <?php endif; ?>
                         <?php if (!$u['is_verified']): ?>
                         <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><button type="submit" name="toggle_verified" value="<?= (int) $u['id'] ?>" class="icon-btn" data-tip="Verify email" aria-label="Verify email"><i data-lucide="badge-check" class="lucide-icon"></i></button></form>
                         <?php endif; ?>
-                        <?php if ((int) $u['id'] !== (int) $user['id']): ?>
+                        <?php if ((int) $u['id'] !== (int) $user['id'] && ($u['role'] !== 'admin' || $isMainAdmin)): ?>
                         <form method="post" onsubmit="return confirm('Change <?= e($u['name']) ?>\'s role?')">
                             <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
                             <input type="hidden" name="user_id" value="<?= (int) $u['id'] ?>">

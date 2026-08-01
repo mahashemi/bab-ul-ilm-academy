@@ -101,6 +101,11 @@ html[lang="ar"] body, html[lang="ar"] input, html[lang="ar"] textarea, html[lang
 
 /* ── Account dropdown (avatar + menu, Udemy-style) ── */
 .nav-account { position: relative; }
+/* Language switcher: pinned to the far end of the navbar via flex order,
+   after the auth/account controls (marketplace convention). The markup
+   stays where it is in each page's copy-pasted navbar; in the mobile
+   drawer (a flex column) this puts it at the bottom of the menu. */
+.nav-links .nav-lang { order: 99; }
 .nav-account-trigger {
     display: flex; align-items: center; gap: .4rem; background: none; border: none; cursor: pointer;
     padding: .3rem .5rem .3rem .3rem; border-radius: var(--radius-full); transition: var(--transition);

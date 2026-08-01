@@ -134,7 +134,7 @@ $dashBg = siteSetting($pdo, 'dashboard_banner_bg');
         <a href="courses.php"><?= t('nav_courses') ?></a>
         <a href="about.php"><?= t('nav_about') ?></a>
         <a href="feedback.php"><?= t('nav_feedback') ?></a>
-        <div class="nav-account">
+        <div class="nav-account nav-lang">
             <button class="nav-account-trigger" type="button" onclick="toggleAccountMenu(event)" aria-label="<?= e(t('nav_language')) ?>">
                 <i data-lucide="globe" class="lucide-icon"></i>
             </button>

@@ -250,8 +250,6 @@ foreach ($lessons as $l) {
         <a href="bulk-lessons.php?course_id=<?= (int) $courseId ?>" class="btn btn-primary btn-sm" style="margin-top:1rem"><i data-lucide="upload" class="lucide-icon"></i> Upload the Resulting CSV</a>
     </div></div>
 
-    <h3 style="margin-bottom:1rem;font-size:1.1rem;color:var(--green-deep)">Curriculum (<?= count($lessons) ?> lecture<?= count($lessons) === 1 ? '' : 's' ?>)</h3>
-
     <?php if (!$lessons): ?>
         <div class="card" style="margin-bottom:1.5rem"><div class="empty-state"><div class="icon"><i data-lucide="notebook-pen" class="lucide-icon"></i></div><h3>No lectures yet</h3><p>Add your first one below.</p></div></div>
     <?php else: ?>
@@ -282,6 +280,7 @@ foreach ($lessons as $l) {
                     $i = array_search($l, $lessons, true);
                 ?>
                 <div class="curriculum-lecture">
+                    <input type="checkbox" name="delete_lessons[]" value="<?= (int) $l['id'] ?>" style="margin-right:.5rem;flex-shrink:0">
                     <div class="curriculum-lecture-check <?= $hasContent ? '' : 'empty' ?>"><i data-lucide="<?= $hasContent ? 'check' : 'file-text' ?>" class="lucide-icon" style="width:13px;height:13px"></i></div>
                     <div class="curriculum-lecture-title">
                         <a href="edit-lesson.php?id=<?= (int) $l['id'] ?>"><?= e($l['title']) ?></a>
@@ -290,7 +289,6 @@ foreach ($lessons as $l) {
                     </div>
                     <?php if ((int) $l['duration_minutes'] > 0): ?><span class="curriculum-lecture-meta"><?= (int) $l['duration_minutes'] ?> min</span><?php endif; ?>
                     <?php if ($l['is_preview']): ?><span class="badge badge-free">Preview</span><?php endif; ?>
-                    <input type="checkbox" name="delete_lessons[]" value="<?= (int) $l['id'] ?>" style="margin-right:.5rem">
                     <div class="action-row">
                         <?php if ($i > 0): ?>
                         <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><input type="hidden" name="direction" value="up"><button type="submit" name="move_lesson" value="<?= (int) $l['id'] ?>" class="icon-btn" data-tip="Move up" aria-label="Move up"><i data-lucide="chevron-up" class="lucide-icon"></i></button></form>
@@ -299,6 +297,7 @@ foreach ($lessons as $l) {
                         <form method="post" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><input type="hidden" name="direction" value="down"><button type="submit" name="move_lesson" value="<?= (int) $l['id'] ?>" class="icon-btn" data-tip="Move down" aria-label="Move down"><i data-lucide="chevron-down" class="lucide-icon"></i></button></form>
                         <?php endif; ?>
                         <a href="edit-lesson.php?id=<?= (int) $l['id'] ?>" class="icon-btn" data-tip="Edit lecture" aria-label="Edit lecture"><i data-lucide="pencil" class="lucide-icon"></i></a>
+                        <form method="post" onsubmit="return confirm('Delete this lesson? This cannot be undone.')" style="display:inline"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"><input type="hidden" name="delete_lessons[]" value="<?= (int) $l['id'] ?>"><button type="submit" class="icon-btn icon-btn-danger" data-tip="Delete lecture" aria-label="Delete lecture"><i data-lucide="trash-2" class="lucide-icon"></i></button></form>
                     </div>
                 </div>
                 <?php endforeach; ?>

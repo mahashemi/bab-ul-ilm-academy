@@ -34,43 +34,57 @@ if (isset($_GET['export'])) {
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename="' . $map[$type]['file'] . '"');
         $out = fopen('php://output', 'w');
+        // UTF-8 BOM so Excel detects the encoding — without it, Arabic/Urdu/
+        // Persian text opens as mojibake.
+        fwrite($out, "\xEF\xBB\xBF");
 
         if ($rows) {
             if ($type === 'courses_full') {
-                // Build a denormalized export: one row per course, with lessons and quizzes joined as structured text blocks
-                $lessonsHeader = ['Lessons (section_title|title|content|video_url|duration_minutes|sort_order)'];
-                $quizzesHeader = ['Quizzes (title|passing_score|question|options|correct_option)'];
-                fputcsv($out, array_merge(array_keys($rows[0]), $lessonsHeader, $quizzesHeader));
+                // Flat denormalized export: one row per course, followed by one
+                // row per lesson and per quiz question (see row_type column) —
+                // filterable in Excel, no packed multi-line cells.
+                $courseCols = array_keys($rows[0]);
+                $headerCourseCols = array_map(fn ($c) => $c === 'id' ? 'course_id' : ($c === 'title' ? 'course_title' : $c), $courseCols);
+                $lessonCols = ['section_title', 'lesson_title', 'lesson_content', 'video_url', 'duration_minutes', 'sort_order'];
+                $quizCols   = ['quiz_title', 'passing_score', 'question', 'option_1', 'option_2', 'option_3', 'option_4', 'correct_option'];
+                fputcsv($out, array_merge(['row_type'], $headerCourseCols, $lessonCols, $quizCols));
+
+                $blankCourse = array_fill(0, count($courseCols), '');
+                $blankLesson = array_fill(0, count($lessonCols), '');
+                $blankQuiz   = array_fill(0, count($quizCols), '');
+                $clean = fn ($s) => trim(str_replace(["\r", "\n"], ' ', strip_tags((string) ($s ?? ''))));
+
+                $lessonStmt = $pdo->prepare('SELECT section_title, title, content, video_url, duration_minutes, sort_order FROM lessons WHERE course_id = ? ORDER BY sort_order ASC');
+                $quizStmt   = $pdo->prepare('SELECT q.title AS quiz_title, q.passing_score, qu.id AS question_id, qu.question_text FROM quizzes q JOIN quiz_questions qu ON qu.quiz_id = q.id WHERE q.course_id = ? ORDER BY q.sort_order ASC, q.id ASC, qu.sort_order ASC, qu.id ASC');
+                $optStmt    = $pdo->prepare('SELECT option_text, is_correct FROM quiz_options WHERE question_id = ? ORDER BY sort_order ASC, id ASC');
+
                 foreach ($rows as $r) {
                     $cid = (int) $r['id'];
-                    $lessonStmt = $pdo->prepare('SELECT section_title, title, content, video_url, duration_minutes, sort_order FROM lessons WHERE course_id = ? ORDER BY sort_order ASC');
+                    fputcsv($out, array_merge(['course'], array_values($r), $blankLesson, $blankQuiz));
+
+                    // Child rows repeat only course_id + course_title for context.
+                    $courseRef = $blankCourse;
+                    $courseRef[array_search('id', $courseCols, true)]    = $r['id'];
+                    $courseRef[array_search('title', $courseCols, true)] = $r['title'];
+
                     $lessonStmt->execute([$cid]);
-                    $lessons = $lessonStmt->fetchAll();
-                    $lessonBlock = '';
-                    foreach ($lessons as $l) {
-                        $line = trim(($l['section_title'] ?: '') . '|' . $l['title'] . '|' . str_replace(["\r","\n"], ' ', $l['content'] ?? '') . '|' . ($l['video_url'] ?: '') . '|' . $l['duration_minutes'] . '|' . $l['sort_order']);
-                        $lessonBlock .= $line . "\n";
+                    foreach ($lessonStmt->fetchAll() as $l) {
+                        $lessonRow = [$l['section_title'] ?? '', $l['title'], $clean($l['content']), $l['video_url'] ?? '', $l['duration_minutes'], $l['sort_order']];
+                        fputcsv($out, array_merge(['lesson'], $courseRef, $lessonRow, $blankQuiz));
                     }
 
-                    $quizStmt = $pdo->prepare('SELECT q.title AS quiz_title, q.passing_score, qu.id AS question_id, qu.question_text FROM quizzes q JOIN quiz_questions qu ON qu.quiz_id = q.id WHERE q.course_id = ? ORDER BY q.sort_order ASC, q.id ASC, qu.sort_order ASC, qu.id ASC');
                     $quizStmt->execute([$cid]);
-                    $questions = $quizStmt->fetchAll();
-                    $optStmt = $pdo->prepare('SELECT option_text, is_correct FROM quiz_options WHERE question_id = ? ORDER BY sort_order ASC, id ASC');
-                    $quizBlock = '';
-                    foreach ($questions as $q) {
+                    foreach ($quizStmt->fetchAll() as $q) {
                         $optStmt->execute([(int) $q['question_id']]);
-                        $optTexts = [];
+                        $optTexts = ['', '', '', ''];
                         $correct = '';
                         foreach ($optStmt->fetchAll() as $idx => $o) {
-                            $optTexts[] = $o['option_text'];
+                            if ($idx < 4) $optTexts[$idx] = $o['option_text'];
                             if ($o['is_correct']) $correct = $idx + 1;
                         }
-                        $line = trim(($q['quiz_title'] ?: '') . '|' . $q['passing_score'] . '|' . str_replace(["\r","\n"], ' ', $q['question_text']) . '|' . implode('|', $optTexts) . '|' . $correct);
-                        $quizBlock .= $line . "\n";
+                        $quizRow = array_merge([$q['quiz_title'], $q['passing_score'], $clean($q['question_text'])], $optTexts, [$correct]);
+                        fputcsv($out, array_merge(['quiz_question'], $courseRef, $blankLesson, $quizRow));
                     }
-
-                    $row = array_merge(array_values($r), [$lessonBlock], [$quizBlock]);
-                    fputcsv($out, $row);
                 }
             } else {
                 fputcsv($out, array_keys($rows[0]));

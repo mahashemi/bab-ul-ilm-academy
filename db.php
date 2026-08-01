@@ -68,8 +68,8 @@ if (isset($_SESSION['user']['id'])) {
     }
 }
 
-function e(string $s): string {
-    return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
+function e(?string $s): string {
+    return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8');
 }
 
 // ── Internationalization (English / Urdu / Persian / Arabic) ─────────────

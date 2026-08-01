@@ -48,17 +48,24 @@ if (isset($_GET['export'])) {
                     $lessons = $lessonStmt->fetchAll();
                     $lessonBlock = '';
                     foreach ($lessons as $l) {
-                        $line = trim(($l['section_title'] ?: '') . '|' . $l['title'] . '|' . str_replace(["\r","\n"], ' ', $l['content']) . '|' . ($l['video_url'] ?: '') . '|' . $l['duration_minutes'] . '|' . $l['sort_order']);
+                        $line = trim(($l['section_title'] ?: '') . '|' . $l['title'] . '|' . str_replace(["\r","\n"], ' ', $l['content'] ?? '') . '|' . ($l['video_url'] ?: '') . '|' . $l['duration_minutes'] . '|' . $l['sort_order']);
                         $lessonBlock .= $line . "\n";
                     }
 
-                    $quizStmt = $pdo->prepare('SELECT q.title AS quiz_title, q.passing_score, qu.question, qu.option_1, qu.option_2, qu.option_3, qu.option_4, qu.correct_option FROM quizzes q JOIN quiz_questions qu ON qu.quiz_id = q.id WHERE q.course_id = ? ORDER BY q.id, qu.id ASC');
+                    $quizStmt = $pdo->prepare('SELECT q.title AS quiz_title, q.passing_score, qu.id AS question_id, qu.question_text FROM quizzes q JOIN quiz_questions qu ON qu.quiz_id = q.id WHERE q.course_id = ? ORDER BY q.sort_order ASC, q.id ASC, qu.sort_order ASC, qu.id ASC');
                     $quizStmt->execute([$cid]);
-                    $quizzes = $quizStmt->fetchAll();
+                    $questions = $quizStmt->fetchAll();
+                    $optStmt = $pdo->prepare('SELECT option_text, is_correct FROM quiz_options WHERE question_id = ? ORDER BY sort_order ASC, id ASC');
                     $quizBlock = '';
-                    foreach ($quizzes as $q) {
-                        $options = trim(($q['option_1'] ?: '') . '|' . ($q['option_2'] ?: '') . '|' . ($q['option_3'] ?: '') . '|' . ($q['option_4'] ?: ''));
-                        $line = trim(($q['quiz_title'] ?: '') . '|' . $q['passing_score'] . '|' . str_replace(["\r","\n"], ' ', $q['question']) . '|' . $options . '|' . $q['correct_option']);
+                    foreach ($questions as $q) {
+                        $optStmt->execute([(int) $q['question_id']]);
+                        $optTexts = [];
+                        $correct = '';
+                        foreach ($optStmt->fetchAll() as $idx => $o) {
+                            $optTexts[] = $o['option_text'];
+                            if ($o['is_correct']) $correct = $idx + 1;
+                        }
+                        $line = trim(($q['quiz_title'] ?: '') . '|' . $q['passing_score'] . '|' . str_replace(["\r","\n"], ' ', $q['question_text']) . '|' . implode('|', $optTexts) . '|' . $correct);
                         $quizBlock .= $line . "\n";
                     }
 
@@ -510,6 +517,7 @@ $flaggedMessages = $pdo->query(
                 <a href="?tab=courses" class="btn btn-outline btn-sm">Clear</a>
             <?php endif; ?>
             <a href="?export=courses" class="btn btn-outline btn-sm" style="margin-left:auto"><i data-lucide="download" class="lucide-icon"></i> Download CSV</a>
+            <a href="?export=courses_full" class="btn btn-outline btn-sm" data-tip="One row per course, including all lessons and quizzes"><i data-lucide="download" class="lucide-icon"></i> Full CSV (lessons + quizzes)</a>
         </form>
         <p class="section-sub"><?= count($filteredCourses) ?> of <?= count($courses) ?> course(s) shown</p>
         <table class="table">

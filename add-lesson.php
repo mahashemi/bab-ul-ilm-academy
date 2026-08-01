@@ -253,11 +253,20 @@ foreach ($lessons as $l) {
     <?php if (!$lessons): ?>
         <div class="card" style="margin-bottom:1.5rem"><div class="empty-state"><div class="icon"><i data-lucide="notebook-pen" class="lucide-icon"></i></div><h3>No lectures yet</h3><p>Add your first one below.</p></div></div>
     <?php else: ?>
-        <form method="post" id="bulkDeleteForm">
-            <input type="hidden" name="_csrf" value="<?= e(csrf()) ?>">
+        <?php /* The bulk-delete form is a stub that the lecture checkboxes join
+                 via the HTML5 form="" attribute — it must NOT wrap the lecture
+                 list, because the per-row move/rename/delete forms inside would
+                 then be nested forms; browsers drop nested <form> tags and merge
+                 their hidden inputs into the wrapper, making any delete wipe
+                 every lesson. */ ?>
+        <form method="post" id="bulkDeleteForm"><input type="hidden" name="_csrf" value="<?= e(csrf()) ?>"></form>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
                 <h3 style="margin:0;font-size:1.1rem;color:var(--green-deep)">Curriculum (<?= count($lessons) ?> lecture<?= count($lessons) === 1 ? '' : 's' ?>)</h3>
-                <button type="submit" class="btn btn-outline btn-sm" onclick="return confirm('Delete selected lessons? This cannot be undone.')"><i data-lucide="trash-2" class="lucide-icon"></i> Delete Selected</button>
+                <div style="display:flex;gap:.5rem;align-items:center">
+                    <button type="button" class="btn btn-outline btn-sm" onclick="var cbs=document.querySelectorAll('input[type=\'checkbox\'][name=\'delete_lessons[]\']');var all=Array.prototype.every.call(cbs,function(c){return c.checked});cbs.forEach(function(c){c.checked=!all})"><i data-lucide="list-checks" class="lucide-icon"></i> Select All</button>
+                    <button type="submit" form="bulkDeleteForm" class="btn btn-outline btn-sm" onclick="return confirm('Delete selected lessons? This cannot be undone.')"><i data-lucide="trash-2" class="lucide-icon"></i> Delete Selected</button>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="if(confirm('Delete ALL <?= count($lessons) ?> lecture(s)? This cannot be undone.')){document.querySelectorAll('input[type=\'checkbox\'][name=\'delete_lessons[]\']').forEach(function(c){c.checked=true});document.getElementById('bulkDeleteForm').submit()}"><i data-lucide="trash-2" class="lucide-icon"></i> Delete All</button>
+                </div>
             </div>
         <?php foreach ($sections as $sectionName => $sectionLessons): ?>
         <div class="curriculum-section">
@@ -280,7 +289,7 @@ foreach ($lessons as $l) {
                     $i = array_search($l, $lessons, true);
                 ?>
                 <div class="curriculum-lecture">
-                    <input type="checkbox" name="delete_lessons[]" value="<?= (int) $l['id'] ?>" style="margin-right:.5rem;flex-shrink:0">
+                    <input type="checkbox" form="bulkDeleteForm" name="delete_lessons[]" value="<?= (int) $l['id'] ?>" style="margin-right:.5rem;flex-shrink:0">
                     <div class="curriculum-lecture-check <?= $hasContent ? '' : 'empty' ?>"><i data-lucide="<?= $hasContent ? 'check' : 'file-text' ?>" class="lucide-icon" style="width:13px;height:13px"></i></div>
                     <div class="curriculum-lecture-title">
                         <a href="edit-lesson.php?id=<?= (int) $l['id'] ?>"><?= e($l['title']) ?></a>
@@ -305,7 +314,6 @@ foreach ($lessons as $l) {
             </div>
         </div>
         <?php endforeach; ?>
-        </form>
     <?php endif; ?>
 
     <a href="#addLectureForm" onclick="document.getElementById('sectionTitleInput').value=<?= json_encode($suggestedSection) ?>" class="curriculum-add-btn" style="margin-bottom:2rem"><i data-lucide="plus" class="lucide-icon"></i> Section</a>

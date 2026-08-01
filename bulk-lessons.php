@@ -45,7 +45,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors = [];
         $sectionTitle = trim($row['section_title'] ?? '');
         $title    = trim($row['title'] ?? '');
-        $content  = trim($row['content'] ?? '');
+        // Same allowlist sanitizer as the add/edit lesson forms — lesson.php
+        // renders content unescaped on the assumption every write path
+        // sanitized it first.
+        $content  = sanitizeLessonHtml(trim($row['content'] ?? ''));
         $videoUrl = trim($row['video_url'] ?? '');
         $durationRaw = trim($row['duration_minutes'] ?? '');
 
